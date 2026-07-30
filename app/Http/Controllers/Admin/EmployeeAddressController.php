@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use Exception;
 use App\Models\User;
 use App\Models\Address;
+use App\Services\EmployeeService;
 use App\Services\UserAddressService;
 use App\Http\Requests\PaginateRequest;
 use App\Http\Resources\AddressResource;
@@ -16,11 +17,13 @@ class EmployeeAddressController extends AdminController implements HasMiddleware
 {
 
     private UserAddressService $userAddressService;
+    private EmployeeService $employeeService;
 
-    public function __construct(UserAddressService $userAddressService)
+    public function __construct(UserAddressService $userAddressService, EmployeeService $employeeService)
     {
         parent::__construct();
         $this->userAddressService = $userAddressService;
+        $this->employeeService    = $employeeService;
     }
 
     public static function middleware(): array
@@ -36,6 +39,7 @@ class EmployeeAddressController extends AdminController implements HasMiddleware
     public function index(PaginateRequest $request, User $employee): \Illuminate\Http\Response | \Illuminate\Http\Resources\Json\AnonymousResourceCollection | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            $this->employeeService->show($employee);
             return AddressResource::collection($this->userAddressService->list($request, $employee));
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
@@ -45,6 +49,7 @@ class EmployeeAddressController extends AdminController implements HasMiddleware
     public function store(EmployeeAddressRequest $request, User $employee): \Illuminate\Http\Response | AddressResource | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            $this->employeeService->show($employee);
             return new AddressResource($this->userAddressService->store($request, $employee));
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
@@ -54,6 +59,7 @@ class EmployeeAddressController extends AdminController implements HasMiddleware
     public function update(EmployeeAddressRequest $request, User $employee, Address $address): \Illuminate\Http\Response | AddressResource | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            $this->employeeService->show($employee);
             return new AddressResource($this->userAddressService->update($request, $employee, $address));
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
@@ -63,6 +69,7 @@ class EmployeeAddressController extends AdminController implements HasMiddleware
     public function destroy(User $employee, Address $address): \Illuminate\Http\Response | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            $this->employeeService->show($employee);
             $this->userAddressService->destroy($employee, $address);
             return response('', 202);
         } catch (Exception $exception) {
@@ -73,6 +80,7 @@ class EmployeeAddressController extends AdminController implements HasMiddleware
     public function show(User $employee, Address $address): \Illuminate\Http\Response | AddressResource | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            $this->employeeService->show($employee);
             return new AddressResource($this->userAddressService->show($employee, $address));
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);

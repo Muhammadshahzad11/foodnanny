@@ -103,6 +103,7 @@ return [
         'user_match'                                                 => 'User not match.',
         'something_wrong'                                            => 'Something wrong.',
         'permission_denied'                                          => 'The permission is denied.',
+        'restaurant_required_for_employee'                           => 'A restaurant must be selected before managing employees.',
         'item_match'                                                 => 'Item not match.',
         'minimum_order_amount'                                       => 'The minimum order amount is ',
         'coupon_date_expired'                                        => 'The coupon time is expired',

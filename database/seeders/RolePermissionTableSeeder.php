@@ -46,7 +46,12 @@ class RolePermissionTableSeeder extends Seeder
                 ['name' => 'payouts_show'],
                 ['name' => 'sales-report'],
                 ['name' => 'items-report'],
-                ['name' => 'restaurant-settings']
+                ['name' => 'restaurant-settings'],
+                ['name' => 'employees'],
+                ['name' => 'employees_create'],
+                ['name' => 'employees_edit'],
+                ['name' => 'employees_delete'],
+                ['name' => 'employees_show'],
             ];
             $restaurantOwnerPermissions = Permission::whereIn('name', $restaurantOwnerPermissions)->get();
             $restaurantOwner->givePermissionTo($restaurantOwnerPermissions);
@@ -94,6 +99,49 @@ class RolePermissionTableSeeder extends Seeder
             ];
             $staffPermissions = Permission::whereIn('name', $staffPermissions)->get();
             $staff->givePermissionTo($staffPermissions);
+        }
+
+        $manager = Role::find(EnumRole::MANAGER);
+        if ($manager) {
+            $managerPermissions = [
+                ['name' => 'dashboard'],
+                ['name' => 'reviews'],
+                ['name' => 'reviews_show'],
+                ['name' => 'items'],
+                ['name' => 'items_show'],
+                ['name' => 'pos'],
+                ['name' => 'pos-orders'],
+                ['name' => 'pos-orders_show'],
+                ['name' => 'online-orders'],
+                ['name' => 'coupons'],
+                ['name' => 'coupons_show'],
+                ['name' => 'campaigns-and-offers'],
+                ['name' => 'statements'],
+                ['name' => 'payouts'],
+                ['name' => 'payouts_show'],
+                ['name' => 'sales-report'],
+                ['name' => 'items-report'],
+            ];
+            $manager->givePermissionTo(Permission::whereIn('name', $managerPermissions)->get());
+        }
+
+        $cashier = Role::find(EnumRole::CASHIER);
+        if ($cashier) {
+            $cashierPermissions = [
+                ['name' => 'dashboard'],
+                ['name' => 'pos'],
+                ['name' => 'pos-orders'],
+                ['name' => 'pos-orders_show'],
+            ];
+            $cashier->givePermissionTo(Permission::whereIn('name', $cashierPermissions)->get());
+        }
+
+        $basicDashboard = Permission::where('name', 'dashboard')->get();
+        foreach ([EnumRole::WAITER, EnumRole::CHEF] as $roleId) {
+            $role = Role::find($roleId);
+            if ($role && $basicDashboard->isNotEmpty()) {
+                $role->givePermissionTo($basicDashboard);
+            }
         }
     }
 }

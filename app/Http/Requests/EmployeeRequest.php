@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\Role as EnumRole;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class EmployeeRequest extends FormRequest
@@ -35,7 +37,7 @@ class EmployeeRequest extends FormRequest
             'phone'                 => ['nullable', 'string', 'max:20', Rule::unique("users", "phone")->ignore($this->route('employee.id'))],
             'restaurant_id'         => ['nullable', 'numeric'],
             'status'                => ['required', 'numeric', 'max:24'],
-            'role_id'               => ['required', 'numeric'],
+            'role_id'               => $this->roleIdRules(),
             'country_code'          => ['required', 'string', 'max:20']
         ];
     }
@@ -44,6 +46,35 @@ class EmployeeRequest extends FormRequest
     {
         return [
             'role_id' => strtolower(trans('all.label.role'))
+        ];
+    }
+
+    protected function roleIdRules(): array
+    {
+        $actorRoleId = (int) optional(Auth::user()?->roles->first())->id;
+
+        if ($actorRoleId === EnumRole::RESTAURANT_OWNER) {
+            return [
+                'required',
+                'numeric',
+                Rule::in([
+                    EnumRole::WAITER,
+                    EnumRole::CHEF,
+                    EnumRole::CASHIER,
+                    EnumRole::MANAGER,
+                ]),
+            ];
+        }
+
+        return [
+            'required',
+            'numeric',
+            Rule::notIn([
+                EnumRole::ADMIN,
+                EnumRole::RESTAURANT_OWNER,
+                EnumRole::DELIVERY_BOY,
+                EnumRole::CUSTOMER,
+            ]),
         ];
     }
 }

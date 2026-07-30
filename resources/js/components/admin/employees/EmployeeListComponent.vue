@@ -146,6 +146,8 @@ import { useCountryCodeStore } from "../../../stores/countryCode.js";
 import { useFrontendSettingStore } from "../../../stores/frontendSetting.js";
 import { useCompanyStore } from "../../../stores/company.js";
 import { useRoleStore } from "../../../stores/role.js";
+import { useAuthStore } from "../../../stores/auth.js";
+import roleEnum from "../../../enums/modules/roleEnum.js";
 import VueSimpleAlert from "vue3-simple-alert";
 
 export default {
@@ -170,13 +172,15 @@ export default {
         const countryCodeStore = useCountryCodeStore();
         const frontendSettingStore = useFrontendSettingStore();
         const companyStore = useCompanyStore();
-        const roleStore = useRoleStore()
+        const roleStore = useRoleStore();
+        const authStore = useAuthStore();
         return {
             employeeStore,
             countryCodeStore,
             frontendSettingStore,
             companyStore,
-            roleStore
+            roleStore,
+            authStore
         }
     },
     data() {
@@ -226,6 +230,12 @@ export default {
         };
     },
     computed: {
+        roleExcepts: function () {
+            if (this.authStore.info?.role_id === roleEnum.RESTAURANT_OWNER) {
+                return "1|2|3|4|5";
+            }
+            return "1|2|3|4";
+        },
         setting: function () {
             return this.frontendSettingStore.lists;
         },
@@ -247,7 +257,7 @@ export default {
         this.roleStore.fetch({
             order_column: "id",
             order_type: "asc",
-            excepts: "1|2|3|4"
+            excepts: this.roleExcepts
         });
     },
     methods: {

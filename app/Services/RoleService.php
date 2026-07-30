@@ -19,7 +19,15 @@ class RoleService
         'excepts'
     ];
     protected array $roleArray = [
-        EnumsRole::ADMIN, EnumsRole::RESTAURANT_OWNER, EnumsRole::DELIVERY_BOY, EnumsRole::CUSTOMER
+        EnumsRole::ADMIN,
+        EnumsRole::RESTAURANT_OWNER,
+        EnumsRole::DELIVERY_BOY,
+        EnumsRole::CUSTOMER,
+        EnumsRole::STAFF,
+        EnumsRole::WAITER,
+        EnumsRole::CHEF,
+        EnumsRole::CASHIER,
+        EnumsRole::MANAGER,
     ];
 
     /**

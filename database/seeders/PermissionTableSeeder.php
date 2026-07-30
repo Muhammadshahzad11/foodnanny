@@ -723,7 +723,7 @@ class PermissionTableSeeder extends Seeder
             [
                 'title'      => 'Employees',
                 'name'       => 'employees',
-                'type'       => PermissionType::ADMIN,
+                'type'       => PermissionType::BOTH,
                 'guard_name' => 'sanctum',
                 'url'        => 'employees',
                 'created_at' => now(),
@@ -732,7 +732,7 @@ class PermissionTableSeeder extends Seeder
                     [
                         'title'      => 'Employees Create',
                         'name'       => 'employees_create',
-                        'type'       => PermissionType::ADMIN,
+                        'type'       => PermissionType::BOTH,
                         'guard_name' => 'sanctum',
                         'url'        => 'employees/create',
                         'created_at' => now(),
@@ -741,7 +741,7 @@ class PermissionTableSeeder extends Seeder
                     [
                         'title'      => 'Employees Edit',
                         'name'       => 'employees_edit',
-                        'type'       => PermissionType::ADMIN,
+                        'type'       => PermissionType::BOTH,
                         'guard_name' => 'sanctum',
                         'url'        => 'employees/edit',
                         'created_at' => now(),
@@ -750,7 +750,7 @@ class PermissionTableSeeder extends Seeder
                     [
                         'title'      => 'Employees Delete',
                         'name'       => 'employees_delete',
-                        'type'       => PermissionType::ADMIN,
+                        'type'       => PermissionType::BOTH,
                         'guard_name' => 'sanctum',
                         'url'        => 'employees/delete',
                         'created_at' => now(),
@@ -759,7 +759,7 @@ class PermissionTableSeeder extends Seeder
                     [
                         'title'      => 'Employees Show',
                         'name'       => 'employees_show',
-                        'type'       => PermissionType::ADMIN,
+                        'type'       => PermissionType::BOTH,
                         'guard_name' => 'sanctum',
                         'url'        => 'employees/show',
                         'created_at' => now(),
