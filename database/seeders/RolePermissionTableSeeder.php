@@ -1,0 +1,99 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Enums\Role as EnumRole;
+use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+
+class RolePermissionTableSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     *
+     * @return void
+     */
+    public function run()
+    {
+        $adminRole = Role::find(EnumRole::ADMIN);
+        $adminRole?->givePermissionTo(Permission::all());
+
+        $restaurantOwner = Role::find(EnumRole::RESTAURANT_OWNER);
+        if ($restaurantOwner) {
+            $restaurantOwnerPermissions = [
+                ['name' => 'dashboard'],
+                ['name' => 'reviews'],
+                ['name' => 'reviews_show'],
+                ['name' => 'items'],
+                ['name' => 'items_create'],
+                ['name' => 'items_edit'],
+                ['name' => 'items_delete'],
+                ['name' => 'items_show'],
+                ['name' => 'pos'],
+                ['name' => 'pos-orders'],
+                ['name' => 'pos-orders_delete'],
+                ['name' => 'pos-orders_show'],
+                ['name' => 'online-orders'],
+                ['name' => 'coupons'],
+                ['name' => 'coupons_create'],
+                ['name' => 'coupons_edit'],
+                ['name' => 'coupons_delete'],
+                ['name' => 'coupons_show'],
+                ['name' => 'campaigns-and-offers'],
+                ['name' => 'statements'],
+                ['name' => 'payouts'],
+                ['name' => 'payouts_show'],
+                ['name' => 'sales-report'],
+                ['name' => 'items-report'],
+                ['name' => 'restaurant-settings']
+            ];
+            $restaurantOwnerPermissions = Permission::whereIn('name', $restaurantOwnerPermissions)->get();
+            $restaurantOwner->givePermissionTo($restaurantOwnerPermissions);
+        }
+
+        $deliveryBoy = Role::find(EnumRole::DELIVERY_BOY);
+        if ($deliveryBoy) {
+            $deliveryBoyPermissions = [
+                ['name' => 'dashboard'],
+                ['name' => 'reviews'],
+                ['name' => 'reviews_show'],
+                ['name' => 'available-orders'],
+                ['name' => 'active-orders'],
+                ['name' => 'messages'],
+                ['name' => 'statements'],
+                ['name' => 'payouts'],
+                ['name' => 'payouts_show'],
+                ['name' => 'collections'],
+                ['name' => 'delivery-boy-settings']
+            ];
+            $deliveryBoyPermissions = Permission::whereIn('name', $deliveryBoyPermissions)->get();
+            $deliveryBoy->givePermissionTo($deliveryBoyPermissions);
+        }
+
+        $staff = Role::find(EnumRole::STAFF);
+        if ($staff) {
+            $staffPermissions = [
+                ['name' => 'dashboard'],
+                ['name' => 'reviews'],
+                ['name' => 'reviews_show'],
+                ['name' => 'items'], 
+                ['name' => 'items_show'],
+                ['name' => 'pos'],
+                ['name' => 'pos-orders'], 
+                ['name' => 'pos-orders_show'],
+                ['name' => 'online-orders'],
+                ['name' => 'coupons'], 
+                ['name' => 'coupons_show'],
+                ['name' => 'campaigns-and-offers'],
+                ['name' => 'statements'],
+                ['name' => 'payouts'],
+                ['name' => 'payouts_show'],
+                ['name' => 'sales-report'],
+                ['name' => 'items-report']
+            ];
+            $staffPermissions = Permission::whereIn('name', $staffPermissions)->get();
+            $staff->givePermissionTo($staffPermissions);
+        }
+    }
+}

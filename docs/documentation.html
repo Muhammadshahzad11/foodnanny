@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FoodNanny — Application Documentation</title>
+  <style>
+    :root {
+      --primary: #f97316;
+      --primary-dark: #c2410c;
+      --primary-light: #fed7aa;
+      --bg: #0f172a;
+      --bg-card: #1e293b;
+      --bg-card2: #162032;
+      --border: #334155;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-faint: #64748b;
+      --accent: #38bdf8;
+      --accent2: #a78bfa;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --sidebar-w: 270px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      display: flex;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0; left: 0;
+      overflow-y: auto;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-logo {
+      padding: 24px 20px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo h1 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.5px;
+    }
+    .sidebar-logo span {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      display: block;
+      margin-top: 3px;
+    }
+
+    .sidebar-nav { padding: 12px 0 24px; flex: 1; }
+    .nav-group { margin-bottom: 8px; }
+    .nav-group-title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 8px 20px 4px;
+    }
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 20px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.855rem;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+    }
+    .nav-link:hover, .nav-link.active {
+      color: var(--primary);
+      background: rgba(249,115,22,0.07);
+      border-left-color: var(--primary);
+    }
+    .nav-link .icon { width: 16px; text-align: center; opacity: .75; font-size: 0.9rem; }
+
+    /* ── Main ── */
+    #main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      min-height: 100vh;
+    }
+
+    /* Top Bar */
+    .topbar {
+      position: sticky; top: 0;
+      background: rgba(15,23,42,0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 90;
+    }
+    .topbar-breadcrumb { font-size: 0.8rem; color: var(--text-faint); }
+    .topbar-breadcrumb strong { color: var(--text-muted); }
+    .badge-version {
+      background: var(--primary);
+      color: white;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.3px;
+    }
+
+    /* Sections */
+    .content { padding: 48px 56px 80px; max-width: 1100px; }
+
+    section { margin-bottom: 64px; }
+
+    .section-anchor { position: relative; top: -80px; display: block; visibility: hidden; }
+
+    h2.section-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 6px;
+      padding-bottom: 14px;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    h2.section-title .icon-circle {
+      width: 36px; height: 36px;
+      background: rgba(249,115,22,0.15);
+      border: 1.5px solid rgba(249,115,22,0.4);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    h3.sub-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 28px 0 10px;
+    }
+    h4.mini-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin: 20px 0 8px;
+    }
+
+    p { color: var(--text-muted); margin-bottom: 12px; font-size: 0.92rem; }
+
+    /* Hero Card */
+    .hero-card {
+      background: linear-gradient(135deg, rgba(249,115,22,0.12), rgba(124,58,237,0.08));
+      border: 1px solid rgba(249,115,22,0.25);
+      border-radius: 16px;
+      padding: 36px 40px;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(249,115,22,0.15), transparent 70%);
+    }
+    .hero-card h1 {
+      font-size: 2rem;
+      font-weight: 900;
+      color: white;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+    .hero-card p { font-size: 1rem; color: var(--text-muted); margin-bottom: 20px; max-width: 600px; }
+    .hero-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .hero-tag {
+      padding: 4px 12px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin: 16px 0;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: rgba(249,115,22,0.4); }
+    .card-icon { font-size: 1.5rem; margin-bottom: 8px; }
+    .card-title { font-size: 0.85rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .card-desc { font-size: 0.78rem; color: var(--text-faint); }
+
+    /* Wide cards */
+    .wide-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin: 16px 0; }
+    .wide-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .wide-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .wide-card-head .icon { font-size: 1.2rem; }
+    .wide-card-head strong { font-size: 0.92rem; color: var(--text); }
+    .wide-card ul { list-style: none; }
+    .wide-card ul li {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .wide-card ul li::before { content: '›'; color: var(--primary); font-weight: bold; }
+
+    /* Stack badges */
+    .stack-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+    .stack-badge {
+      padding: 5px 14px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid;
+    }
+    .stack-badge.php { background: rgba(119,82,154,0.15); border-color: rgba(119,82,154,0.4); color: #c4b5fd; }
+    .stack-badge.js  { background: rgba(234,179,8,0.12); border-color: rgba(234,179,8,0.3); color: #fde68a; }
+    .stack-badge.css { background: rgba(56,189,248,0.12); border-color: rgba(56,189,248,0.3); color: #7dd3fc; }
+    .stack-badge.db  { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.3); color: #6ee7b7; }
+    .stack-badge.tool { background: rgba(251,146,60,0.12); border-color: rgba(251,146,60,0.3); color: #fed7aa; }
+    .stack-badge.ai  { background: rgba(167,139,250,0.12); border-color: rgba(167,139,250,0.3); color: #c4b5fd; }
+
+    /* Code block */
+    pre, code {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+    }
+    pre {
+      background: #0a1628;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      overflow-x: auto;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin: 14px 0;
+      line-height: 1.6;
+    }
+    code {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.8rem;
+      color: var(--accent);
+    }
+    pre code { background: none; border: none; padding: 0; color: inherit; }
+
+    /* Tree */
+    .tree {
+      background: #0a1628;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      font-size: 0.79rem;
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+    .tree .folder { color: var(--accent); }
+    .tree .file { color: var(--text-faint); }
+    .tree .comment { color: var(--primary); }
+
+    /* Table */
+    .tbl-wrap { overflow-x: auto; margin: 16px 0; border-radius: 10px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: rgba(249,115,22,0.08); }
+    th { padding: 12px 16px; text-align: left; font-size: 0.78rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.6px; border-bottom: 1px solid var(--border); }
+    td { padding: 10px 16px; font-size: 0.82rem; color: var(--text-muted); border-bottom: 1px solid rgba(255,255,255,0.03); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    td code { font-size: 0.75rem; }
+
+    /* Stat row */
+    .stats-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
+    .stat-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 24px;
+      text-align: center;
+      min-width: 120px;
+      flex: 1;
+    }
+    .stat-box .val { font-size: 1.8rem; font-weight: 900; color: var(--primary); line-height: 1; }
+    .stat-box .lbl { font-size: 0.72rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 6px; }
+
+    /* List styles */
+    .feature-list { list-style: none; margin: 10px 0; }
+    .feature-list li {
+      padding: 5px 0 5px 20px;
+      position: relative;
+      font-size: 0.87rem;
+      color: var(--text-muted);
+    }
+    .feature-list li::before {
+      content: '✦';
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-size: 0.6rem;
+      top: 8px;
+    }
+
+    .check-list { list-style: none; margin: 10px 0; }
+    .check-list li {
+      padding: 4px 0 4px 22px;
+      position: relative;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .check-list li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: var(--success);
+      font-weight: bold;
+    }
+
+    /* Alert boxes */
+    .alert {
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 0.85rem;
+      border-left: 3px solid;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .alert.info { background: rgba(56,189,248,0.07); border-color: var(--accent); color: #7dd3fc; }
+    .alert.warning { background: rgba(251,191,36,0.07); border-color: var(--warning); color: #fde68a; }
+    .alert.success { background: rgba(52,211,153,0.07); border-color: var(--success); color: #6ee7b7; }
+    .alert .alert-icon { flex-shrink: 0; margin-top: 1px; }
+
+    /* Pills */
+    .pill {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .pill.green { background: rgba(52,211,153,0.15); color: var(--success); }
+    .pill.blue  { background: rgba(56,189,248,0.15); color: var(--accent); }
+    .pill.purple{ background: rgba(167,139,250,0.15); color: var(--accent2); }
+    .pill.orange{ background: rgba(249,115,22,0.15); color: var(--primary); }
+    .pill.red   { background: rgba(248,113,113,0.15); color: var(--danger); }
+
+    /* Divider */
+    .divider { height: 1px; background: var(--border); margin: 32px 0; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text-faint);
+    }
+    footer strong { color: var(--primary); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+
+    @media (max-width: 900px) {
+      #sidebar { transform: translateX(-100%); }
+      #main { margin-left: 0; }
+      .content { padding: 30px 22px 60px; }
+      h2.section-title { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════ -->
+<aside id="sidebar">
+  <div class="sidebar-logo">
+    <h1>🍜 FoodNanny</h1>
+    <span>Application Documentation</span>
+  </div>
+  <nav class="sidebar-nav">
+
+    <div class="nav-group">
+      <div class="nav-group-title">Introduction</div>
+      <a class="nav-link" href="#overview"><span class="icon">🏠</span> Overview</a>
+      <a class="nav-link" href="#tech-stack"><span class="icon">⚙️</span> Tech Stack</a>
+      <a class="nav-link" href="#stats"><span class="icon">📊</span> Project Stats</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Architecture</div>
+      <a class="nav-link" href="#structure"><span class="icon">📁</span> Directory Structure</a>
+      <a class="nav-link" href="#backend"><span class="icon">🖥️</span> Backend Architecture</a>
+      <a class="nav-link" href="#frontend"><span class="icon">🎨</span> Frontend Architecture</a>
+      <a class="nav-link" href="#database"><span class="icon">🗄️</span> Database Schema</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Core Modules</div>
+      <a class="nav-link" href="#users"><span class="icon">👤</span> Users & Roles</a>
+      <a class="nav-link" href="#restaurants"><span class="icon">🍽️</span> Restaurants</a>
+      <a class="nav-link" href="#ordering"><span class="icon">📦</span> Ordering System</a>
+      <a class="nav-link" href="#payments"><span class="icon">💳</span> Payments</a>
+      <a class="nav-link" href="#delivery"><span class="icon">🛵</span> Delivery</a>
+      <a class="nav-link" href="#marketing"><span class="icon">📣</span> Marketing</a>
+      <a class="nav-link" href="#ai"><span class="icon">🤖</span> AI Assistant</a>
+      <a class="nav-link" href="#notifications"><span class="icon">🔔</span> Notifications</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">API & Integration</div>
+      <a class="nav-link" href="#api"><span class="icon">🔌</span> API Endpoints</a>
+      <a class="nav-link" href="#integrations"><span class="icon">🔗</span> Integrations</a>
+      <a class="nav-link" href="#realtime"><span class="icon">⚡</span> Real-time</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Deployment</div>
+      <a class="nav-link" href="#installation"><span class="icon">🚀</span> Installation</a>
+      <a class="nav-link" href="#env"><span class="icon">🔑</span> Environment Config</a>
+      <a class="nav-link" href="#security"><span class="icon">🛡️</span> Security</a>
+      <a class="nav-link" href="#performance"><span class="icon">⚡</span> Performance</a>
+    </div>
+
+  </nav>
+</aside>
+
+<!-- ══════════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════════ -->
+<main id="main">
+  <div class="topbar">
+    <div class="topbar-breadcrumb"><strong>FoodNanny</strong> · Application Documentation</div>
+    <div class="badge-version">v Laravel 12 · PHP 8.2+</div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── OVERVIEW ── -->
+    <section id="overview">
+      <a class="section-anchor" id="overview-anchor"></a>
+
+      <div class="hero-card">
+        <h1>🍜 FoodNanny</h1>
+        <p>
+          A full-featured, enterprise-grade <strong>Multi-Restaurant Food Delivery Platform</strong> with
+          a Progressive Web App (PWA) customer frontend, a powerful admin dashboard, restaurant management,
+          real-time delivery tracking, and an integrated AI assistant — all built on a modern Laravel + Vue 3 stack.
+        </p>
+        <div class="hero-tags">
+          <span class="hero-tag">Laravel 12</span>
+          <span class="hero-tag">Vue 3</span>
+          <span class="hero-tag">PHP 8.2+</span>
+          <span class="hero-tag">Multi-Restaurant</span>
+          <span class="hero-tag">PWA</span>
+          <span class="hero-tag">AI-Powered</span>
+          <span class="hero-tag">Real-time</span>
+          <span class="hero-tag">16 Payment Gateways</span>
+          <span class="hero-tag">8 SMS Gateways</span>
+          <span class="hero-tag">OpenAI</span>
+        </div>
+      </div>
+
+      <h2 class="section-title"><span class="icon-circle">🏠</span> Overview</h2>
+      <p>
+        FoodNanny is a production-ready SaaS food delivery solution designed for restaurant chains,
+        aggregators, and delivery startups. It provides everything from customer ordering to restaurant
+        management, delivery dispatch, payment processing, and AI-powered content generation — all in
+        a single cohesive application.
+      </p>
+
+      <div class="wide-cards">
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🍽️</span><strong>For Restaurants</strong></div>
+          <ul>
+            <li>Multi-restaurant management</li>
+            <li>Menu builder with categories & items</li>
+            <li>Time slots & operating hours</li>
+            <li>POS (Point of Sale) system</li>
+            <li>Revenue & payout tracking</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">👥</span><strong>For Customers</strong></div>
+          <ul>
+            <li>Browse & search restaurants</li>
+            <li>Real-time order tracking</li>
+            <li>Multiple payment methods</li>
+            <li>Order history & re-order</li>
+            <li>Reviews & ratings</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🛵</span><strong>For Delivery Boys</strong></div>
+          <ul>
+            <li>Order acceptance & dispatch</li>
+            <li>Live map tracking</li>
+            <li>Earnings & cashout</li>
+            <li>Delivery status updates</li>
+            <li>Rider tip system</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">⚙️</span><strong>For Admins</strong></div>
+          <ul>
+            <li>Comprehensive dashboard</li>
+            <li>User & role management</li>
+            <li>Payment & gateway control</li>
+            <li>Advanced analytics & reports</li>
+            <li>Global settings & themes</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── TECH STACK ── -->
+    <section id="tech-stack">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">⚙️</span> Technology Stack</h2>
+
+      <h3 class="sub-title">Backend</h3>
+      <div class="stack-list">
+        <span class="stack-badge php">PHP 8.2+</span>
+        <span class="stack-badge php">Laravel 12.0</span>
+        <span class="stack-badge php">Laravel Sanctum 4.0</span>
+        <span class="stack-badge php">Spatie Permission 6.16</span>
+        <span class="stack-badge php">Spatie Media Library 11.12</span>
+        <span class="stack-badge db">MySQL</span>
+        <span class="stack-badge tool">Eloquent ORM</span>
+        <span class="stack-badge tool">Laravel Queues</span>
+        <span class="stack-badge tool">Laravel Events</span>
+        <span class="stack-badge tool">Laravel Observers</span>
+        <span class="stack-badge tool">Laravel Sail (Docker)</span>
+      </div>
+
+      <h3 class="sub-title">Frontend</h3>
+      <div class="stack-list">
+        <span class="stack-badge js">Vue 3.5.13</span>
+        <span class="stack-badge js">Vite 6.0.11</span>
+        <span class="stack-badge js">Vue Router 4.5.0</span>
+        <span class="stack-badge js">Pinia 3.0.1</span>
+        <span class="stack-badge js">Vue i18n 10.0.5</span>
+        <span class="stack-badge css">Tailwind CSS 3.4.17</span>
+        <span class="stack-badge js">Laravel Echo 2.1.4</span>
+        <span class="stack-badge js">Pusher JS 8.4.0</span>
+        <span class="stack-badge js">ApexCharts</span>
+        <span class="stack-badge js">Swiper 11.2.5</span>
+        <span class="stack-badge js">Vue Quill</span>
+      </div>
+
+      <h3 class="sub-title">AI & Cloud Services</h3>
+      <div class="stack-list">
+        <span class="stack-badge ai">OpenAI API</span>
+        <span class="stack-badge ai">Firebase 11.9.1</span>
+        <span class="stack-badge tool">AWS S3</span>
+        <span class="stack-badge tool">Pusher (Real-time)</span>
+        <span class="stack-badge tool">Google Maps API</span>
+        <span class="stack-badge tool">Mailer Send</span>
+        <span class="stack-badge tool">Google API Client</span>
+      </div>
+
+      <h3 class="sub-title">Development Tools</h3>
+      <div class="stack-list">
+        <span class="stack-badge tool">PHPUnit 11.0</span>
+        <span class="stack-badge tool">Laravel Pint</span>
+        <span class="stack-badge tool">Laravel Debugbar</span>
+        <span class="stack-badge tool">Laravel Pail</span>
+        <span class="stack-badge tool">Mockery 1.6</span>
+        <span class="stack-badge tool">Faker 1.23</span>
+        <span class="stack-badge tool">Query Detector 2.1</span>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Technology</th>
+              <th>Version</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Backend Framework</td><td>Laravel</td><td>12.0</td><td>Core PHP web framework</td></tr>
+            <tr><td>Language</td><td>PHP</td><td>8.2+</td><td>Server-side language</td></tr>
+            <tr><td>Frontend Framework</td><td>Vue.js</td><td>3.5.13</td><td>Reactive SPA</td></tr>
+            <tr><td>Build Tool</td><td>Vite</td><td>6.0.11</td><td>Frontend asset bundling</td></tr>
+            <tr><td>CSS Framework</td><td>Tailwind CSS</td><td>3.4.17</td><td>Utility-first styling</td></tr>
+            <tr><td>State Management</td><td>Pinia</td><td>3.0.1</td><td>Vue store management</td></tr>
+            <tr><td>Authentication</td><td>Laravel Sanctum</td><td>4.0</td><td>Token-based API auth</td></tr>
+            <tr><td>Authorization</td><td>Spatie Permission</td><td>6.16</td><td>RBAC system</td></tr>
+            <tr><td>Media</td><td>Spatie Media Library</td><td>11.12</td><td>File & image management</td></tr>
+            <tr><td>Real-time</td><td>Pusher</td><td>7.2 / 8.4.0</td><td>WebSocket broadcasting</td></tr>
+            <tr><td>AI</td><td>OpenAI</td><td>0.18.0</td><td>AI content generation</td></tr>
+            <tr><td>Push Notifications</td><td>Firebase</td><td>11.9.1</td><td>Mobile push notifications</td></tr>
+            <tr><td>Database</td><td>MySQL</td><td>8.x</td><td>Primary data store</td></tr>
+            <tr><td>Queue</td><td>Database Queue</td><td>-</td><td>Background job processing</td></tr>
+            <tr><td>Cache</td><td>File Cache</td><td>-</td><td>Response caching</td></tr>
+            <tr><td>Storage</td><td>AWS S3 / Local</td><td>-</td><td>Media file storage</td></tr>
+            <tr><td>Maps</td><td>Google Maps</td><td>-</td><td>Delivery map & geolocation</td></tr>
+            <tr><td>Email</td><td>Mailer Send</td><td>2.8</td><td>Transactional email</td></tr>
+            <tr><td>PWA</td><td>LaravelPWA</td><td>2.0</td><td>Progressive Web App</td></tr>
+            <tr><td>i18n</td><td>Vue i18n</td><td>10.0.5</td><td>Internationalization</td></tr>
+            <tr><td>Charts</td><td>ApexCharts</td><td>-</td><td>Dashboard analytics</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── STATS ── -->
+    <section id="stats">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">📊</span> Project Stats</h2>
+      <div class="stats-row">
+        <div class="stat-box"><div class="val">90+</div><div class="lbl">Models</div></div>
+        <div class="stat-box"><div class="val">137</div><div class="lbl">Controllers</div></div>
+        <div class="stat-box"><div class="val">140+</div><div class="lbl">Services</div></div>
+        <div class="stat-box"><div class="val">328</div><div class="lbl">Vue Components</div></div>
+        <div class="stat-box"><div class="val">69</div><div class="lbl">DB Migrations</div></div>
+        <div class="stat-box"><div class="val">16</div><div class="lbl">Payment Gateways</div></div>
+        <div class="stat-box"><div class="val">8</div><div class="lbl">SMS Gateways</div></div>
+        <div class="stat-box"><div class="val">45+</div><div class="lbl">Enums</div></div>
+        <div class="stat-box"><div class="val">200+</div><div class="lbl">API Endpoints</div></div>
+        <div class="stat-box"><div class="val">15</div><div class="lbl">Events</div></div>
+        <div class="stat-box"><div class="val">12</div><div class="lbl">Observers</div></div>
+        <div class="stat-box"><div class="val">30+</div><div class="lbl">Traits</div></div>
+      </div>
+    </section>
+
+    <!-- ── STRUCTURE ── -->
+    <section id="structure">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">📁</span> Directory Structure</h2>
+      <p>FoodNanny follows the standard Laravel directory structure with additional custom namespaces for AI agents, payment gateways, and SMS gateways.</p>
+      <div class="tree">
+<span class="folder">foodnanny/</span>
+├── <span class="folder">app/</span>
+│   ├── <span class="folder">Enums/</span>          <span class="comment">← 45+ enumeration classes</span>
+│   ├── <span class="folder">Events/</span>         <span class="comment">← 15 broadcast event classes</span>
+│   ├── <span class="folder">Exports/</span>         <span class="comment">← Excel export classes</span>
+│   ├── <span class="folder">Http/</span>
+│   │   ├── <span class="folder">AiAgents/</span>    <span class="comment">← AI agent implementations</span>
+│   │   │   ├── <span class="folder">Agents/</span>    <span class="comment">← Openai.php, etc.</span>
+│   │   │   └── <span class="folder">Requests/</span>  <span class="comment">← AI request handlers</span>
+│   │   ├── <span class="folder">Controllers/</span>
+│   │   │   ├── <span class="folder">Admin/</span>     <span class="comment">← 100+ admin controllers</span>
+│   │   │   ├── <span class="folder">Auth/</span>      <span class="comment">← 7 auth controllers</span>
+│   │   │   ├── <span class="folder">Frontend/</span>  <span class="comment">← 30+ frontend controllers</span>
+│   │   │   └── <span class="folder">Installer/</span> <span class="comment">← Wizard controllers</span>
+│   │   ├── <span class="folder">Middleware/</span>  <span class="comment">← 5 custom middleware</span>
+│   │   ├── <span class="folder">PaymentGateways/</span> <span class="comment">← 16 integrations</span>
+│   │   ├── <span class="folder">Requests/</span>    <span class="comment">← Form request validation</span>
+│   │   ├── <span class="folder">Resources/</span>   <span class="comment">← 145 API resource classes</span>
+│   │   ├── <span class="folder">SmsGateways/</span> <span class="comment">← 8 SMS integrations</span>
+│   │   └── <span class="folder">Storages/</span>    <span class="comment">← Storage abstraction</span>
+│   ├── <span class="folder">Libraries/</span>      <span class="comment">← AppLibrary, QueryExceptionLibrary</span>
+│   ├── <span class="folder">Listeners/</span>      <span class="comment">← Event listeners</span>
+│   ├── <span class="folder">Mail/</span>           <span class="comment">← 6 mailable classes</span>
+│   ├── <span class="folder">Models/</span>         <span class="comment">← 90+ Eloquent models</span>
+│   ├── <span class="folder">Observers/</span>      <span class="comment">← 12 model observers</span>
+│   ├── <span class="folder">Providers/</span>
+│   ├── <span class="folder">Rules/</span>          <span class="comment">← Custom validation rules</span>
+│   ├── <span class="folder">Services/</span>       <span class="comment">← 140+ service classes</span>
+│   └── <span class="folder">Traits/</span>         <span class="comment">← 30+ reusable traits</span>
+├── <span class="folder">config/</span>          <span class="comment">← Laravel configuration files</span>
+├── <span class="folder">database/</span>
+│   ├── <span class="folder">migrations/</span>     <span class="comment">← 69 migration files</span>
+│   ├── <span class="folder">seeders/</span>
+│   └── <span class="folder">factories/</span>
+├── <span class="folder">public/</span>          <span class="comment">← Web root / static assets</span>
+├── <span class="folder">resources/</span>
+│   ├── <span class="folder">css/</span>            <span class="comment">← app.css (Tailwind imports)</span>
+│   ├── <span class="folder">js/</span>
+│   │   ├── <span class="folder">components/</span>  <span class="comment">← 328 Vue components</span>
+│   │   ├── <span class="folder">composables/</span> <span class="comment">← Vue 3 composables</span>
+│   │   ├── <span class="folder">config/</span>      <span class="comment">← Frontend configuration</span>
+│   │   ├── <span class="folder">enums/</span>       <span class="comment">← Frontend constants</span>
+│   │   ├── <span class="folder">languages/</span>   <span class="comment">← i18n translation files</span>
+│   │   ├── <span class="folder">router/</span>      <span class="comment">← Vue Router setup</span>
+│   │   ├── <span class="folder">services/</span>    <span class="comment">← API service classes</span>
+│   │   ├── <span class="folder">stores/</span>      <span class="comment">← Pinia state stores (20+)</span>
+│   │   └── <span class="file">app.js</span>       <span class="comment">← SPA entry point</span>
+│   └── <span class="folder">views/</span>
+│       ├── <span class="file">master.blade.php</span>  <span class="comment">← Main SPA template</span>
+│       └── <span class="file">payment.blade.php</span> <span class="comment">← Payment page template</span>
+├── <span class="folder">routes/</span>
+│   ├── <span class="file">api.php</span>         <span class="comment">← REST API routes (200+)</span>
+│   └── <span class="file">web.php</span>         <span class="comment">← SPA + installer routes</span>
+├── <span class="folder">storage/</span>
+├── <span class="folder">tests/</span>
+├── <span class="file">artisan</span>
+├── <span class="file">composer.json</span>    <span class="comment">← PHP dependencies</span>
+├── <span class="file">package.json</span>     <span class="comment">← JS dependencies</span>
+├── <span class="file">tailwind.config.js</span>
+└── <span class="file">vite.config.js</span>
+      </div>
+    </section>
+
+    <!-- ── BACKEND ── -->
+    <section id="backend">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">🖥️</span> Backend Architecture</h2>
+      <p>The backend follows a <strong>Service Layer pattern</strong> where controllers are thin and delegate all business logic to dedicated service classes. This promotes testability, reusability, and clean code.</p>
+
+      <h3 class="sub-title">Design Patterns Used</h3>
+      <div class="wide-cards">
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🏗️</span><strong>Service Layer</strong></div>
+          <ul>
+            <li>140+ service classes</li>
+            <li>Controllers stay thin</li>
+            <li>Business logic isolated</li>
+            <li>Easily unit-testable</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">👁️</span><strong>Observer Pattern</strong></div>
+          <ul>
+            <li>12 model observers</li>
+            <li>Hooks into Eloquent events</li>
+            <li>Auto side-effects on create/update</li>
+            <li>Clean model lifecycle handling</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">📡</span><strong>Event/Listener</strong></div>
+          <ul>
+            <li>15 broadcast events</li>
+            <li>Decoupled side effects</li>
+            <li>Email, SMS, push on events</li>
+            <li>Queued listeners</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🏭</span><strong>Factory / Strategy</strong></div>
+          <ul>
+            <li>AI agent factory (AiService)</li>
+            <li>Payment gateway abstraction</li>
+            <li>SMS gateway abstraction</li>
+            <li>Storage abstraction</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 class="sub-title">Key Service Categories</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Category</th><th>Services</th><th>Responsibility</th></tr></thead>
+          <tbody>
+            <tr><td>AI Services</td><td>AiService, AiAbstract, AiAgentService, AiChatHistoryService, AiUsageService</td><td>OpenAI integration, agent factory, usage tracking</td></tr>
+            <tr><td>Order Services</td><td>OrderService, FrontendOrderService, ActiveOrderService, AvailableOrderService</td><td>Full order lifecycle management</td></tr>
+            <tr><td>Item Services</td><td>ItemService, ItemCategoryService, ItemAddonService, ItemAttributeService</td><td>Menu item management</td></tr>
+            <tr><td>Payment Services</td><td>PaymentService, PaymentGatewayService, PaymentManagerService, PaymentAbstract</td><td>Payment processing across 16 gateways</td></tr>
+            <tr><td>Notification Services</td><td>SmsService, PushNotificationService, NotificationService, FirebaseService</td><td>Multi-channel notifications</td></tr>
+            <tr><td>Delivery Services</td><td>DeliveryBoyService, DeliverySetupService, DeliveryLocationSetupService</td><td>Delivery management</td></tr>
+            <tr><td>Finance Services</td><td>TransactionService, StatementService, PayoutService, RefundService</td><td>Financial transactions & payouts</td></tr>
+            <tr><td>Marketing Services</td><td>CampaignService, OfferService, CouponService, VoucherService</td><td>Promotions & discounts</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-title">Middleware</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Middleware</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>ApiKeyMiddleware</code></td><td>Validates API key on protected endpoints</td></tr>
+            <tr><td><code>Installed</code></td><td>Redirects to installer if app is not yet set up</td></tr>
+            <tr><td><code>JsonMiddleware</code></td><td>Forces JSON response format for API routes</td></tr>
+            <tr><td><code>Localization</code></td><td>Sets locale from user preferences for i18n</td></tr>
+            <tr><td><code>VerifyEmail</code></td><td>Ensures email is verified before access</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-title">Rate Limiting</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Endpoint Group</th><th>Limit</th></tr></thead>
+          <tbody>
+            <tr><td>Login attempts</td><td>5 per minute</td></tr>
+            <tr><td>OTP sending</td><td>3 per minute</td></tr>
+            <tr><td>OTP verification</td><td>5 per minute</td></tr>
+            <tr><td>Payment requests</td><td>10 per minute</td></tr>
+            <tr><td>Webhook calls</td><td>60 per minute</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── FRONTEND ── -->
+    <section id="frontend">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">🎨</span> Frontend Architecture</h2>
+      <p>The frontend is a <strong>Single Page Application (SPA)</strong> built with Vue 3 Composition API. It serves both the admin dashboard and the customer-facing website from the same codebase, separated by router guards and Pinia stores.</p>
+
+      <div class="wide-cards">
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🗂️</span><strong>328 Vue Components</strong></div>
+          <ul>
+            <li>Admin components (CRUD, forms, tables)</li>
+            <li>Frontend/Customer components</li>
+            <li>Shared common components</li>
+            <li>Layout components</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">📦</span><strong>Pinia Stores (20+)</strong></div>
+          <ul>
+            <li>ai.js — AI assistant state</li>
+            <li>orderTracker.js — live tracking</li>
+            <li>frontendItem.js — menu browsing</li>
+            <li>coupon.js — coupon management</li>
+            <li>restaurantSwitch.js</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🛣️</span><strong>Vue Router Modules</strong></div>
+          <ul>
+            <li>Admin routes (role-guarded)</li>
+            <li>Frontend routes (customer)</li>
+            <li>Auth routes (login/signup)</li>
+            <li>Installer routes (setup wizard)</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🌐</span><strong>i18n (Vue i18n)</strong></div>
+          <ul>
+            <li>Multiple language files</li>
+            <li>Auto-localization feature</li>
+            <li>Language switching at runtime</li>
+            <li>Translation management in admin</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 class="sub-title">Key UI Libraries</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Library</th><th>Version</th><th>Use Case</th></tr></thead>
+          <tbody>
+            <tr><td>Vue Datepicker</td><td>6.1.0</td><td>Date/time selection for orders & reports</td></tr>
+            <tr><td>Vue Quill</td><td>-</td><td>Rich text editor for descriptions</td></tr>
+            <tr><td>Vue Awesome Paginate</td><td>-</td><td>Pagination on listing pages</td></tr>
+            <tr><td>Vue Draggable Next</td><td>-</td><td>Drag-and-drop menu reordering</td></tr>
+            <tr><td>Swiper</td><td>11.2.5</td><td>Touch sliders for restaurant/item carousels</td></tr>
+            <tr><td>ApexCharts for Vue</td><td>-</td><td>Dashboard analytics charts</td></tr>
+            <tr><td>Vue Element Loading</td><td>-</td><td>Loading states & skeletons</td></tr>
+            <tr><td>Vue Toast</td><td>-</td><td>Toast notifications</td></tr>
+            <tr><td>Vue Print</td><td>-</td><td>Receipt & invoice printing</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── DATABASE ── -->
+    <section id="database">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">🗄️</span> Database Schema</h2>
+      <p>The application uses <strong>MySQL</strong> with <strong>69 migration files</strong> covering all platform features. Soft deletes are used extensively to protect data integrity.</p>
+
+      <h3 class="sub-title">Core Tables</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Table</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>users</code></td><td>All users (admin, restaurant owner, delivery boy, customer) with roles</td></tr>
+            <tr><td><code>restaurants</code></td><td>Restaurant profiles, settings, operating hours</td></tr>
+            <tr><td><code>orders</code></td><td>Order records with status, type, amounts, and timestamps</td></tr>
+            <tr><td><code>items</code></td><td>Menu items with details, price, images</td></tr>
+            <tr><td><code>item_categories</code></td><td>Menu item categories per restaurant</td></tr>
+            <tr><td><code>item_addons</code></td><td>Paid add-ons for items</td></tr>
+            <tr><td><code>item_attributes</code></td><td>Customization options (size, spice level, etc.)</td></tr>
+            <tr><td><code>item_variations</code></td><td>Item size/type variations</td></tr>
+            <tr><td><code>item_extras</code></td><td>Free extras included with items</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-title">Order Tables</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Table</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>order_items</code></td><td>Individual line items within an order</td></tr>
+            <tr><td><code>order_addresses</code></td><td>Delivery address snapshot per order</td></tr>
+            <tr><td><code>order_coupons</code></td><td>Applied coupons and discount amounts</td></tr>
+            <tr><td><code>order_setups</code></td><td>Order configuration (delivery fees, tax, etc.)</td></tr>
+            <tr><td><code>order_pos_details</code></td><td>POS-specific dine-in order data</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-title">Finance & AI Tables</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Table</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>transactions</code></td><td>All financial transactions with status</td></tr>
+            <tr><td><code>statements</code></td><td>Restaurant financial statements</td></tr>
+            <tr><td><code>payouts</code></td><td>Restaurant payout requests & processing</td></tr>
+            <tr><td><code>cashouts</code></td><td>Delivery boy earning cashouts</td></tr>
+            <tr><td><code>refunds</code></td><td>Refund records per order</td></tr>
+            <tr><td><code>revenues</code></td><td>Platform revenue tracking</td></tr>
+            <tr><td><code>company_balances</code></td><td>Platform-level financial balance</td></tr>
+            <tr><td><code>ai_agents</code></td><td>AI provider configurations (OpenAI, etc.)</td></tr>
+            <tr><td><code>ai_chat_histories</code></td><td>AI conversation logs per user/session</td></tr>
+            <tr><td><code>ai_usage_logs</code></td><td>API usage tracking for cost monitoring</td></tr>
+            <tr><td><code>gateway_options</code></td><td>Key-value config per payment/SMS/AI gateway</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-title">Settings & Communication Tables</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Table</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>settings</code></td><td>Global application settings (key-value)</td></tr>
+            <tr><td><code>languages</code></td><td>Supported languages</td></tr>
+            <tr><td><code>currencies</code></td><td>Currency definitions and exchange info</td></tr>
+            <tr><td><code>time_slots</code></td><td>Delivery/booking time slots per restaurant</td></tr>
+            <tr><td><code>taxes</code></td><td>Tax configurations</td></tr>
+            <tr><td><code>push_notifications</code></td><td>Push notification records</td></tr>
+            <tr><td><code>messages</code></td><td>In-app messaging records</td></tr>
+            <tr><td><code>one_time_passwords</code></td><td>OTP records with expiry</td></tr>
+            <tr><td><code>delivery_locations</code></td><td>Service area definitions</td></tr>
+            <tr><td><code>payment_gateways</code></td><td>Payment provider configurations</td></tr>
+            <tr><td><code>sms_gateways</code></td><td>SMS provider configurations</td></tr>
+            <tr><td><code>personal_access_tokens</code></td><td>Sanctum API tokens</td></tr>
+            <tr><td><code>media</code></td><td>Spatie media library file records</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── USERS ── -->
+    <section id="users">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">👤</span> Users & Roles</h2>
+      <p>FoodNanny uses Spatie Permission for RBAC. Each role has a specific set of permissions that control access to admin controllers and frontend features.</p>
+
+      <div class="cards-grid">
+        <div class="card">
+          <div class="card-icon">👑</div>
+          <div class="card-title">Super Admin</div>
+          <div class="card-desc">Full platform access. Manages everything including system settings.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🛠️</div>
+          <div class="card-title">Admin</div>
+          <div class="card-desc">Admin panel access with configurable permissions.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🍽️</div>
+          <div class="card-title">Restaurant Owner</div>
+          <div class="card-desc">Manages their own restaurant(s), menus, orders, staff.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">👨‍💼</div>
+          <div class="card-title">Restaurant Employee</div>
+          <div class="card-desc">Staff-level access within a specific restaurant.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🛵</div>
+          <div class="card-title">Delivery Boy</div>
+          <div class="card-desc">Accepts deliveries, updates order status, manages earnings.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🧑‍🦱</div>
+          <div class="card-title">Customer</div>
+          <div class="card-desc">Registered user who can browse, order, track, and review.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">👤</div>
+          <div class="card-title">Guest User</div>
+          <div class="card-desc">Limited checkout without requiring full registration.</div>
+        </div>
+      </div>
+
+      <h3 class="sub-title">Authentication Methods</h3>
+      <ul class="check-list">
+        <li>Email + password login</li>
+        <li>Phone number login with OTP verification</li>
+        <li>Multi-step registration (phone → OTP → complete profile)</li>
+        <li>Forgot password flow via email/SMS</li>
+        <li>Account deactivation</li>
+        <li>Email verification middleware</li>
+      </ul>
+    </section>
+
+    <!-- ── RESTAURANTS ── -->
+    <section id="restaurants">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">🍽️</span> Restaurant Management</h2>
+
+      <div class="wide-cards">
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🏪</span><strong>Restaurant Setup</strong></div>
+          <ul>
+            <li>Multi-restaurant support</li>
+            <li>Restaurant profiles & branding</li>
+            <li>Cuisine type assignment</li>
+            <li>Operating hours & holidays</li>
+            <li>Delivery area (geo-fenced zones)</li>
+            <li>Restaurant switching for admins</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">📋</span><strong>Menu Builder</strong></div>
+          <ul>
+            <li>Menu templates for reuse</li>
+            <li>Menu sections organization</li>
+            <li>Item categories & sub-categories</li>
+            <li>Items with images, descriptions</li>
+            <li>Variations (sizes, types)</li>
+            <li>Addons (paid extras)</li>
+            <li>Attributes (customizations)</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🖥️</span><strong>POS System</strong></div>
+          <ul>
+            <li>Dine-in order management</li>
+            <li>POS-specific categories</li>
+            <li>Table-based orders</li>
+            <li>Cash/card/credit payment</li>
+            <li>Invoice printing support</li>
+            <li>POS offers & discounts</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">⭐</span><strong>Reviews & Analytics</strong></div>
+          <ul>
+            <li>Customer reviews & ratings</li>
+            <li>Delivery boy ratings</li>
+            <li>Restaurant analytics</li>
+            <li>Order performance stats</li>
+            <li>Revenue reports per restaurant</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ORDERING ── -->
+    <section id="ordering">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">📦</span> Ordering System</h2>
+
+      <h3 class="sub-title">Order Types</h3>
+      <div class="cards-grid">
+        <div class="card">
+          <div class="card-icon">🛵</div>
+          <div class="card-title">Online Delivery</div>
+          <div class="card-desc">Standard home delivery with geo-location tracking.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🍴</div>
+          <div class="card-title">Dine-In</div>
+          <div class="card-desc">Table orders placed via POS or customer app.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🏃</div>
+          <div class="card-title">Pickup</div>
+          <div class="card-desc">Customer picks up order from restaurant.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">📅</div>
+          <div class="card-title">Advance Order</div>
+          <div class="card-desc">Order scheduled for a future date/time slot.</div>
+        </div>
+      </div>
+
+      <h3 class="sub-title">Order Status Flow</h3>
+      <div class="stats-row">
+        <div class="stat-box"><div class="val" style="font-size:1rem">⏳</div><div class="lbl">Pending</div></div>
+        <div class="stat-box"><div class="val" style="font-size:1rem">✅</div><div class="lbl">Confirmed</div></div>
+        <div class="stat-box"><div class="val" style="font-size:1rem">👨‍🍳</div><div class="lbl">Prepared</div></div>
+        <div class="stat-box"><div class="val" style="font-size:1rem">🛵</div><div class="lbl">Picked Up</div></div>
+        <div class="stat-box"><div class="val" style="font-size:1rem">🏠</div><div class="lbl">Delivered</div></div>
+        <div class="stat-box"><div class="val" style="font-size:1rem">❌</div><div class="lbl">Canceled</div></div>
+        <div class="stat-box"><div class="val" style="font-size:1rem">↩️</div><div class="lbl">Returned</div></div>
+      </div>
+
+      <h3 class="sub-title">Order Composition</h3>
+      <ul class="check-list">
+        <li>Items with quantities, variations, and addons</li>
+        <li>Applied coupons with discount amounts</li>
+        <li>Tax calculation (configurable per region)</li>
+        <li>Delivery fees based on distance zones</li>
+        <li>Service fees</li>
+        <li>Rider tips</li>
+        <li>Subtotal, tax, and grand total</li>
+        <li>Order notes and special requests</li>
+      </ul>
+    </section>
+
+    <!-- ── PAYMENTS ── -->
+    <section id="payments">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">💳</span> Payment Gateways</h2>
+      <p>FoodNanny integrates <strong>16 payment gateways</strong> with a unified abstraction layer (<code>PaymentAbstract</code>). Each gateway can be enabled/disabled and configured independently from the admin panel.</p>
+
+      <div class="cards-grid">
+        <div class="card"><div class="card-icon">💳</div><div class="card-title">Stripe</div><div class="card-desc">Global card payments</div></div>
+        <div class="card"><div class="card-icon">🅿️</div><div class="card-title">PayPal</div><div class="card-desc">Worldwide digital payments</div></div>
+        <div class="card"><div class="card-icon">🇮🇳</div><div class="card-title">Razorpay</div><div class="card-desc">India payment gateway</div></div>
+        <div class="card"><div class="card-icon">🇮🇳</div><div class="card-title">Paytm</div><div class="card-desc">India UPI & wallet</div></div>
+        <div class="card"><div class="card-icon">📱</div><div class="card-title">PhonePe</div><div class="card-desc">India UPI payments</div></div>
+        <div class="card"><div class="card-icon">🇧🇩</div><div class="card-title">Bkash</div><div class="card-desc">Bangladesh mobile banking</div></div>
+        <div class="card"><div class="card-icon">🇳🇱</div><div class="card-title">Mollie</div><div class="card-desc">European payments</div></div>
+        <div class="card"><div class="card-icon">🌍</div><div class="card-title">Paystack</div><div class="card-desc">Africa payment gateway</div></div>
+        <div class="card"><div class="card-icon">🇿🇦</div><div class="card-title">Payfast</div><div class="card-desc">South Africa</div></div>
+        <div class="card"><div class="card-icon">🇲🇾</div><div class="card-title">Senangpay</div><div class="card-desc">Malaysia payments</div></div>
+        <div class="card"><div class="card-icon">🇧🇷</div><div class="card-title">Mercado Pago</div><div class="card-desc">Latin America</div></div>
+        <div class="card"><div class="card-icon">🇮🇳</div><div class="card-title">Cashfree</div><div class="card-desc">India payments</div></div>
+        <div class="card"><div class="card-icon">💼</div><div class="card-title">Skrill</div><div class="card-desc">Digital wallet</div></div>
+        <div class="card"><div class="card-icon">🇧🇩</div><div class="card-title">SSLCommerz</div><div class="card-desc">Bangladesh payment</div></div>
+        <div class="card"><div class="card-icon">💰</div><div class="card-title">Credit Wallet</div><div class="card-desc">In-app balance</div></div>
+        <div class="card"><div class="card-icon">💵</div><div class="card-title">Cash on Delivery</div><div class="card-desc">Pay on arrival</div></div>
+      </div>
+    </section>
+
+    <!-- ── DELIVERY ── -->
+    <section id="delivery">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">🛵</span> Delivery Management</h2>
+
+      <ul class="feature-list">
+        <li>Delivery boy registration and profile management</li>
+        <li>Delivery zone/location setup with geo-fencing</li>
+        <li>Distance-based delivery fee calculation</li>
+        <li>Real-time delivery tracking via Google Maps integration</li>
+        <li>Order acceptance and dispatch workflow</li>
+        <li>Delivery status updates with push/SMS/email notifications</li>
+        <li>Delivery boy earnings tracking and cashout requests</li>
+        <li>Rider tip system for customers to tip delivery boys</li>
+        <li>Delivery boy reviews and ratings from customers</li>
+        <li>Multiple delivery boys per restaurant support</li>
+      </ul>
+    </section>
+
+    <!-- ── MARKETING ── -->
+    <section id="marketing">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">📣</span> Marketing & Promotions</h2>
+
+      <div class="wide-cards">
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">📢</span><strong>Campaigns</strong></div>
+          <ul>
+            <li>Date-range campaigns</li>
+            <li>Percentage / Fixed / Buy X Get Y</li>
+            <li>Assign to multiple restaurants</li>
+            <li>Campaign status tracking</li>
+            <li>Campaign analytics</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🏷️</span><strong>Offers</strong></div>
+          <ul>
+            <li>Restaurant-specific offers</li>
+            <li>Limited-time promotions</li>
+            <li>Offer tracking</li>
+            <li>POS-specific offers</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🎟️</span><strong>Coupons & Vouchers</strong></div>
+          <ul>
+            <li>Discount coupon creation</li>
+            <li>Minimum order requirements</li>
+            <li>Usage limits & expiry dates</li>
+            <li>User-specific vouchers</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">❤️</span><strong>Favorites</strong></div>
+          <ul>
+            <li>Customer favorite restaurants</li>
+            <li>Favorite item tracking</li>
+            <li>Quick re-order from favorites</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── AI ── -->
+    <section id="ai">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">🤖</span> AI Assistant</h2>
+      <p>FoodNanny includes a modular AI system built on the <code>addon-ai</code> branch. It uses an abstract factory pattern (<code>AiService</code>) that dynamically loads AI provider agents, starting with OpenAI.</p>
+
+      <div class="alert info">
+        <span class="alert-icon">ℹ️</span>
+        <span>The AI system is designed for extensibility — adding a new AI provider (e.g., Gemini, Claude) requires creating a new agent class under <code>app/Http/AiAgents/Agents/</code> and registering it in the database.</span>
+      </div>
+
+      <h3 class="sub-title">AI Architecture</h3>
+      <pre><code>AiService (Factory)
+  └── agent('Openai', ...) → new App\Http\AiAgents\Agents\Openai($args)
+           ├── status()       → Check AI agent availability
+           ├── name()         → Generate product names
+           ├── description()  → Generate product descriptions
+           └── message()      → General chat/message generation
+
+Database:
+  ai_agents          → Provider configs (model, endpoint, key)
+  ai_chat_histories  → Conversation logs per user
+  ai_usage_logs      → API token usage tracking</code></pre>
+
+      <h3 class="sub-title">AI Capabilities</h3>
+      <ul class="check-list">
+        <li>AI-generated product/item names for restaurants</li>
+        <li>AI-generated product descriptions</li>
+        <li>Chat message generation</li>
+        <li>Usage logging for cost monitoring</li>
+        <li>Chat history persistence per user</li>
+        <li>Per-agent gateway configuration (API key, model, etc.)</li>
+      </ul>
+
+      <h3 class="sub-title">AI-Related Traits</h3>
+      <p>The <code>HasAiPrompt</code> trait can be added to any model to enable AI content generation capabilities for that resource.</p>
+    </section>
+
+    <!-- ── NOTIFICATIONS ── -->
+    <section id="notifications">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">🔔</span> Notification System</h2>
+
+      <div class="wide-cards">
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">📱</span><strong>Push Notifications</strong></div>
+          <ul>
+            <li>Firebase Cloud Messaging</li>
+            <li>Firebase token management</li>
+            <li>Order status push alerts</li>
+            <li>Delivery updates</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">📩</span><strong>Email (8 templates)</strong></div>
+          <ul>
+            <li>Order confirmation</li>
+            <li>Forgot password</li>
+            <li>Restaurant order received</li>
+            <li>Delivery boy dispatch</li>
+            <li>Order picked/delivered</li>
+            <li>Subscriber welcome</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">💬</span><strong>SMS (8 Gateways)</strong></div>
+          <ul>
+            <li>Twilio</li>
+            <li>Nexmo / Vonage</li>
+            <li>Twofactor</li>
+            <li>Msg91</li>
+            <li>Bulksms / Bulksmsbd</li>
+            <li>Clickatell</li>
+            <li>Telesign</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🔔</span><strong>In-App</strong></div>
+          <ul>
+            <li>Real-time via Pusher</li>
+            <li>Notification alert centre</li>
+            <li>In-app messaging</li>
+            <li>Order status banners</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 class="sub-title">Notification Events</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Event</th><th>Channels</th></tr></thead>
+          <tbody>
+            <tr><td>Order Placed</td><td>Email, SMS, Push</td></tr>
+            <tr><td>Order Confirmed</td><td>Push</td></tr>
+            <tr><td>Order Prepared</td><td>Push</td></tr>
+            <tr><td>Delivery Boy Assigned</td><td>Email, SMS, Push</td></tr>
+            <tr><td>Order Picked Up</td><td>Email, SMS, Push</td></tr>
+            <tr><td>Order Delivered</td><td>Push</td></tr>
+            <tr><td>OTP Requested</td><td>SMS</td></tr>
+            <tr><td>Password Reset</td><td>Email</td></tr>
+            <tr><td>New Chat Message</td><td>Pusher (Real-time)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── API ── -->
+    <section id="api">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">🔌</span> API Endpoints</h2>
+      <p>The REST API has <strong>200+ endpoints</strong> organized by module. All API responses follow a consistent JSON format enforced by <code>JsonMiddleware</code>. Authentication uses Bearer tokens via Laravel Sanctum.</p>
+
+      <h3 class="sub-title">Authentication Routes</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill blue">POST</span></td><td><code>/api/auth/login</code></td><td>Email + password login</td></tr>
+            <tr><td><span class="pill blue">POST</span></td><td><code>/api/auth/login-phone</code></td><td>Phone-based login</td></tr>
+            <tr><td><span class="pill blue">POST</span></td><td><code>/api/auth/signup/phone</code></td><td>Begin phone registration</td></tr>
+            <tr><td><span class="pill blue">POST</span></td><td><code>/api/auth/signup/verify</code></td><td>Verify OTP</td></tr>
+            <tr><td><span class="pill blue">POST</span></td><td><code>/api/auth/signup/register</code></td><td>Complete registration</td></tr>
+            <tr><td><span class="pill blue">POST</span></td><td><code>/api/auth/forgot-password/*</code></td><td>Password reset flow</td></tr>
+            <tr><td><span class="pill blue">POST</span></td><td><code>/api/auth/logout</code></td><td>Revoke auth token</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-title">Profile Routes</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill green">GET</span></td><td><code>/api/profile</code></td><td>Get authenticated user profile</td></tr>
+            <tr><td><span class="pill orange">PUT</span></td><td><code>/api/profile</code></td><td>Update profile details</td></tr>
+            <tr><td><span class="pill orange">PUT</span></td><td><code>/api/profile/change-password</code></td><td>Change password</td></tr>
+            <tr><td><span class="pill blue">POST</span></td><td><code>/api/profile/change-image</code></td><td>Upload profile image</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-title">Frontend (Customer) Routes</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill green">GET</span></td><td><code>/api/frontend/restaurants</code></td><td>Browse all restaurants</td></tr>
+            <tr><td><span class="pill green">GET</span></td><td><code>/api/frontend/restaurants/{id}</code></td><td>Restaurant details & menu</td></tr>
+            <tr><td><span class="pill green">GET</span></td><td><code>/api/frontend/items</code></td><td>Browse menu items</td></tr>
+            <tr><td><span class="pill blue">POST</span></td><td><code>/api/frontend/orders</code></td><td>Place a new order</td></tr>
+            <tr><td><span class="pill green">GET</span></td><td><code>/api/frontend/orders/{id}</code></td><td>Track order status</td></tr>
+            <tr><td><span class="pill blue">POST</span></td><td><code>/api/frontend/coupons/validate</code></td><td>Validate coupon code</td></tr>
+            <tr><td><span class="pill blue">POST</span></td><td><code>/api/frontend/payment</code></td><td>Process payment</td></tr>
+            <tr><td><span class="pill green">GET</span></td><td><code>/api/frontend/addresses</code></td><td>List user addresses</td></tr>
+            <tr><td><span class="pill blue">POST</span></td><td><code>/api/frontend/reviews</code></td><td>Submit review</td></tr>
+            <tr><td><span class="pill blue">POST</span></td><td><code>/api/frontend/favorites</code></td><td>Toggle favorite</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-title">Admin Routes (100+ endpoints)</h3>
+      <p>All admin routes are prefixed with <code>/api/admin/</code> and require authenticated admin/super-admin tokens. Examples include:</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Resource</th><th>Operations</th></tr></thead>
+          <tbody>
+            <tr><td>Users</td><td>CRUD, activate/deactivate, role assignment</td></tr>
+            <tr><td>Restaurants</td><td>CRUD, approve, assign owners</td></tr>
+            <tr><td>Orders</td><td>List, update status, assign delivery boy, refund</td></tr>
+            <tr><td>Menu Items</td><td>CRUD, images, variations, addons, attributes</td></tr>
+            <tr><td>Campaigns/Offers</td><td>CRUD, assign to restaurants</td></tr>
+            <tr><td>Payment Gateways</td><td>Enable/disable, configure credentials</td></tr>
+            <tr><td>SMS Gateways</td><td>Enable/disable, configure credentials</td></tr>
+            <tr><td>AI Agents</td><td>Configure OpenAI key, model selection</td></tr>
+            <tr><td>Reports</td><td>Sales, revenue, delivery, credit balance</td></tr>
+            <tr><td>Settings</td><td>App name, logo, theme, currency, timezone</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── INTEGRATIONS ── -->
+    <section id="integrations">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">🔗</span> Integrations</h2>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Service</th><th>Purpose</th><th>Config Key</th></tr></thead>
+          <tbody>
+            <tr><td>OpenAI</td><td>AI assistant for content generation</td><td><code>OPENAI_API_KEY</code></td></tr>
+            <tr><td>Firebase</td><td>Push notifications to mobile/web</td><td>Firebase config in admin panel</td></tr>
+            <tr><td>Pusher</td><td>Real-time WebSocket events</td><td><code>PUSHER_APP_KEY</code>, etc.</td></tr>
+            <tr><td>Google Maps</td><td>Delivery map & geolocation</td><td><code>VITE_GOOGLE_MAP_KEY</code></td></tr>
+            <tr><td>AWS S3</td><td>Media file storage in cloud</td><td><code>AWS_BUCKET</code>, <code>AWS_ACCESS_KEY_ID</code></td></tr>
+            <tr><td>Mailer Send</td><td>Transactional email delivery</td><td><code>MAIL_MAILER</code></td></tr>
+            <tr><td>Google API Client</td><td>Social login / geolocation services</td><td>Google config</td></tr>
+            <tr><td>Spatie Media Library</td><td>Image & file management</td><td>Via <code>media</code> table</td></tr>
+            <tr><td>Spatie Permission</td><td>Role-based access control</td><td>Via DB roles/permissions</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── REAL-TIME ── -->
+    <section id="realtime">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">⚡</span> Real-time Features</h2>
+      <p>Real-time functionality is powered by <strong>Pusher</strong> on the server side and <strong>Laravel Echo + Pusher JS</strong> on the frontend.</p>
+
+      <ul class="feature-list">
+        <li>Live order status updates as restaurants/delivery boys update status</li>
+        <li>Real-time delivery tracking on map</li>
+        <li>Instant chat message delivery via <code>NewChatMessage</code> event</li>
+        <li>New order alerts in restaurant dashboard</li>
+        <li>Live notification badge updates</li>
+        <li>WebSocket-based bidirectional communication</li>
+      </ul>
+
+      <pre><code>// Broadcasting configuration
+BROADCAST_CONNECTION=pusher
+PUSHER_APP_ID=your_app_id
+PUSHER_APP_KEY=your_key
+PUSHER_APP_SECRET=your_secret
+PUSHER_APP_CLUSTER=mt1</code></pre>
+    </section>
+
+    <!-- ── INSTALLATION ── -->
+    <section id="installation">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">🚀</span> Installation</h2>
+
+      <div class="alert success">
+        <span class="alert-icon">✅</span>
+        <span>FoodNanny includes a built-in <strong>Installation Wizard</strong> accessible at <code>/install</code> that guides through all setup steps.</span>
+      </div>
+
+      <h3 class="sub-title">Wizard Steps</h3>
+      <ul class="check-list">
+        <li>System requirements check (PHP version, extensions)</li>
+        <li>File permission verification</li>
+        <li>License acceptance</li>
+        <li>Site configuration (name, logo, colors)</li>
+        <li>Database credentials and migration run</li>
+        <li>Admin account creation</li>
+      </ul>
+
+      <h3 class="sub-title">Manual Installation</h3>
+      <pre><code># 1. Clone repository
+git clone &lt;repo-url&gt; foodnanny && cd foodnanny
+
+# 2. Install PHP dependencies
+composer install
+
+# 3. Install JS dependencies
+npm install
+
+# 4. Copy and configure environment
+cp .env.example .env
+php artisan key:generate
+
+# 5. Run database migrations and seeders
+php artisan migrate --seed
+
+# 6. Build frontend assets
+npm run build
+
+# 7. Set file permissions
+chmod -R 775 storage bootstrap/cache
+
+# 8. Start development server
+composer dev   # Runs artisan serve + queue + vite + pail</code></pre>
+
+      <h3 class="sub-title">Post-Installation Checklist</h3>
+      <ul class="check-list">
+        <li>Configure payment gateways in admin panel → Settings → Payment</li>
+        <li>Configure SMS gateways in admin panel → Settings → SMS</li>
+        <li>Set OpenAI API key in admin panel → Settings → AI</li>
+        <li>Configure Firebase for push notifications</li>
+        <li>Set Google Maps API key (<code>VITE_GOOGLE_MAP_KEY</code>)</li>
+        <li>Configure AWS S3 or local storage</li>
+        <li>Set up Pusher credentials for real-time features</li>
+        <li>Configure Mailer Send for email delivery</li>
+        <li>Enable PWA in admin panel → Settings → PWA</li>
+        <li>Set up HTTPS SSL certificate for production</li>
+      </ul>
+    </section>
+
+    <!-- ── ENV ── -->
+    <section id="env">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">🔑</span> Environment Configuration</h2>
+      <pre><code># Application
+APP_NAME=FoodNanny
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://yourdomain.com
+TIMEZONE=Asia/Dhaka
+
+# Database
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=foodnanny
+DB_USERNAME=root
+DB_PASSWORD=your_password
+
+# Queue & Cache
+BROADCAST_CONNECTION=pusher
+CACHE_STORE=file
+QUEUE_CONNECTION=database
+SESSION_DRIVER=file
+
+# Email
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.mailersend.net
+MAIL_PORT=587
+MAIL_FROM_ADDRESS=noreply@yourdomain.com
+
+# AI (OpenAI)
+OPENAI_API_KEY=sk-...
+
+# AWS S3 (optional)
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=your-bucket
+
+# Pusher (Real-time)
+PUSHER_APP_ID=
+PUSHER_APP_KEY=
+PUSHER_APP_SECRET=
+PUSHER_APP_CLUSTER=mt1
+
+# Google Maps
+VITE_GOOGLE_MAP_KEY=
+
+# Demo mode
+DEMO=false</code></pre>
+    </section>
+
+    <!-- ── SECURITY ── -->
+    <section id="security">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">🛡️</span> Security</h2>
+
+      <div class="wide-cards">
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🔐</span><strong>Authentication</strong></div>
+          <ul>
+            <li>Laravel Sanctum Bearer tokens</li>
+            <li>bcrypt password hashing</li>
+            <li>OTP-based phone verification</li>
+            <li>Email verification middleware</li>
+            <li>Account deactivation support</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🔒</span><strong>Authorization</strong></div>
+          <ul>
+            <li>Spatie RBAC (roles & permissions)</li>
+            <li>Gate-based authorization</li>
+            <li>Middleware-based route protection</li>
+            <li>Per-model access control</li>
+            <li>DefaultAccess for role defaults</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🛡️</span><strong>API Security</strong></div>
+          <ul>
+            <li>Rate limiting on sensitive endpoints</li>
+            <li>API key middleware validation</li>
+            <li>Webhook signature verification</li>
+            <li>CSRF protection for web routes</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">💾</span><strong>Data Protection</strong></div>
+          <ul>
+            <li>Soft deletes for data safety</li>
+            <li>Encrypted sensitive configuration</li>
+            <li>Input validation via Form Requests</li>
+            <li>Custom validation rules</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PERFORMANCE ── -->
+    <section id="performance">
+      <a class="section-anchor"></a>
+      <h2 class="section-title"><span class="icon-circle">⚡</span> Performance</h2>
+
+      <div class="wide-cards">
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">⚡</span><strong>Database</strong></div>
+          <ul>
+            <li>Eager loading via Eloquent</li>
+            <li>Indexed key columns</li>
+            <li>Query scopes for reuse</li>
+            <li>Query Detector (N+1 detection)</li>
+            <li>Soft delete vs hard delete</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🗂️</span><strong>Caching</strong></div>
+          <ul>
+            <li>File-based Laravel cache</li>
+            <li>Query result caching</li>
+            <li>Spatie media library caching</li>
+            <li>Pinia store persistence (frontend)</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">📦</span><strong>Frontend</strong></div>
+          <ul>
+            <li>Vite code splitting & tree-shaking</li>
+            <li>Lazy-loaded Vue Router routes</li>
+            <li>Component lazy loading</li>
+            <li>PWA service worker caching</li>
+            <li>Tailwind CSS purging</li>
+          </ul>
+        </div>
+        <div class="wide-card">
+          <div class="wide-card-head"><span class="icon">🔄</span><strong>Background Jobs</strong></div>
+          <ul>
+            <li>Database queue driver</li>
+            <li>Queued email sending</li>
+            <li>Queued SMS sending</li>
+            <li>Queued push notifications</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 class="sub-title">Production Optimizations</h3>
+      <pre><code># Optimize autoload
+composer install --optimize-autoloader --no-dev
+
+# Cache config, routes, views
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# Run queue worker
+php artisan queue:work --sleep=3 --tries=3
+
+# Build optimized frontend
+npm run build</code></pre>
+    </section>
+
+    <div class="divider"></div>
+
+    <footer>
+      Generated documentation for <strong>FoodNanny</strong> — Multi-Restaurant Food Delivery Platform<br>
+      Laravel 12 · Vue 3 · PHP 8.2+ · Tailwind CSS · OpenAI · Pusher · Firebase<br><br>
+      <span style="color: var(--text-faint)">© 2025 FoodNanny. All rights reserved.</span>
+    </footer>
+
+  </div>
+</main>
+
+<script>
+  // Active nav link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks  = document.querySelectorAll('.nav-link');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.nav-link[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -75% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<?php
+
+namespace App\Http\Resources;
+
+use App\Enums\Ask;
+use App\Libraries\AppLibrary;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class OfferResource extends JsonResource
+{
+    /**
+     * Frontend (storefront) detail resource: localized title/description via the model
+     * accessor, full customer-facing fields. No raw values, no translations array.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return array
+     */
+    public function toArray($request): array
+    {
+        return [
+            'id'          => $this->id,
+            'title'       => $this->title,
+            'slug'        => $this->slug,
+            'amount'      => (float)$this->amount,
+            'percentage'  => AppLibrary::convertAmountFormat($this->amount) . '%',
+            'option'      => $this->is_single == Ask::YES ? 'single' : 'multi',
+            'type'        => 'offer',
+            'start_time'  => AppLibrary::time($this->start_time),
+            'end_time'    => AppLibrary::time($this->end_time),
+            'start_date'  => AppLibrary::date($this->start_date),
+            'end_date'    => AppLibrary::date($this->end_date),
+            'thumb'       => $this->thumb,
+            'cover'       => $this->cover,
+            'restaurants' => SimpleOfferRestaurantResource::collection($this->offerRestaurants),
+            'description' => $this->description
+        ];
+    }
+}

@@ -1,0 +1,30 @@
+import axios from 'axios'
+import {defineStore} from "pinia";
+
+export const useMailStore = defineStore('mail', {
+    state: () => ({
+        lists: []
+    }),
+    actions: {
+        fetch: function () {
+            return new Promise((resolve, reject) => {
+                axios.get('admin/system-setting/mail').then((res) => {
+                    this.lists = res.data.data;
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        save: function (payload) {
+            return new Promise((resolve, reject) => {
+                axios.put(`/admin/system-setting/mail`, payload).then(res => {
+                    this.lists = res.data.data;
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        }
+    }
+})
