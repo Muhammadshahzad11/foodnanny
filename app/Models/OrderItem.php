@@ -28,7 +28,9 @@ class OrderItem extends Model
         'item_extra_total',
         'total_price',
         'instruction',
-        'status'
+        'status',
+        'kitchen_status',
+        'kitchen_station_id',
     ];
     protected $casts = [
         'id'                   => 'integer',
@@ -48,7 +50,9 @@ class OrderItem extends Model
         'item_extra_total'     => 'decimal:6',
         'total_price'          => 'decimal:6',
         'instruction'          => 'string',
-        'status'               => 'integer'
+        'status'               => 'integer',
+        'kitchen_status'       => 'integer',
+        'kitchen_station_id'   => 'integer',
     ];
 
     protected static function boot()

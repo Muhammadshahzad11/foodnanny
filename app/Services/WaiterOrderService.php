@@ -531,6 +531,7 @@ class WaiterOrderService
                     'item_extra_total'     => $item->item_extra_total,
                     'total_price'          => $item->total_price,
                     'status'               => Status::ACTIVE,
+                    'kitchen_status'       => \App\Enums\KitchenItemStatus::PENDING,
                     'created_at'           => now(),
                     'updated_at'           => now(),
                 ];

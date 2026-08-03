@@ -54,6 +54,7 @@ use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RestaurantController;
 use App\Http\Controllers\Admin\RestaurantTableController;
 use App\Http\Controllers\Admin\WaiterController;
+use App\Http\Controllers\Admin\KitchenController;
 use App\Http\Controllers\Admin\RestaurantTableQrController;
 use App\Http\Controllers\Admin\SmsGatewayController;
 use App\Http\Controllers\Admin\AiAgentController;
@@ -344,6 +345,17 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::match(['put', 'patch'], '/orders/{order}', [WaiterController::class, 'update']);
         Route::post('/orders/{order}/send-kitchen', [WaiterController::class, 'sendToKitchen']);
         Route::post('/orders/{order}/cancel-draft', [WaiterController::class, 'cancelDraft']);
+    });
+
+    Route::prefix('kitchen')->name('kitchen.')->group(function () {
+        Route::get('/dashboard', [KitchenController::class, 'dashboard']);
+        Route::get('/orders', [KitchenController::class, 'orders']);
+        Route::get('/orders/{order}', [KitchenController::class, 'orderShow']);
+        Route::post('/orders/{order}/accept', [KitchenController::class, 'accept']);
+        Route::post('/orders/{order}/preparing', [KitchenController::class, 'preparing']);
+        Route::post('/orders/{order}/ready', [KitchenController::class, 'ready']);
+        Route::post('/orders/{order}/priority', [KitchenController::class, 'priority']);
+        Route::post('/orders/{order}/print-data', [KitchenController::class, 'printData']);
     });
 
     Route::prefix('table-qr')->name('table-qr.')->group(function () {
