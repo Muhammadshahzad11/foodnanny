@@ -15,6 +15,12 @@
 
     <section class="mb-24 md:mb-14">
         <div class="container">
+            <DineInBannerComponent
+                :visible="isDineInSession"
+                :table-label="dineInContextStore.tableLabel"
+                :zone="dineInContextStore.context?.zone || ''"
+                :allow-exit="true"
+                @exit="exitDineIn"/>
             <div class="relative pb-2">
                 <img :src="restaurant.cover" alt="banner"
                     class="rounded-[0%_0%_30%_30%/_0%_0%_15%_15%] w-full h-[200px] md:h-[250px] object-cover">
@@ -383,12 +389,14 @@ import { useFrontendCouponStore } from "../../../stores/frontendCoupon.js";
 import { useFrontendRestaurantStore } from "../../../stores/frontendRestaurant.js";
 import { useFrontendItemCategoryStore } from "../../../stores/frontendItemCategory.js";
 import ItemComponent from "../components/ItemComponent.vue";
+import DineInBannerComponent from "../components/DineInBannerComponent.vue";
 import { useFrontendItemStore } from "../../../stores/frontendItem.js";
 import { useFrontendFavoriteStore } from "../../../stores/frontendFavorite.js";
 import router from "../../../router/index.js";
 import MapComponent from "../../common/MapComponent.vue";
 import { useCanvas } from "../../../composables/canvas.js";
 import { useFrontendCartStore } from "../../../stores/frontendCart.js";
+import { useDineInContextStore } from "../../../stores/dineInContext.js";
 import { useFrontendOfferStore } from "../../../stores/frontendOffer.js";
 
 
@@ -397,6 +405,7 @@ export default {
     components: {
         MapComponent,
         ItemComponent,
+        DineInBannerComponent,
         Swiper,
         SwiperSlide,
     },
@@ -407,6 +416,7 @@ export default {
         const { handleSlide, toggleSlide } = useSlide(false);
         const commonStore = useCommonStore();
         const frontendCartStore = useFrontendCartStore();
+        const dineInContextStore = useDineInContextStore();
         const frontendItemStore = useFrontendItemStore();
         const frontendOfferStore = useFrontendOfferStore();
         const frontendCouponStore = useFrontendCouponStore();
@@ -424,6 +434,7 @@ export default {
             toggleSlide,
             commonStore,
             frontendCartStore,
+            dineInContextStore,
             frontendItemStore,
             frontendOfferStore,
             frontendCouponStore,
@@ -490,10 +501,15 @@ export default {
         },
         checkOffer: function () {
             return this.frontendOfferStore.check;
+        },
+        isDineInSession: function () {
+            return this.dineInContextStore.isActive
+                && this.dineInContextStore.matchesRestaurant(this.$route.params.slug);
         }
     },
     mounted() {
         window.addEventListener('scroll', this.handleMenuFixed);
+        this.syncDineInContext();
         if (typeof this.$route.params.slug !== "undefined") {
             this.loading.isActive = true;
             this.frontendRestaurantStore.view({
@@ -509,6 +525,7 @@ export default {
                     longitude: this.commonStore.longitude
                 });
                 this.frontendCouponStore.fetch(res.data.data.id);
+                this.syncDineInContext();
                 this.loading.isActive = false;
             }).catch((err) => {
                 this.loading.isActive = false;
@@ -526,6 +543,21 @@ export default {
         }
     },
     methods: {
+        syncDineInContext: function () {
+            if (!this.dineInContextStore.isActive) {
+                return;
+            }
+            if (!this.dineInContextStore.matchesRestaurant(this.$route.params.slug)) {
+                this.dineInContextStore.clear();
+                this.frontendCartStore.clearDineInContext();
+                return;
+            }
+            this.frontendCartStore.applyDineInContext(this.dineInContextStore.context);
+        },
+        exitDineIn: function () {
+            this.dineInContextStore.clear();
+            this.frontendCartStore.clearDineInContext();
+        },
         textShortener: function (text, number) {
             return appService.textShortener(text, number);
         },

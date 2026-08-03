@@ -53,6 +53,7 @@ use App\Http\Controllers\Admin\OrderSetupController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RestaurantController;
 use App\Http\Controllers\Admin\RestaurantTableController;
+use App\Http\Controllers\Admin\WaiterController;
 use App\Http\Controllers\Admin\RestaurantTableQrController;
 use App\Http\Controllers\Admin\SmsGatewayController;
 use App\Http\Controllers\Admin\AiAgentController;
@@ -331,6 +332,18 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::match(['put', 'patch'], '/{restaurantTable}', [RestaurantTableController::class, 'update']);
         Route::delete('/{restaurantTable}', [RestaurantTableController::class, 'destroy']);
         Route::post('/change-status/{restaurantTable}', [RestaurantTableController::class, 'changeStatus']);
+    });
+
+    Route::prefix('waiter')->name('waiter.')->group(function () {
+        Route::get('/dashboard', [WaiterController::class, 'dashboard']);
+        Route::get('/tables', [WaiterController::class, 'tables']);
+        Route::get('/tables/{restaurantTable}', [WaiterController::class, 'tableShow']);
+        Route::get('/orders', [WaiterController::class, 'orders']);
+        Route::post('/orders', [WaiterController::class, 'store']);
+        Route::get('/orders/{order}', [WaiterController::class, 'orderShow']);
+        Route::match(['put', 'patch'], '/orders/{order}', [WaiterController::class, 'update']);
+        Route::post('/orders/{order}/send-kitchen', [WaiterController::class, 'sendToKitchen']);
+        Route::post('/orders/{order}/cancel-draft', [WaiterController::class, 'cancelDraft']);
     });
 
     Route::prefix('table-qr')->name('table-qr.')->group(function () {

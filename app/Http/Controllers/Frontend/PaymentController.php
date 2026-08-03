@@ -100,7 +100,11 @@ class PaymentController extends Controller
     public function successful(FrontendOrder $frontendOrder): \Illuminate\Foundation\Application|\Illuminate\Routing\Redirector|\Illuminate\Http\RedirectResponse
     {
         try {
-            if($frontendOrder->order_type == OrderType::DELIVERY || $frontendOrder->order_type == OrderType::TAKEAWAY) {
+            if (in_array((int) $frontendOrder->order_type, [
+                OrderType::DELIVERY,
+                OrderType::TAKEAWAY,
+                OrderType::DINING_TABLE,
+            ], true)) {
                 OrderPlacedEmail::dispatch(['order_id' => $frontendOrder->id, 'status' => OrderStatus::PENDING]);
                 OrderPlacedSMS::dispatch(['order_id' => $frontendOrder->id, 'status' => OrderStatus::PENDING]);
                 OrderPlacedPushNotification::dispatch(['order_id' => $frontendOrder->id, 'status' => OrderStatus::PENDING]);
@@ -114,9 +118,14 @@ class PaymentController extends Controller
         }
 
         $frontendOrder->load('restaurant');
-        if ($frontendOrder->order_type == OrderType::DELIVERY || $frontendOrder->order_type == OrderType::TAKEAWAY) {
+        if (in_array((int) $frontendOrder->order_type, [
+            OrderType::DELIVERY,
+            OrderType::TAKEAWAY,
+            OrderType::DINING_TABLE,
+        ], true)) {
             return redirect('/my-orders/?id=' . $frontendOrder->id);
         }
+
         return redirect()->route('home');
     }
 }

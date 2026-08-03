@@ -66,6 +66,7 @@ import ENV from "../../../config/env.js";
 import router from "../../../router/index.js";
 import {useDefaultAccessStore} from "../../../stores/defaultAccess.js";
 import {useFrontendCartStore} from "../../../stores/frontendCart.js";
+import {useDineInContextStore} from "../../../stores/dineInContext.js";
 
 export default {
     name: "GuestLoginComponent",
@@ -74,6 +75,7 @@ export default {
         const authStore                = useAuthStore();
         const commonStore              = useCommonStore();
         const frontendCartStore        = useFrontendCartStore();
+        const dineInContextStore       = useDineInContextStore();
         const defaultAccessStore       = useDefaultAccessStore();
         const frontendSettingStore     = useFrontendSettingStore();
         const frontendCountryCodeStore = useFrontendCountryCodeStore();
@@ -84,6 +86,7 @@ export default {
             authStore,
             commonStore,
             frontendCartStore,
+            dineInContextStore,
             defaultAccessStore,
             frontendSettingStore,
             frontendCountryCodeStore,
@@ -194,28 +197,32 @@ export default {
                             token: ""
                         };
 
-                        if (this.carts.length > 0 && this.location) {
-                            await this.$router.push({name: "frontend.checkout"});
-                        } else if (this.location) {
-                            await this.$router.push({name: "frontend.restaurant"});
-                        } else {
-                            await this.$router.push({name: "frontend.home"});
-                        }
+                        await appService.redirectAfterAuth(this.$router, {
+                            carts: this.carts,
+                            location: this.location,
+                            dineInContext: this.dineInContextStore,
+                        });
                     }).catch((err) => {
                         this.loading.isActive = false;
                         this.errors           = err.response.data.message;
                     })
                 } else {
                     this.loading.isActive = true;
-                    this.frontendGuestSignupStore.callPhone(this.props.form).then((res) => {
+                    this.frontendGuestSignupStore.callPhone(this.props.form).then(async (res) => {
                         this.loading.isActive = false;
                         alertService.success(res.data.message);
+                        if (res.data?.otp) {
+                            await alertService.showOtp(res.data.otp);
+                        }
                         this.props.form = {
                             code: "",
                             phone: "",
                             token: ""
                         };
-                        this.$router.push({name: "auth.guestLoginVerify"});
+                        this.$router.push({
+                            name: "auth.guestLoginVerify",
+                            query: this.$route.query,
+                        });
                     }).catch(err => {
                         this.loading.isActive = false;
                         if (err?.response?.data?.errors) {

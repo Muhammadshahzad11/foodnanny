@@ -47,6 +47,15 @@
                                         {{ enums.orderTypeEnumArray[order.order_type] }}
                                     </span>
                                 </li>
+                                <li class="text-xs" v-if="order.table">
+                                    {{ $t('label.table') }}:
+                                    <span class="text-heading">
+                                        {{ order.table.name || order.table.table_number }}
+                                        <span v-if="order.table.table_number && order.table.name">
+                                            ({{ order.table.table_number }})
+                                        </span>
+                                    </span>
+                                </li>
                                 <li class="text-xs">
                                     {{ $t('label.delivery_time') }}:
                                     <span
@@ -460,7 +469,8 @@ export default {
                 orderTypeEnumArray: {
                     [orderTypeEnum.DELIVERY]: this.$t("label.delivery"),
                     [orderTypeEnum.TAKEAWAY]: this.$t("label.takeaway"),
-                    [orderTypeEnum.POS]: this.$t("label.pos")
+                    [orderTypeEnum.POS]: this.$t("label.pos"),
+                    [orderTypeEnum.DINING_TABLE]: this.$t("label.dining_table")
                 },
                 cutleryArray: {
                     [activityEnum.ENABLE]: this.$t('label.included'),

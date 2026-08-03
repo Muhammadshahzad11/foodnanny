@@ -239,6 +239,7 @@ import {Swiper, SwiperSlide} from "swiper/vue";
 import DisplayModeEnum from "../../../enums/modules/displayModeEnum.js";
 import {useCommonStore} from "../../../stores/common.js";
 import {usePosCartStore} from "../../../stores/posCart.js";
+import {inject} from "vue";
 import _ from "lodash";
 import alertService from "../../../services/alertService.js";
 
@@ -254,7 +255,8 @@ export default {
     },
     setup() {
         const itemStore               = useItemStore();
-        const posCartStore            = usePosCartStore();
+        const injectedCartStore       = inject('cartStore', null);
+        const posCartStore            = injectedCartStore || usePosCartStore();
         const commonStore             = useCommonStore();
         const frontendSettingStore    = useFrontendSettingStore();
         const {openModal, closeModal} = useModal();

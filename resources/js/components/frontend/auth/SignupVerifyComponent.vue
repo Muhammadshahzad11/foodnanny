@@ -92,10 +92,14 @@ export default {
                 this.frontendSignupStore.callPhone({
                     code: this.frontendSignupStore.code,
                     phone: this.frontendSignupStore.phone
-                }).then((res) => {
+                }).then(async (res) => {
                     this.loading.isActive = false;
                     this.errors           = "";
                     alertService.success(res.data.message);
+                    if (res.data?.otp) {
+                        this.props.form.token = String(res.data.otp);
+                        await alertService.showOtp(res.data.otp);
+                    }
                 }).catch((err) => {
                     this.loading.isActive = false;
                     this.errors           = err.response.data.message;

@@ -225,5 +225,35 @@ export default {
         } else {
             return "db-table-badge text-red-600 bg-red-100";
         }
+    },
+    /**
+     * After login/guest auth, return user to intended page (checkout, restaurant, etc.).
+     */
+    redirectAfterAuth: async function (router, options = {}) {
+        const carts = options.carts || [];
+        const location = options.location;
+        const dineInContext = options.dineInContext || null;
+        const redirect = router.currentRoute.value?.query?.redirect;
+
+        if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) {
+            return router.push(redirect);
+        }
+
+        if (carts.length > 0) {
+            return router.push({name: 'frontend.checkout'});
+        }
+
+        if (dineInContext?.isActive && dineInContext.context?.restaurant_slug) {
+            return router.push({
+                name: 'frontend.singleRestaurant',
+                params: {slug: dineInContext.context.restaurant_slug},
+            });
+        }
+
+        if (location) {
+            return router.push({name: 'frontend.restaurant'});
+        }
+
+        return router.push({name: 'frontend.home'});
     }
 }

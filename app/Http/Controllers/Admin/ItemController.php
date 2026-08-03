@@ -30,13 +30,13 @@ class ItemController extends AdminController implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:items|items-report|pos', only: ['index']),
+            new Middleware('permission:items|items-report|pos|waiter|waiter_orders_create', only: ['index']),
             new Middleware('permission:items', only: ['export']),
             new Middleware('permission:items', only: ['changeImage']),
             new Middleware('permission:items_create', only: ['store']),
             new Middleware('permission:items_edit', only: ['update']),
             new Middleware('permission:items_delete', only: ['destroy']),
-            new Middleware('permission:items_show|pos', only: ['show']),
+            new Middleware('permission:items_show|pos|waiter|waiter_orders_create', only: ['show']),
             new Middleware('permission:items_edit', only: ['saveTranslations'])
         ];
     }

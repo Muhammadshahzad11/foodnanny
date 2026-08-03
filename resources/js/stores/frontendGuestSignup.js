@@ -16,6 +16,7 @@ export const useFrontendGuestSignupStore = defineStore('useFrontendGuestSignupSt
                 axios.post(url, payload).then((res) => {
                     this.code   = payload.code;
                     this.phone  = payload.phone;
+                    this.token  = res.data?.otp ? String(res.data.otp) : "";
                     this.verify = false;
                     resolve(res);
                 }).catch((err) => {

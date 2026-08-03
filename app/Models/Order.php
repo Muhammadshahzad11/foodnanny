@@ -24,6 +24,7 @@ class Order extends Model implements HasMedia
         'user_id',
         'restaurant_id',
         'table_id',
+        'waiter_id',
         'subtotal',
         'discount',
         'delivery_fee',
@@ -43,8 +44,9 @@ class Order extends Model implements HasMedia
         'delivery_boy_request',
         'service_fee',
         'reason',
+        'order_note',
         'source',
-        'active', 
+        'active',
         'creator_type',
         'creator_id',
         'editor_type',
@@ -58,6 +60,7 @@ class Order extends Model implements HasMedia
         'user_id'              => 'integer',
         'restaurant_id'        => 'integer',
         'table_id'             => 'integer',
+        'waiter_id'            => 'integer',
         'subtotal'             => 'decimal:6',
         'discount'             => 'decimal:6',
         'delivery_fee'         => 'decimal:6',
@@ -77,6 +80,7 @@ class Order extends Model implements HasMedia
         'delivery_boy_request' => 'integer',
         'service_fee'          => 'decimal:6',
         'reason'               => 'string',
+        'order_note'           => 'string',
         'source'               => 'integer',
         'active'               => 'integer', 
         'creator_type'         => 'string',
@@ -119,6 +123,11 @@ class Order extends Model implements HasMedia
     public function diningTable(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(RestaurantTable::class, 'table_id');
+    }
+
+    public function waiter(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'waiter_id', 'id')->withTrashed();
     }
 
     public function deliveryBoy(): \Illuminate\Database\Eloquent\Relations\BelongsTo

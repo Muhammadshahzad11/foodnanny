@@ -79,7 +79,7 @@
             </router-link>
         </div>
         <p class="uppercase text-xs my-4 text-center text-paragraph">{{ $t('label.or') }}</p>
-        <router-link :to="{ name: 'auth.guestLogin' }"
+        <router-link :to="{ name: 'auth.guestLogin', query: $route.query }"
                      class="w-full h-12 leading-[46px] text-center font-medium rounded-full border border-primary text-primary">
             {{ $t('button.login_as_guest') }}
         </router-link>
@@ -118,6 +118,7 @@ import appService from "../../../services/appService.js";
 import alertService from "../../../services/alertService.js";
 import {useDefaultAccessStore} from "../../../stores/defaultAccess.js";
 import {useFrontendCartStore} from "../../../stores/frontendCart.js";
+import {useDineInContextStore} from "../../../stores/dineInContext.js";
 import {useCommonStore} from "../../../stores/common.js";
 import {useFrontendCountryCodeStore} from "../../../stores/frontendCountryCode.js";
 import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
@@ -130,6 +131,7 @@ export default {
         const authStore                = useAuthStore();
         const commonStore              = useCommonStore();
         const frontendCartStore        = useFrontendCartStore();
+        const dineInContextStore       = useDineInContextStore();
         const defaultAccessStore       = useDefaultAccessStore();
         const frontendSettingStore     = useFrontendSettingStore();
         const frontendCountryCodeStore = useFrontendCountryCodeStore();
@@ -140,6 +142,7 @@ export default {
             commonStore,
             myRestaurantStore,
             frontendCartStore,
+            dineInContextStore,
             defaultAccessStore,
             frontendSettingStore,
             frontendCountryCodeStore
@@ -236,13 +239,11 @@ export default {
                     };
                     this.loading.isActive = false;
 
-                    if (this.carts.length > 0 && this.location) {
-                        await this.$router.push({name: "frontend.checkout"});
-                    } else if (this.location) {
-                        await this.$router.push({name: "frontend.restaurant"});
-                    } else {
-                        await this.$router.push({name: "frontend.home"});
-                    }
+                    await appService.redirectAfterAuth(this.$router, {
+                        carts: this.carts,
+                        location: this.location,
+                        dineInContext: this.dineInContextStore,
+                    });
                 }).catch((err) => {
                     this.loading.isActive = false;
                     if (err?.response?.data?.errors) {

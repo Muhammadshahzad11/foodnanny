@@ -37,6 +37,23 @@ class OrderDetailsResource extends JsonResource
             'total_currency_price'        => AppLibrary::currencyAmountFormat($this->total),
             'total_tax_currency_price'    => AppLibrary::currencyAmountFormat($this->total_tax),
             'order_type'                  => $this->order_type,
+            'table_id'                    => $this->table_id,
+            'waiter_id'                   => $this->waiter_id,
+            'order_note'                  => $this->order_note,
+            'table'                       => $this->when((int) $this->table_id > 0, function () {
+                return [
+                    'id'           => $this->diningTable?->id,
+                    'name'         => $this->diningTable?->name,
+                    'table_number' => $this->diningTable?->table_number,
+                    'zone'         => $this->diningTable?->zone,
+                ];
+            }),
+            'waiter'                      => $this->when((int) $this->waiter_id > 0, function () {
+                return [
+                    'id'   => $this->waiter?->id,
+                    'name' => $this->waiter?->name,
+                ];
+            }),
             'order_datetime'              => AppLibrary::datetime($this->order_datetime),
             'order_date'                  => AppLibrary::date($this->order_datetime),
             'order_time'                  => AppLibrary::time($this->order_datetime),

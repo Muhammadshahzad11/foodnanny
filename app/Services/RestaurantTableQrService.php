@@ -296,7 +296,7 @@ class RestaurantTableQrService
 
         $table = RestaurantTable::withoutGlobalScopes()
             ->withTrashed()
-            ->with(['restaurant:id,name,slug,status'])
+            ->with(['restaurant:id,name,slug,status,current_status'])
             ->where('qr_token', $token)
             ->first();
 
@@ -305,32 +305,42 @@ class RestaurantTableQrService
         }
 
         if ($table->trashed()) {
-            throw new Exception(trans('all.message.table_qr_unavailable'), 404);
+            throw new Exception(trans('all.message.table_qr_removed'), 404);
         }
 
         if (in_array((int) $table->status, [TableStatus::INACTIVE, TableStatus::OUT_OF_SERVICE], true)) {
-            throw new Exception(trans('all.message.table_qr_unavailable'), 404);
+            throw new Exception(trans('all.message.table_qr_inactive'), 404);
         }
 
         if (!$table->restaurant || (int) $table->restaurant->status === Status::INACTIVE) {
-            throw new Exception(trans('all.message.table_qr_unavailable'), 404);
+            throw new Exception(trans('all.message.restaurant_inactive_for_qr'), 404);
+        }
+
+        if ((int) $table->restaurant->current_status === Status::INACTIVE) {
+            throw new Exception(trans('all.message.restaurant_closed_for_qr'), 404);
         }
 
         return [
+            'table_id'         => $table->id,
             'table_uuid'       => $table->uuid,
             'table_number'     => $table->table_number,
             'table_name'       => $table->name,
             'zone'             => $table->zone,
             'status'           => $table->status,
+            'qr_token'         => $table->qr_token,
             'qr_version'       => $table->qr_version,
+            'restaurant_id'    => $table->restaurant->id,
             'restaurant_slug'  => $table->restaurant->slug,
             'restaurant_name'  => $table->restaurant->name,
-            'restaurant_uuid'  => null,
             'menu_path'        => '/restaurant/' . $table->restaurant->slug,
+            'error_code'       => null,
             'dine_in_context'  => [
-                'source'      => 'table_qr',
-                'table_uuid'  => $table->uuid,
-                'qr_version'  => $table->qr_version,
+                'source'          => 'table_qr',
+                'table_id'        => $table->id,
+                'table_uuid'      => $table->uuid,
+                'qr_token'        => $table->qr_token,
+                'qr_version'      => $table->qr_version,
+                'restaurant_id'   => $table->restaurant->id,
                 'restaurant_slug' => $table->restaurant->slug,
             ],
         ];

@@ -1,19 +1,53 @@
 <template>
     <LoadingComponent :props="loading"/>
-    <AddressCreateModalComponent v-on:click="this.props.isMap = true" :props="addButton"/>
+    <AddressCreateModalComponent @open="openManualByDefault" :props="addButton"/>
 
     <div id="new-address-modal"
          class="fixed inset-0 z-50 p-3 w-screen h-dvh overflow-y-auto bg-black/50 transition-all duration-300 opacity-0 invisible">
         <div class="max-w-lg w-full rounded-xl mx-auto bg-white transition-all duration-300">
             <div class="flex items-center justify-between gap-4 py-4 px-6 border-b border-slate-100">
                 <h3 class="text-lg font-semibold capitalize">{{ $t('label.address') }}</h3>
-                <button @click.prevent="reset" class="lab-line-circle-cross text-lg text-danger"></button>
+                <button @click.prevent="reset" type="button" class="lab-line-circle-cross text-lg text-danger"></button>
             </div>
 
             <div class="p-6">
-                <MapComponent :key="mapKey" v-if="props.isMap" :location="{lat : props.form.latitude, lng : props.form.longitude}" :position="location"/>
+                <div class="mb-5 flex items-center justify-center p-1 rounded-full bg-mate w-fit mx-auto">
+                    <button type="button"
+                            @click.prevent="setEntryMode('manual')"
+                            :class="entryMode === 'manual' ? 'text-white bg-secondary' : ''"
+                            class="text-sm capitalize h-8 px-3 rounded-full">
+                        {{ $t('label.enter_manually') }}
+                    </button>
+                    <button type="button"
+                            @click.prevent="setEntryMode('map')"
+                            :class="entryMode === 'map' ? 'text-white bg-secondary' : ''"
+                            class="text-sm capitalize h-8 px-3 rounded-full">
+                        {{ $t('label.use_map') }}
+                    </button>
+                </div>
+
+                <p v-if="entryMode === 'manual'" class="mb-4 text-xs text-paragraph text-center">
+                    {{ $t('message.manual_address_temporary_note') }}
+                </p>
+
+                <MapComponent
+                    :key="mapKey"
+                    v-if="entryMode === 'map' && props.isMap"
+                    :location="{lat : props.form.latitude, lng : props.form.longitude}"
+                    :position="location"/>
+
                 <form @submit.prevent="save">
-                    <div v-if="props.form.address" class="flex items-center gap-2 mb-5">
+                    <div v-if="entryMode === 'manual'" class="mb-5">
+                        <label class="text-xs mb-2 capitalize block required">{{ $t('label.address') }}</label>
+                        <textarea
+                            v-model="props.form.address"
+                            rows="3"
+                            class="w-full px-4 py-3 rounded-lg border border-gray-200"
+                            :placeholder="$t('label.enter_full_address')"></textarea>
+                        <small class="db-field-alert" v-if="errors.address">{{ errors.address[0] }}</small>
+                    </div>
+
+                    <div v-else-if="props.form.address" class="flex items-center gap-2 mb-5">
                         <i class="lab-fill-location text-xl text-primary"></i>
                         <span class="text-sm text-heading">{{ props.form.address }}</span>
                     </div>
@@ -50,7 +84,7 @@
                         </div>
                     </div>
                     <button type="submit" class="w-full h-12 leading-12 px-4 text-center rounded-3xl capitalize font-medium bg-primary text-white">
-                        {{ $t('button.confirm_location') }}
+                        {{ entryMode === 'manual' ? $t('button.save_address') : $t('button.confirm_location') }}
                     </button>
                 </form>
             </div>
@@ -65,6 +99,7 @@ import MapComponent from "../../common/MapComponent.vue";
 import {useModal} from "../../../composables/modal.js";
 import labelEnum from "../../../enums/modules/labelEnum.js";
 import {useFrontendAddressStore} from "../../../stores/frontendAddress.js";
+import {useFrontendCartStore} from "../../../stores/frontendCart.js";
 import alertService from "../../../services/alertService.js";
 
 export default {
@@ -75,12 +110,15 @@ export default {
         getLocation: Function
     },
     setup() {
-        const {closeModal}         = useModal();
+        const {closeModal, openModal} = useModal();
         const frontendAddressStore = useFrontendAddressStore();
+        const frontendCartStore = useFrontendCartStore();
 
         return {
             closeModal,
-            frontendAddressStore
+            openModal,
+            frontendAddressStore,
+            frontendCartStore
         }
     },
     data() {
@@ -94,9 +132,39 @@ export default {
             mapKey: "create-update",
             labelEnum: labelEnum,
             errors: {},
+            entryMode: 'manual',
+            // Temporary defaults for testing without Google Maps
+            defaultLatitude: '24.8607',
+            defaultLongitude: '67.0011',
+        }
+    },
+    computed: {
+        restaurant() {
+            return this.frontendCartStore.restaurant || {};
         }
     },
     methods: {
+        openManualByDefault() {
+            this.setEntryMode('manual');
+            this.openModal('new-address-modal');
+        },
+        setEntryMode(mode) {
+            this.entryMode = mode;
+            this.props.isMap = mode === 'map';
+            if (mode === 'manual') {
+                this.applyDefaultCoordinates();
+            }
+        },
+        applyDefaultCoordinates() {
+            const lat = this.restaurant.latitude || this.defaultLatitude;
+            const lng = this.restaurant.longitude || this.defaultLongitude;
+            if (!this.props.form.latitude) {
+                this.props.form.latitude = String(lat);
+            }
+            if (!this.props.form.longitude) {
+                this.props.form.longitude = String(lng);
+            }
+        },
         changeSwitchLabel: function (id) {
             this.props.switchLabel = id;
         },
@@ -109,6 +177,7 @@ export default {
             this.closeModal('new-address-modal');
             this.frontendAddressStore.reset();
             this.errors                   = {};
+            this.entryMode                = 'manual';
             this.$props.props.form        = {
                 address: "",
                 apartment: "",
@@ -122,6 +191,18 @@ export default {
         },
         save: function () {
             try {
+                if (this.entryMode === 'manual') {
+                    this.applyDefaultCoordinates();
+                    if (!this.props.form.address || !String(this.props.form.address).trim()) {
+                        this.errors = {address: [this.$t('message.address_required')]};
+                        return;
+                    }
+                    if (!this.props.form.label) {
+                        this.errors = {label: [this.$t('message.label_required')]};
+                        return;
+                    }
+                }
+
                 const tempId          = this.frontendAddressStore.temp.temp_id;
                 this.loading.isActive = true;
                 this.frontendAddressStore.save(this.props).then((res) => {
@@ -139,10 +220,14 @@ export default {
                     this.props.isMap       = false;
                     this.props.status      = false;
                     this.props.switchLabel = "";
+                    this.entryMode         = 'manual';
                     this.errors            = {};
                 }).catch((err) => {
                     this.loading.isActive = false;
-                    this.errors           = err.response.data.errors;
+                    this.errors           = err.response?.data?.errors || {};
+                    if (err.response?.data?.message && !this.errors.address) {
+                        alertService.error(err.response.data.message);
+                    }
                 })
             } catch (err) {
                 this.loading.isActive = false;

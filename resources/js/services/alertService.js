@@ -1,4 +1,5 @@
 import {useToast} from "vue-toastification";
+import VueSimpleAlert from "vue3-simple-alert";
 /*
  * Position
  * --------------
@@ -43,6 +44,21 @@ export default {
         toast.error(message, {
             position: position,
         });
+    },
+
+    /**
+     * Temporary OTP popup until SMS credentials are configured.
+     * Remove or gate this when real SMS delivery is enabled.
+     */
+    showOtp: function (otp) {
+        if (!otp) {
+            return Promise.resolve(false);
+        }
+        return VueSimpleAlert.alert(
+            `Your OTP is: ${otp}\n\nTemporary popup — SMS gateway credentials are not configured yet.`,
+            'OTP Code',
+            'info'
+        );
     },
 
     successFlip: function (status = null, message = "", position = "top-right") {
