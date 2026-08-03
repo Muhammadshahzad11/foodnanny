@@ -52,6 +52,7 @@ use App\Http\Controllers\Admin\CollectionController;
 use App\Http\Controllers\Admin\OrderSetupController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RestaurantController;
+use App\Http\Controllers\Admin\RestaurantTableController;
 use App\Http\Controllers\Admin\SmsGatewayController;
 use App\Http\Controllers\Admin\AiAgentController;
 use App\Http\Controllers\Admin\SubscriberController;
@@ -319,6 +320,15 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
             Route::match(['put', 'patch'], '/{administrator}/{address}', [AdministratorAddressController::class, 'update']);
             Route::delete('/{administrator}/{address}', [AdministratorAddressController::class, 'destroy']);
         });
+    });
+
+    Route::prefix('table')->name('table.')->group(function () {
+        Route::get('/', [RestaurantTableController::class, 'index']);
+        Route::post('/', [RestaurantTableController::class, 'store']);
+        Route::get('/show/{restaurantTable}', [RestaurantTableController::class, 'show']);
+        Route::match(['put', 'patch'], '/{restaurantTable}', [RestaurantTableController::class, 'update']);
+        Route::delete('/{restaurantTable}', [RestaurantTableController::class, 'destroy']);
+        Route::post('/change-status/{restaurantTable}', [RestaurantTableController::class, 'changeStatus']);
     });
 
     Route::prefix('employee')->name('employee.')->group(function () {

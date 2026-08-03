@@ -23,6 +23,7 @@ class Order extends Model implements HasMedia
         'token',
         'user_id',
         'restaurant_id',
+        'table_id',
         'subtotal',
         'discount',
         'delivery_fee',
@@ -56,6 +57,7 @@ class Order extends Model implements HasMedia
         'token'                => 'string',
         'user_id'              => 'integer',
         'restaurant_id'        => 'integer',
+        'table_id'             => 'integer',
         'subtotal'             => 'decimal:6',
         'discount'             => 'decimal:6',
         'delivery_fee'         => 'decimal:6',
@@ -112,6 +114,11 @@ class Order extends Model implements HasMedia
     public function restaurant(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
+    }
+
+    public function diningTable(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(RestaurantTable::class, 'table_id');
     }
 
     public function deliveryBoy(): \Illuminate\Database\Eloquent\Relations\BelongsTo

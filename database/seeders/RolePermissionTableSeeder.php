@@ -52,6 +52,11 @@ class RolePermissionTableSeeder extends Seeder
                 ['name' => 'employees_edit'],
                 ['name' => 'employees_delete'],
                 ['name' => 'employees_show'],
+                ['name' => 'tables'],
+                ['name' => 'tables_create'],
+                ['name' => 'tables_edit'],
+                ['name' => 'tables_delete'],
+                ['name' => 'tables_show'],
             ];
             $restaurantOwnerPermissions = Permission::whereIn('name', $restaurantOwnerPermissions)->get();
             $restaurantOwner->givePermissionTo($restaurantOwnerPermissions);
@@ -121,6 +126,9 @@ class RolePermissionTableSeeder extends Seeder
                 ['name' => 'payouts_show'],
                 ['name' => 'sales-report'],
                 ['name' => 'items-report'],
+                ['name' => 'tables'],
+                ['name' => 'tables_show'],
+                ['name' => 'tables_edit'],
             ];
             $manager->givePermissionTo(Permission::whereIn('name', $managerPermissions)->get());
         }

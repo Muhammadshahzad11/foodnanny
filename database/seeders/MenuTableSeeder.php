@@ -475,6 +475,16 @@ class MenuTableSeeder extends Seeder
                         'updated_at' => now()
                     ],
                     [
+                        'name'       => 'Tables',
+                        'language'   => 'tables',
+                        'url'        => 'tables',
+                        'icon'       => 'lab lab-line-restaurants',
+                        'priority'   => 95,
+                        'status'     => 1,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ],
+                    [
                         'name'       => 'System Settings',
                         'language'   => 'system_settings',
                         'url'        => 'system-settings',

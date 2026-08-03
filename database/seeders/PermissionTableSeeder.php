@@ -768,6 +768,53 @@ class PermissionTableSeeder extends Seeder
                 ]
             ],
             [
+                'title'      => 'Tables',
+                'name'       => 'tables',
+                'type'       => PermissionType::BOTH,
+                'guard_name' => 'sanctum',
+                'url'        => 'tables',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'children'   => [
+                    [
+                        'title'      => 'Tables Create',
+                        'name'       => 'tables_create',
+                        'type'       => PermissionType::BOTH,
+                        'guard_name' => 'sanctum',
+                        'url'        => 'tables/create',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                    [
+                        'title'      => 'Tables Edit',
+                        'name'       => 'tables_edit',
+                        'type'       => PermissionType::BOTH,
+                        'guard_name' => 'sanctum',
+                        'url'        => 'tables/edit',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                    [
+                        'title'      => 'Tables Delete',
+                        'name'       => 'tables_delete',
+                        'type'       => PermissionType::BOTH,
+                        'guard_name' => 'sanctum',
+                        'url'        => 'tables/delete',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                    [
+                        'title'      => 'Tables Show',
+                        'name'       => 'tables_show',
+                        'type'       => PermissionType::BOTH,
+                        'guard_name' => 'sanctum',
+                        'url'        => 'tables/show',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                ]
+            ],
+            [
                 'title'      => 'Restaurant Owners',
                 'name'       => 'restaurant-owners',
                 'type'       => PermissionType::ADMIN,
