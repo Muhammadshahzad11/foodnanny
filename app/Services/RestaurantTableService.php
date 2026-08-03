@@ -188,7 +188,7 @@ class RestaurantTableService
     /**
      * @throws Exception
      */
-    protected function assertCanManage(RestaurantTable $restaurantTable): void
+    public function assertCanManage(RestaurantTable $restaurantTable): void
     {
         $scoped = (int) $this->restaurant();
         if ($scoped > 0 && (int) $restaurantTable->restaurant_id !== $scoped) {

@@ -8,6 +8,11 @@ export const useRestaurantTableStore = defineStore('restaurantTable', {
         page: {},
         pagination: [],
         show: {},
+        qrPreview: {},
+        printSheet: {
+            items: [],
+            instruction: "",
+        },
         temp: {
             temp_id: null,
             isEditing: false,
@@ -85,6 +90,93 @@ export const useRestaurantTableStore = defineStore('restaurantTable', {
                     status: payload.status
                 }).then((res) => {
                     this.fetch(payload.search).then().catch();
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        fetchQrPreview: function (id) {
+            return new Promise((resolve, reject) => {
+                axios.get(`admin/table-qr/preview/${id}`).then((res) => {
+                    this.qrPreview = res.data.data;
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        generateQr: function (id) {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/table-qr/generate/${id}`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        regenerateQr: function (id) {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/table-qr/regenerate/${id}`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        generateMissingQr: function () {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/table-qr/generate-missing`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        generateAllQr: function () {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/table-qr/generate-all`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        regenerateSelectedQr: function (ids) {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/table-qr/regenerate-selected`, {ids}).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        downloadQr: function (id, format = 'png') {
+            return new Promise((resolve, reject) => {
+                axios.get(`admin/table-qr/download/${id}?format=${format}`, {
+                    responseType: 'blob'
+                }).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        bulkDownloadQr: function (ids) {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/table-qr/bulk-download`, {ids}, {
+                    responseType: 'blob'
+                }).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        printData: function (ids) {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/table-qr/print-data`, {ids}).then((res) => {
+                    this.printSheet = res.data.data;
                     resolve(res);
                 }).catch((err) => {
                     reject(err);

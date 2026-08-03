@@ -53,6 +53,7 @@ use App\Http\Controllers\Admin\OrderSetupController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RestaurantController;
 use App\Http\Controllers\Admin\RestaurantTableController;
+use App\Http\Controllers\Admin\RestaurantTableQrController;
 use App\Http\Controllers\Admin\SmsGatewayController;
 use App\Http\Controllers\Admin\AiAgentController;
 use App\Http\Controllers\Admin\SubscriberController;
@@ -122,6 +123,7 @@ use App\Http\Controllers\Frontend\RiderTipController as FrontendRiderTipControll
 use App\Http\Controllers\Frontend\TimeSlotController as FrontendTimeSlotController;
 use App\Http\Controllers\Frontend\AboutStepsController as FrontendAboutStepsController;
 use App\Http\Controllers\Frontend\RestaurantController as FrontendRestaurantController;
+use App\Http\Controllers\Frontend\TableQrResolveController;
 use App\Http\Controllers\Frontend\SubscriberController as FrontendSubscriberController;
 use App\Http\Controllers\Frontend\CountryCodeController as FrontendCountryCodeController;
 use App\Http\Controllers\Frontend\ItemCategoryController as FrontendItemCategoryController;
@@ -329,6 +331,18 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::match(['put', 'patch'], '/{restaurantTable}', [RestaurantTableController::class, 'update']);
         Route::delete('/{restaurantTable}', [RestaurantTableController::class, 'destroy']);
         Route::post('/change-status/{restaurantTable}', [RestaurantTableController::class, 'changeStatus']);
+    });
+
+    Route::prefix('table-qr')->name('table-qr.')->group(function () {
+        Route::get('/preview/{restaurantTable}', [RestaurantTableQrController::class, 'preview']);
+        Route::post('/generate/{restaurantTable}', [RestaurantTableQrController::class, 'generate']);
+        Route::post('/regenerate/{restaurantTable}', [RestaurantTableQrController::class, 'regenerate']);
+        Route::get('/download/{restaurantTable}', [RestaurantTableQrController::class, 'download']);
+        Route::post('/generate-missing', [RestaurantTableQrController::class, 'generateMissing']);
+        Route::post('/generate-all', [RestaurantTableQrController::class, 'generateAll']);
+        Route::post('/regenerate-selected', [RestaurantTableQrController::class, 'regenerateSelected']);
+        Route::post('/bulk-download', [RestaurantTableQrController::class, 'bulkDownload']);
+        Route::post('/print-data', [RestaurantTableQrController::class, 'printData']);
     });
 
     Route::prefix('employee')->name('employee.')->group(function () {
@@ -913,6 +927,10 @@ Route::prefix('frontend')->name('frontend.')->middleware(['installed', 'apiKey',
         Route::get('/', [FrontendPageController::class, 'index']);
         Route::get('/show/{page:slug}', [FrontendPageController::class, 'show']);
         Route::get('/page-info/{page}', [FrontendPageController::class, 'show']);
+    });
+
+    Route::prefix('table-qr')->name('table-qr.')->group(function () {
+        Route::get('/resolve/{token}', [TableQrResolveController::class, 'resolve']);
     });
 
     Route::prefix('language')->name('language.')->group(function () {

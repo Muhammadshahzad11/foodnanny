@@ -23,6 +23,12 @@ class RestaurantTableResource extends JsonResource
             'zone'          => $this->zone,
             'status'        => $this->status,
             'notes'         => $this->notes,
+            'uuid'          => $this->uuid,
+            'has_qr'        => $this->hasQr(),
+            'qr_version'    => $this->qr_version,
+            'qr_generated_at' => $this->qr_generated_at,
+            'qr_url'        => $this->qr_url,
+            'qr_image_url'  => $this->qrImageUrl(),
             'created_by'    => $this->whenLoaded('creator', function () {
                 return [
                     'id'   => $this->creator?->id,

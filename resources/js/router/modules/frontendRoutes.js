@@ -43,6 +43,16 @@ export default [
         }
     },
     {
+        path: "/t/:token",
+        component: () => import("../../components/frontend/tableQr/TableQrEntryComponent.vue"),
+        name: "frontend.tableQrEntry",
+        meta: {
+            template: "frontend",
+            auth: false,
+            mode: "main"
+        }
+    },
+    {
         path: "/offer-and-campaign/:slug/:type",
         component: OfferAndCampaign,
         name: "frontend.offerAndCampaign",
