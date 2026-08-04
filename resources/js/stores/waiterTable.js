@@ -43,7 +43,7 @@ export const useWaiterTableStore = defineStore('waiterTable', {
                 });
             });
         },
-        show(id) {
+        view(id) {
             return new Promise((resolve, reject) => {
                 axios.get(`admin/waiter/tables/${id}`).then((res) => {
                     this.show = res.data.data;

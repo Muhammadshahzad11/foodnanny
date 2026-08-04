@@ -13,7 +13,7 @@
     </div>
     <div v-if="theme === 'admin'">
         <main :class="sidebar ? 'ltr:lg:pl-64 rtl:lg:pr-64' : 'ltr:pl-0 rtl:pr-0'"
-            class="pt-[70px] md:pt-16 font-admin text-paragraph transition-all duration-300">
+            class="pt-20 font-admin text-paragraph transition-all duration-300">
             <BackendNavbarComponent />
             <BackendMenuComponent />
             <section class="p-3 lg:p-5">

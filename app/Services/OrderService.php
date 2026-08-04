@@ -241,7 +241,12 @@ class OrderService
                     ]);
                 }
             });
-            return $this->order;
+            $order = $this->order->fresh();
+            if ($order) {
+                app(KitchenOrderService::class)->notifyNewKitchenOrder($order);
+            }
+
+            return $order;
         } catch (Exception $exception) {
             DB::rollBack();
             Log::info($exception->getMessage());

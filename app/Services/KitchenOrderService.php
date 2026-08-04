@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\Ask;
 use App\Enums\KitchenItemStatus;
+use App\Enums\KitchenPriority;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Http\Requests\PaginateRequest;
@@ -106,12 +107,19 @@ class KitchenOrderService
                     'orderItems.orderItem:id,name',
                 ]);
 
-            if ($period === 'today' || empty($requests['from_date'])) {
+            if (!empty($requests['from_date']) || !empty($requests['to_date'])) {
+                // explicit date range — skip default today filter
+            } elseif ($period === 'today' || empty($period)) {
                 $query->whereDate('order_datetime', Carbon::today()->toDateString());
             }
 
             if (!empty($requests['status'])) {
-                $query->where('status', (int) $requests['status']);
+                $status = (int) $requests['status'];
+                if ($status === OrderStatus::CANCELED) {
+                    $query->whereIn('status', [OrderStatus::CANCELED, OrderStatus::REJECTED]);
+                } else {
+                    $query->where('status', $status);
+                }
             } else {
                 // Default active kitchen board
                 $query->whereIn('status', [
@@ -131,6 +139,15 @@ class KitchenOrderService
             if (!empty($requests['kitchen_station_id'])) {
                 $query->where('kitchen_station_id', $requests['kitchen_station_id']);
             }
+            if (isset($requests['kitchen_priority']) && $requests['kitchen_priority'] !== '') {
+                $query->where('kitchen_priority', (int) $requests['kitchen_priority']);
+            }
+            if (!empty($requests['from_date'])) {
+                $query->whereDate('order_datetime', '>=', $requests['from_date']);
+            }
+            if (!empty($requests['to_date'])) {
+                $query->whereDate('order_datetime', '<=', $requests['to_date']);
+            }
 
             if ($search !== '') {
                 $query->where(function ($inner) use ($search) {
@@ -149,11 +166,14 @@ class KitchenOrderService
             }
 
             match ($sort) {
-                'priority' => $query->orderByDesc('kitchen_priority')->orderBy('order_datetime'),
+                'priority' => $query->orderByDesc('kitchen_priority')->orderBy('order_datetime')->orderBy('id'),
+                'oldest' => $query->orderBy('order_datetime')->orderBy('id'),
+                'preparation_time' => $query->orderBy('preparation_time')->orderBy('order_datetime'),
                 'table' => $query->orderBy('table_id')->orderBy('order_datetime'),
                 'waiter' => $query->orderBy('waiter_id')->orderBy('order_datetime'),
                 'order_number' => $query->orderBy('order_serial_no'),
-                default => $query->orderBy('order_datetime')->orderBy('id'),
+                // Highest priority, then oldest waiting
+                default => $query->orderByDesc('kitchen_priority')->orderBy('order_datetime')->orderBy('id'),
             };
 
             return $query->$method($methodValue);
@@ -193,11 +213,27 @@ class KitchenOrderService
     }
 
     /**
+     * Called when waiter/POS activates an order for the kitchen board.
+     * Module 7 will broadcast from afterKitchenTransition.
+     */
+    public function notifyNewKitchenOrder(Order $order): void
+    {
+        try {
+            $order = $order->loadMissing(['diningTable', 'waiter', 'user', 'restaurant']);
+            $this->afterKitchenTransition($order, 'created', (int) $order->status);
+        } catch (Exception $exception) {
+            Log::info($exception->getMessage());
+        }
+    }
+
+    /**
      * @throws Exception
      */
     public function accept(Order $order, ?string $updatedAt = null): Order
     {
         return $this->transition($order, OrderStatus::ACCEPT, 'accept', $updatedAt, function (Order $order) {
+            $this->assertMutable($order);
+
             if (!in_array((int) $order->status, [OrderStatus::PENDING, OrderStatus::ACCEPT], true)) {
                 throw new Exception(trans('all.message.kitchen_invalid_transition'), 422);
             }
@@ -226,6 +262,8 @@ class KitchenOrderService
     public function preparing(Order $order, ?string $updatedAt = null): Order
     {
         return $this->transition($order, OrderStatus::PREPARING, 'preparing', $updatedAt, function (Order $order) {
+            $this->assertMutable($order);
+
             if (!in_array((int) $order->status, [OrderStatus::ACCEPT, OrderStatus::PREPARING], true)) {
                 throw new Exception(trans('all.message.kitchen_invalid_transition'), 422);
             }
@@ -250,6 +288,8 @@ class KitchenOrderService
     public function ready(Order $order, ?string $updatedAt = null): Order
     {
         return $this->transition($order, OrderStatus::PREPARED, 'ready', $updatedAt, function (Order $order) {
+            $this->assertMutable($order);
+
             if (!in_array((int) $order->status, [OrderStatus::PREPARING, OrderStatus::PREPARED], true)) {
                 throw new Exception(trans('all.message.kitchen_invalid_transition'), 422);
             }
@@ -273,14 +313,78 @@ class KitchenOrderService
     /**
      * @throws Exception
      */
+    public function reject(Order $order, ?string $reason = null, ?string $updatedAt = null): Order
+    {
+        return $this->transition($order, OrderStatus::REJECTED, 'reject', $updatedAt, function (Order $order) use ($reason) {
+            $this->assertMutable($order);
+
+            if (!in_array((int) $order->status, [
+                OrderStatus::PENDING,
+                OrderStatus::ACCEPT,
+                OrderStatus::PREPARING,
+            ], true)) {
+                throw new Exception(trans('all.message.kitchen_invalid_transition'), 422);
+            }
+
+            $order->status = OrderStatus::REJECTED;
+            $order->reason = $reason ?: $order->reason;
+            $order->save();
+
+            return ['reason' => $reason];
+        });
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function cancel(Order $order, ?string $reason = null, ?string $updatedAt = null): Order
+    {
+        return $this->transition($order, OrderStatus::CANCELED, 'cancel', $updatedAt, function (Order $order) use ($reason) {
+            $this->assertMutable($order);
+
+            if (!in_array((int) $order->status, [
+                OrderStatus::PENDING,
+                OrderStatus::ACCEPT,
+                OrderStatus::PREPARING,
+                OrderStatus::PREPARED,
+            ], true)) {
+                throw new Exception(trans('all.message.kitchen_invalid_transition'), 422);
+            }
+
+            $order->status = OrderStatus::CANCELED;
+            $order->reason = $reason ?: $order->reason;
+            $order->save();
+
+            return ['reason' => $reason];
+        });
+    }
+
+    /**
+     * @throws Exception
+     */
     public function updatePriority(Order $order, int $priority): Order
     {
         try {
             $this->assertKitchenOrder($order);
-            $order->kitchen_priority = max(0, min(100, $priority));
+            $this->assertMutable($order);
+
+            $allowed = [
+                KitchenPriority::NORMAL,
+                KitchenPriority::HIGH,
+                KitchenPriority::URGENT,
+                KitchenPriority::VIP,
+            ];
+            if (!in_array($priority, $allowed, true)) {
+                throw new Exception(trans('all.message.kitchen_invalid_priority'), 422);
+            }
+
+            $order->kitchen_priority = $priority;
             $order->save();
 
-            return $this->show($order->fresh());
+            $fresh = $this->show($order->fresh());
+            $this->afterKitchenTransition($fresh, 'priority', (int) $order->status);
+
+            return $fresh;
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             throw new Exception(
@@ -300,12 +404,13 @@ class KitchenOrderService
         try {
             $order = $this->show($order);
 
-            $payload = $this->buildTicketPayload($order);
-
             $ticket = KitchenTicket::query()
                 ->where('order_id', $order->id)
                 ->latest('id')
                 ->first();
+
+            $isReprint = (bool) $ticket;
+            $payload   = $this->buildTicketPayload($order, $isReprint);
 
             if (!$ticket) {
                 $ticket = KitchenTicket::create([
@@ -327,10 +432,12 @@ class KitchenOrderService
                 $ticket->refresh();
             }
 
-            $this->logStatus($order, (int) $order->status, (int) $order->status, 'print', [
+            $this->logStatus($order, (int) $order->status, (int) $order->status, $isReprint ? 'reprint' : 'print', [
                 'ticket_id'   => $ticket->id,
                 'print_count' => $ticket->print_count,
             ]);
+
+            $this->afterKitchenTransition($order, $isReprint ? 'reprint' : 'print', (int) $order->status);
 
             return [
                 'ticket'  => $ticket,
@@ -408,13 +515,15 @@ class KitchenOrderService
      */
     protected function transition(Order $order, int $toStatus, string $action, ?string $updatedAt, callable $mutator): Order
     {
+        $fromStatus = null;
         try {
-            DB::transaction(function () use ($order, $toStatus, $action, $updatedAt, $mutator) {
+            DB::transaction(function () use ($order, $toStatus, $action, $updatedAt, $mutator, &$fromStatus) {
                 $locked = Order::query()->whereKey($order->id)->lockForUpdate()->first();
                 $this->assertKitchenOrder($locked);
                 $this->assertOptimisticLock($locked, $updatedAt);
 
                 $from = (int) $locked->status;
+                $fromStatus = $from;
                 $meta = $mutator($locked);
                 if (!is_array($meta)) {
                     $meta = [];
@@ -424,7 +533,10 @@ class KitchenOrderService
                 $this->order = $locked->fresh();
             });
 
-            return $this->show($this->order);
+            $shown = $this->show($this->order);
+            $this->afterKitchenTransition($shown, $action, $fromStatus);
+
+            return $shown;
         } catch (Exception $exception) {
             DB::rollBack();
             Log::info($exception->getMessage());
@@ -436,6 +548,39 @@ class KitchenOrderService
     }
 
     protected object $order;
+
+    /**
+     * Terminal kitchen states cannot be mutated.
+     *
+     * @throws Exception
+     */
+    protected function assertMutable(Order $order): void
+    {
+        if (in_array((int) $order->status, [
+            OrderStatus::DELIVERED,
+            OrderStatus::CANCELED,
+            OrderStatus::REJECTED,
+            OrderStatus::RETURNED,
+        ], true)) {
+            throw new Exception(trans('all.message.kitchen_order_locked_terminal'), 422);
+        }
+    }
+
+    /**
+     * Module 7 seam: realtime broadcast / notifications hook.
+     * Intentionally empty in Module 6 — keep all mutations here so Module 7
+     * can broadcast without changing controllers or Vue action flow.
+     */
+    protected function afterKitchenTransition(Order $order, string $action, ?int $previousStatus = null): void
+    {
+        try {
+            app(\App\Services\RealtimePublisher::class)->kitchenOrder($order, $action, $previousStatus, [
+                'status' => (int) $order->status,
+            ]);
+        } catch (\Throwable $e) {
+            Log::info('afterKitchenTransition: ' . $e->getMessage());
+        }
+    }
 
     protected function bumpItemKitchenStatus(Order $order, int $kitchenStatus): void
     {
@@ -457,16 +602,21 @@ class KitchenOrderService
         ]);
     }
 
-    protected function buildTicketPayload(Order $order): array
+    protected function buildTicketPayload(Order $order, bool $reprint = false): array
     {
         $items = $order->orderItems->map(function ($item) {
+            $variations = json_decode($item->item_variations, true);
+            $extras     = json_decode($item->item_extras, true);
+
             return [
-                'name'            => $item->orderItem?->name,
-                'quantity'        => $item->quantity,
-                'instruction'     => $item->instruction,
-                'item_variations' => json_decode($item->item_variations, true),
-                'item_extras'     => json_decode($item->item_extras, true),
-                'kitchen_status'  => $item->kitchen_status,
+                'name'             => $item->orderItem?->name,
+                'quantity'         => $item->quantity,
+                'instruction'      => $item->instruction,
+                'item_variations'  => $variations,
+                'item_extras'      => $extras,
+                'variation_lines'  => $this->variationLines(is_array($variations) ? $variations : null),
+                'extra_lines'      => $this->extraLines(is_array($extras) ? $extras : null),
+                'kitchen_status'   => $item->kitchen_status,
             ];
         })->values()->all();
 
@@ -488,9 +638,47 @@ class KitchenOrderService
             'status'            => $order->status,
             'status_name'       => trans('order_status.' . $order->status),
             'priority'          => $order->kitchen_priority,
+            'priority_label'    => KitchenPriority::LABELS[$order->kitchen_priority] ?? 'normal',
             'station'           => $order->kitchenStation?->name,
             'items'             => $items,
             'printed_at'        => AppLibrary::datetime(now()),
+            'reprint'           => $reprint,
         ];
+    }
+
+    protected function variationLines(?array $variations): array
+    {
+        if (!$variations) {
+            return [];
+        }
+        if (isset($variations['names']) && is_array($variations['names'])) {
+            return array_values(array_filter($variations['names']));
+        }
+        if (array_is_list($variations)) {
+            return array_values(array_filter(array_map(
+                fn ($v) => $v['name'] ?? $v['variation_name'] ?? null,
+                $variations
+            )));
+        }
+
+        return [];
+    }
+
+    protected function extraLines(?array $extras): array
+    {
+        if (!$extras) {
+            return [];
+        }
+        if (isset($extras['names']) && is_array($extras['names'])) {
+            return array_values(array_filter($extras['names']));
+        }
+        if (array_is_list($extras)) {
+            return array_values(array_filter(array_map(
+                fn ($e) => $e['name'] ?? null,
+                $extras
+            )));
+        }
+
+        return [];
     }
 }

@@ -23,8 +23,8 @@
     <div v-if="isPwaViewed && showInstall" ref="pwaStickyFooter"
          class="lg:hidden border-none bg-white p-4 fixed bottom-0 left-0 w-full z-80 rounded-tl-3xl rounded-tr-3xl shadow-paper">
         <div class="flex items-start gap-3 mb-3">
-            <img :src="setting.theme_favicon_logo" alt="theme-favicon-logo"
-                 class="w-8 h-8 rounded-lg flex-shrink-0 shadow-xl">
+            <img :src="setting.theme_favicon_logo" alt="Cost to Cost Foods"
+                 class="w-12 h-12 rounded-xl flex-shrink-0 shadow-xl object-contain bg-white">
             <h3 class="text-sm flex-auto text-[#008BBA]">
                 {{ $t('message.add_app_to_your_home_screen', {title: setting.company_name}) }}
             </h3>

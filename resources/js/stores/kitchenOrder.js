@@ -40,6 +40,18 @@ export const useKitchenOrderStore = defineStore('kitchenOrder', {
                 }).catch(reject);
             });
         },
+        upsertLocal(order) {
+            if (!order?.id) return;
+            const idx = this.lists.findIndex((o) => o.id === order.id);
+            if (idx >= 0) {
+                this.lists.splice(idx, 1, order);
+            } else {
+                this.lists.unshift(order);
+            }
+            if (this.show?.id === order.id) {
+                this.show = order;
+            }
+        },
         view(id) {
             return new Promise((resolve, reject) => {
                 axios.get(`admin/kitchen/orders/${id}`).then((res) => {
@@ -51,7 +63,7 @@ export const useKitchenOrderStore = defineStore('kitchenOrder', {
         accept(id, updatedAt = null) {
             return new Promise((resolve, reject) => {
                 axios.post(`admin/kitchen/orders/${id}/accept`, {updated_at: updatedAt}).then((res) => {
-                    this.show = res.data.data;
+                    this.upsertLocal(res.data.data);
                     resolve(res);
                 }).catch(reject);
             });
@@ -59,7 +71,7 @@ export const useKitchenOrderStore = defineStore('kitchenOrder', {
         preparing(id, updatedAt = null) {
             return new Promise((resolve, reject) => {
                 axios.post(`admin/kitchen/orders/${id}/preparing`, {updated_at: updatedAt}).then((res) => {
-                    this.show = res.data.data;
+                    this.upsertLocal(res.data.data);
                     resolve(res);
                 }).catch(reject);
             });
@@ -67,7 +79,29 @@ export const useKitchenOrderStore = defineStore('kitchenOrder', {
         ready(id, updatedAt = null) {
             return new Promise((resolve, reject) => {
                 axios.post(`admin/kitchen/orders/${id}/ready`, {updated_at: updatedAt}).then((res) => {
-                    this.show = res.data.data;
+                    this.upsertLocal(res.data.data);
+                    resolve(res);
+                }).catch(reject);
+            });
+        },
+        reject(id, reason = null, updatedAt = null) {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/kitchen/orders/${id}/reject`, {
+                    reason,
+                    updated_at: updatedAt,
+                }).then((res) => {
+                    this.upsertLocal(res.data.data);
+                    resolve(res);
+                }).catch(reject);
+            });
+        },
+        cancel(id, reason = null, updatedAt = null) {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/kitchen/orders/${id}/cancel`, {
+                    reason,
+                    updated_at: updatedAt,
+                }).then((res) => {
+                    this.upsertLocal(res.data.data);
                     resolve(res);
                 }).catch(reject);
             });
@@ -77,7 +111,7 @@ export const useKitchenOrderStore = defineStore('kitchenOrder', {
                 axios.post(`admin/kitchen/orders/${id}/priority`, {
                     kitchen_priority: kitchenPriority,
                 }).then((res) => {
-                    this.show = res.data.data;
+                    this.upsertLocal(res.data.data);
                     resolve(res);
                 }).catch(reject);
             });

@@ -173,9 +173,13 @@ class RestaurantTableService
     {
         try {
             $this->assertCanManage($restaurantTable);
+            $previous = (int) $restaurantTable->status;
             $restaurantTable->update(['status' => $request->validated('status')]);
+            $fresh = $restaurantTable->fresh()->load(['restaurant:id,name', 'creator:id,name', 'editor:id,name']);
 
-            return $restaurantTable->fresh()->load(['restaurant:id,name', 'creator:id,name', 'editor:id,name']);
+            app(RealtimePublisher::class)->table($fresh, 'status', $previous);
+
+            return $fresh;
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             throw new Exception(

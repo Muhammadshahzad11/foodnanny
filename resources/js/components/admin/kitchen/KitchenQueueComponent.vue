@@ -3,15 +3,16 @@
     <KitchenTicketPrintSheet :payload="printPayload"/>
 
     <div class="col-12">
-        <div class="db-card">
-            <div class="db-card-header border-none">
+        <div class="db-card overflow-hidden">
+            <div class="db-card-header border-none !items-start gap-3">
                 <div>
                     <router-link :to="{name: 'admin.kitchen.dashboard'}" class="text-sm text-primary">
                         ← {{ $t('menu.kitchen') }}
                     </router-link>
-                    <h3 class="db-card-title mt-1">{{ $t('label.kitchen_queue') }}</h3>
+                    <h3 class="db-card-title mt-1 text-2xl">{{ $t('label.kitchen_queue') }}</h3>
+                    <p class="text-sm text-[#6E7191] mt-1">{{ $t('message.kitchen_queue_hint') }}</p>
                 </div>
-                <button type="button" class="db-btn py-2 text-white bg-primary" @click="refresh">
+                <button type="button" class="db-btn py-3 px-5 text-base text-white bg-primary" @click="refresh">
                     {{ $t('button.refresh') }}
                 </button>
             </div>
@@ -21,7 +22,7 @@
                     v-for="tab in statusTabs"
                     :key="tab.value === '' ? 'all' : tab.value"
                     type="button"
-                    class="px-4 py-2 rounded-lg text-sm font-medium border transition"
+                    class="min-h-12 px-4 py-2.5 rounded-xl text-base font-semibold border transition"
                     :class="String(filters.status) === String(tab.value)
                         ? 'bg-primary border-primary text-white'
                         : 'bg-white border-[#EFF0F6] text-heading hover:border-primary'"
@@ -31,17 +32,27 @@
                 </button>
             </div>
 
-            <form class="px-4 pb-4 grid grid-cols-1 md:grid-cols-4 gap-3" @submit.prevent="refresh">
-                <input v-model="filters.search" type="text" class="db-field-control"
+            <form class="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3" @submit.prevent="refresh">
+                <input v-model="filters.search" type="text" class="db-field-control xl:col-span-2"
                        :placeholder="$t('label.search_order_table_waiter')"/>
                 <select v-model="filters.sort" class="db-field-control">
-                    <option value="order_time">{{ $t('label.sort_order_time') }}</option>
                     <option value="priority">{{ $t('label.sort_priority') }}</option>
+                    <option value="oldest">{{ $t('label.sort_oldest') }}</option>
+                    <option value="preparation_time">{{ $t('label.sort_preparation_time') }}</option>
                     <option value="table">{{ $t('label.sort_table') }}</option>
                     <option value="waiter">{{ $t('label.sort_waiter') }}</option>
                     <option value="order_number">{{ $t('label.sort_order_number') }}</option>
                 </select>
-                <button type="submit" class="db-btn py-2 text-white bg-primary">
+                <select v-model="filters.kitchen_priority" class="db-field-control">
+                    <option value="">{{ $t('label.all_priorities') }}</option>
+                    <option :value="kitchenPriorityEnum.NORMAL">{{ $t('label.priority_normal') }}</option>
+                    <option :value="kitchenPriorityEnum.HIGH">{{ $t('label.priority_high') }}</option>
+                    <option :value="kitchenPriorityEnum.URGENT">{{ $t('label.priority_urgent') }}</option>
+                    <option :value="kitchenPriorityEnum.VIP">{{ $t('label.priority_vip') }}</option>
+                </select>
+                <input v-model="filters.from_date" type="date" class="db-field-control"/>
+                <input v-model="filters.to_date" type="date" class="db-field-control"/>
+                <button type="submit" class="db-btn py-3 text-base text-white bg-primary md:col-span-2 xl:col-span-1">
                     {{ $t('button.search') }}
                 </button>
             </form>
@@ -50,23 +61,38 @@
                 <article
                     v-for="order in orders"
                     :key="order.id"
-                    class="rounded-xl border p-4 flex flex-col gap-3 bg-white"
-                    :class="cardClass(order.status)"
+                    class="rounded-2xl border-2 p-5 flex flex-col gap-4 bg-white shadow-sm"
+                    :class="cardClass(order)"
                 >
-                    <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-start justify-between gap-3">
                         <div>
-                            <p class="text-xl font-semibold text-heading">#{{ order.order_serial_no }}</p>
-                            <p class="text-sm text-[#6E7191]">{{ order.order_time }}</p>
+                            <p class="text-3xl font-bold tracking-tight text-heading">#{{ order.order_serial_no }}</p>
+                            <p class="text-base text-[#6E7191] mt-1">{{ order.order_time }}</p>
+                            <p class="text-lg font-semibold mt-1" :class="elapsedClass(order)">
+                                ⏱ {{ elapsedLabel(order) }}
+                            </p>
                         </div>
-                        <span class="text-xs font-semibold uppercase px-2 py-1 rounded bg-[#F7F7FC] text-heading">
-                            {{ order.status_name }}
-                        </span>
+                        <div class="flex flex-col items-end gap-2">
+                            <span class="text-xs font-bold uppercase tracking-wide px-2.5 py-1.5 rounded-lg"
+                                  :class="statusChipClass(order.status)">
+                                {{ order.status_name }}
+                            </span>
+                            <span class="text-xs font-bold uppercase px-2.5 py-1.5 rounded-lg"
+                                  :class="priorityChipClass(order.kitchen_priority)">
+                                {{ priorityLabel(order) }}
+                            </span>
+                        </div>
                     </div>
 
-                    <div class="text-sm space-y-1 text-heading">
-                        <p v-if="order.table">
-                            <span class="text-[#6E7191]">{{ $t('label.table') }}:</span>
-                            {{ order.table.table_number }} · {{ order.table.name }}
+                    <div class="text-base space-y-1.5 text-heading">
+                        <p v-if="order.restaurant" class="font-medium">
+                            <span class="text-[#6E7191]">{{ $t('label.restaurant') }}:</span>
+                            {{ order.restaurant.name }}
+                        </p>
+                        <p v-if="order.table" class="text-xl font-semibold">
+                            <span class="text-[#6E7191] text-base font-normal">{{ $t('label.table') }}:</span>
+                            {{ order.table.table_number }}
+                            <span v-if="order.table.name"> · {{ order.table.name }}</span>
                         </p>
                         <p v-if="order.waiter">
                             <span class="text-[#6E7191]">{{ $t('label.waiter') }}:</span>
@@ -76,29 +102,37 @@
                             <span class="text-[#6E7191]">{{ $t('label.customer') }}:</span>
                             {{ order.customer.name }}
                         </p>
-                        <p v-if="order.accepted_by">
-                            <span class="text-[#6E7191]">{{ $t('label.accepted_by') }}:</span>
-                            {{ order.accepted_by.name }}
-                        </p>
-                        <p v-if="order.order_note" class="text-primary font-medium">
-                            {{ order.order_note }}
+                        <p v-if="order.preparation_time" class="text-[#6E7191]">
+                            {{ $t('label.preparation_time') }}: {{ order.preparation_time }} min
                         </p>
                     </div>
 
-                    <ul class="space-y-2 border-t border-[#EFF0F6] pt-3">
-                        <li v-for="item in order.order_items" :key="item.id" class="text-sm">
-                            <span class="font-semibold text-heading">{{ item.quantity }}× {{ item.item_name }}</span>
-                            <p v-if="item.instruction" class="text-primary text-xs mt-0.5">{{ item.instruction }}</p>
-                            <p v-if="variationText(item)" class="text-[#6E7191] text-xs">{{ variationText(item) }}</p>
-                            <p v-if="extraText(item)" class="text-[#6E7191] text-xs">{{ extraText(item) }}</p>
+                    <div v-if="order.order_note"
+                         class="rounded-xl px-3 py-2.5 bg-amber-50 border border-amber-200 text-amber-900 text-base font-semibold">
+                        ⚠ {{ order.order_note }}
+                    </div>
+
+                    <ul class="space-y-3 border-t border-[#EFF0F6] pt-3">
+                        <li v-for="item in order.order_items" :key="item.id" class="text-base">
+                            <p class="font-bold text-heading text-lg leading-snug">
+                                {{ item.quantity }}× {{ item.item_name }}
+                            </p>
+                            <p v-for="(line, i) in (item.variation_lines || [])" :key="'v'+i"
+                               class="text-[#4E4B66] text-sm mt-0.5 pl-1">• {{ line }}</p>
+                            <p v-for="(line, i) in (item.extra_lines || [])" :key="'e'+i"
+                               class="text-emerald-700 text-sm mt-0.5 pl-1 font-medium">+ {{ line }}</p>
+                            <p v-if="item.instruction"
+                               class="mt-1 inline-flex rounded-lg bg-rose-50 text-rose-700 px-2 py-1 text-sm font-semibold">
+                                {{ item.instruction }}
+                            </p>
                         </li>
                     </ul>
 
-                    <div class="mt-auto grid grid-cols-2 gap-2 pt-2">
+                    <div class="mt-auto grid grid-cols-2 gap-2.5 pt-2">
                         <button
                             v-if="canAccept(order)"
                             type="button"
-                            class="h-12 rounded-lg text-sm font-semibold text-white bg-sky-500"
+                            class="min-h-14 rounded-xl text-base font-bold text-white bg-sky-500 active:scale-[0.98]"
                             @click="accept(order)"
                         >
                             {{ $t('button.accept') }}
@@ -106,7 +140,7 @@
                         <button
                             v-if="canPrepare(order)"
                             type="button"
-                            class="h-12 rounded-lg text-sm font-semibold text-white bg-amber-500"
+                            class="min-h-14 rounded-xl text-base font-bold text-white bg-amber-500 active:scale-[0.98]"
                             @click="preparing(order)"
                         >
                             {{ $t('button.preparing') }}
@@ -114,21 +148,38 @@
                         <button
                             v-if="canReady(order)"
                             type="button"
-                            class="h-12 rounded-lg text-sm font-semibold text-white bg-[#1AB759]"
+                            class="min-h-14 rounded-xl text-base font-bold text-white bg-emerald-600 active:scale-[0.98]"
                             @click="ready(order)"
                         >
                             {{ $t('button.ready') }}
                         </button>
                         <button
+                            v-if="permissionChecker('kitchen_print')"
                             type="button"
-                            class="h-12 rounded-lg text-sm font-semibold text-white bg-primary"
+                            class="min-h-14 rounded-xl text-base font-bold text-white bg-primary active:scale-[0.98]"
                             @click="printTicket(order)"
                         >
                             {{ $t('button.print_kot') }}
                         </button>
+                        <button
+                            v-if="canReject(order)"
+                            type="button"
+                            class="min-h-14 rounded-xl text-base font-bold text-white bg-rose-500 active:scale-[0.98]"
+                            @click="reject(order)"
+                        >
+                            {{ $t('button.reject') }}
+                        </button>
+                        <button
+                            v-if="canCancel(order)"
+                            type="button"
+                            class="min-h-14 rounded-xl text-base font-bold border-2 border-rose-300 text-rose-700 bg-white active:scale-[0.98]"
+                            @click="cancel(order)"
+                        >
+                            {{ $t('button.cancel') }}
+                        </button>
                         <router-link
                             :to="{name: 'admin.kitchen.orders.show', params: {id: order.id}}"
-                            class="h-12 rounded-lg text-sm font-semibold border border-[#EFF0F6] text-heading flex items-center justify-center col-span-2 hover:border-primary"
+                            class="min-h-14 rounded-xl text-base font-bold border-2 border-[#EFF0F6] text-heading flex items-center justify-center col-span-2 hover:border-primary"
                         >
                             {{ $t('button.view') }}
                         </router-link>
@@ -136,7 +187,7 @@
                 </article>
             </div>
 
-            <div v-if="!orders.length" class="p-8 text-center text-[#6E7191]">
+            <div v-if="!orders.length" class="p-10 text-center text-lg text-[#6E7191]">
                 {{ $t('message.no_data_found') }}
             </div>
         </div>
@@ -148,9 +199,14 @@ import LoadingComponent from "../../common/LoadingComponent.vue";
 import KitchenTicketPrintSheet from "./KitchenTicketPrintSheet.vue";
 import {useKitchenOrderStore} from "../../../stores/kitchenOrder.js";
 import {useCommonStore} from "../../../stores/common.js";
+import {useAuthStore} from "../../../stores/auth.js";
+import {useDefaultAccessStore} from "../../../stores/defaultAccess.js";
 import orderStatusEnum from "../../../enums/modules/orderStatusEnum.js";
+import kitchenPriorityEnum from "../../../enums/modules/kitchenPriorityEnum.js";
 import alertService from "../../../services/alertService.js";
 import appService from "../../../services/appService.js";
+import {getAuthRestaurantId, subscribeRestaurantRealtime} from "../../../composables/useRealtime.js";
+import roleEnum from "../../../enums/modules/roleEnum.js";
 
 export default {
     name: "KitchenQueueComponent",
@@ -159,18 +215,27 @@ export default {
         return {
             kitchenOrderStore: useKitchenOrderStore(),
             commonStore: useCommonStore(),
-            orderStatusEnum
+            authStore: useAuthStore(),
+            defaultAccessStore: useDefaultAccessStore(),
+            orderStatusEnum,
+            kitchenPriorityEnum,
         };
     },
     data() {
         return {
             loading: {isActive: false},
             printPayload: null,
+            nowTick: Date.now(),
+            tickTimer: null,
+            unsubscribeRealtime: null,
             filters: {
                 period: 'today',
-                status: '',
+                status: this.$route.query.status || '',
                 search: '',
-                sort: 'order_time',
+                sort: 'priority',
+                kitchen_priority: '',
+                from_date: '',
+                to_date: '',
                 paginate: 0,
             }
         };
@@ -194,8 +259,38 @@ export default {
     mounted() {
         this.commonStore.update({top_sidebar: false});
         this.refresh();
+        this.tickTimer = setInterval(() => {
+            this.nowTick = Date.now();
+        }, 1000);
+        this.bindRealtime();
+    },
+    beforeUnmount() {
+        if (this.tickTimer) {
+            clearInterval(this.tickTimer);
+        }
+        if (typeof this.unsubscribeRealtime === 'function') {
+            this.unsubscribeRealtime();
+        }
     },
     methods: {
+        bindRealtime() {
+            const restaurantId = getAuthRestaurantId(this.authStore.info, this.defaultAccessStore.lists);
+            const isAdmin = Number(this.authStore.info?.role_id) === roleEnum.ADMIN;
+            this.unsubscribeRealtime = subscribeRestaurantRealtime({
+                restaurantId: restaurantId || 1,
+                roles: isAdmin ? ['admin'] : [],
+                onKitchenOrder: () => {
+                    this.refreshQuiet();
+                },
+            });
+        },
+        refreshQuiet() {
+            const payload = {...this.filters};
+            if (payload.from_date || payload.to_date) {
+                payload.period = 'custom';
+            }
+            this.kitchenOrderStore.fetch(payload).catch(() => {});
+        },
         permissionChecker(permission) {
             return appService.permissionChecker(permission);
         },
@@ -205,19 +300,66 @@ export default {
         },
         refresh() {
             this.loading.isActive = true;
-            this.kitchenOrderStore.fetch({...this.filters}).then(() => {
+            const payload = {...this.filters};
+            if (payload.from_date || payload.to_date) {
+                payload.period = 'custom';
+            }
+            this.kitchenOrderStore.fetch(payload).then(() => {
                 this.loading.isActive = false;
             }).catch((err) => {
                 this.loading.isActive = false;
                 alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
             });
         },
-        cardClass(status) {
-            if (status === orderStatusEnum.PENDING) return 'border-sky-300';
-            if (status === orderStatusEnum.ACCEPT) return 'border-sky-400';
-            if (status === orderStatusEnum.PREPARING) return 'border-amber-400';
-            if (status === orderStatusEnum.PREPARED) return 'border-emerald-400';
+        cardClass(order) {
+            if (order.status === orderStatusEnum.PENDING) return 'border-sky-400';
+            if (order.status === orderStatusEnum.ACCEPT) return 'border-sky-500';
+            if (order.status === orderStatusEnum.PREPARING) return 'border-amber-500';
+            if (order.status === orderStatusEnum.PREPARED) return 'border-emerald-500';
+            if ([orderStatusEnum.CANCELED, orderStatusEnum.REJECTED].includes(order.status)) return 'border-rose-300 opacity-80';
             return 'border-[#EFF0F6]';
+        },
+        statusChipClass(status) {
+            if (status === orderStatusEnum.PREPARING) return 'bg-amber-100 text-amber-800';
+            if (status === orderStatusEnum.PREPARED) return 'bg-emerald-100 text-emerald-800';
+            if ([orderStatusEnum.CANCELED, orderStatusEnum.REJECTED].includes(status)) return 'bg-rose-100 text-rose-800';
+            return 'bg-sky-100 text-sky-800';
+        },
+        priorityChipClass(priority) {
+            if (priority >= kitchenPriorityEnum.VIP) return 'bg-violet-100 text-violet-800';
+            if (priority >= kitchenPriorityEnum.URGENT) return 'bg-rose-100 text-rose-800';
+            if (priority >= kitchenPriorityEnum.HIGH) return 'bg-orange-100 text-orange-800';
+            return 'bg-slate-100 text-slate-700';
+        },
+        priorityLabel(order) {
+            const map = {
+                [kitchenPriorityEnum.NORMAL]: this.$t('label.priority_normal'),
+                [kitchenPriorityEnum.HIGH]: this.$t('label.priority_high'),
+                [kitchenPriorityEnum.URGENT]: this.$t('label.priority_urgent'),
+                [kitchenPriorityEnum.VIP]: this.$t('label.priority_vip'),
+            };
+            return map[order.kitchen_priority] || order.priority_label || this.$t('label.priority_normal');
+        },
+        elapsedSeconds(order) {
+            void this.nowTick;
+            const from = order.elapsed_from || order.order_datetime_iso;
+            if (!from) return 0;
+            const start = new Date(from).getTime();
+            if (Number.isNaN(start)) return 0;
+            return Math.max(0, Math.floor((Date.now() - start) / 1000));
+        },
+        elapsedLabel(order) {
+            const s = this.elapsedSeconds(order);
+            const m = Math.floor(s / 60);
+            const r = s % 60;
+            return `${m}:${String(r).padStart(2, '0')}`;
+        },
+        elapsedClass(order) {
+            const m = Math.floor(this.elapsedSeconds(order) / 60);
+            const eta = Number(order.preparation_time || 0);
+            if (eta && m >= eta) return 'text-rose-600';
+            if (eta && m >= Math.max(1, eta - 5)) return 'text-amber-600';
+            return 'text-heading';
         },
         canAccept(order) {
             return this.permissionChecker('kitchen_accept')
@@ -232,27 +374,13 @@ export default {
             return this.permissionChecker('kitchen_ready')
                 && order.status === orderStatusEnum.PREPARING;
         },
-        variationText(item) {
-            const vars = item.item_variations;
-            if (!vars) return '';
-            if (Array.isArray(vars)) {
-                return vars.map((v) => v.name || v.variation_name).filter(Boolean).join(', ');
-            }
-            if (vars.names) {
-                return Object.values(vars.names).join(', ');
-            }
-            return '';
+        canReject(order) {
+            return this.permissionChecker('kitchen_reject')
+                && [orderStatusEnum.PENDING, orderStatusEnum.ACCEPT, orderStatusEnum.PREPARING].includes(order.status);
         },
-        extraText(item) {
-            const extras = item.item_extras;
-            if (!extras) return '';
-            if (Array.isArray(extras)) {
-                return extras.map((e) => e.name).filter(Boolean).join(', ');
-            }
-            if (extras.names) {
-                return (extras.names || []).join(', ');
-            }
-            return '';
+        canCancel(order) {
+            return this.permissionChecker('kitchen_cancel')
+                && [orderStatusEnum.PENDING, orderStatusEnum.ACCEPT, orderStatusEnum.PREPARING, orderStatusEnum.PREPARED].includes(order.status);
         },
         async accept(order) {
             try {
@@ -284,12 +412,32 @@ export default {
                 alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
             }
         },
+        async reject(order) {
+            const reason = window.prompt(this.$t('message.kitchen_reject_reason'), '');
+            if (reason === null) return;
+            try {
+                this.loading.isActive = true;
+                await this.kitchenOrderStore.reject(order.id, reason || null, order.updated_at);
+                await this.refresh();
+            } catch (err) {
+                this.loading.isActive = false;
+                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+            }
+        },
+        async cancel(order) {
+            const reason = window.prompt(this.$t('message.kitchen_cancel_reason'), '');
+            if (reason === null) return;
+            try {
+                this.loading.isActive = true;
+                await this.kitchenOrderStore.cancel(order.id, reason || null, order.updated_at);
+                await this.refresh();
+            } catch (err) {
+                this.loading.isActive = false;
+                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+            }
+        },
         async printTicket(order) {
             try {
-                if (!this.permissionChecker('kitchen_print')) {
-                    alertService.error(this.$t('message.access_denied'));
-                    return;
-                }
                 this.loading.isActive = true;
                 const res = await this.kitchenOrderStore.printData(order.id);
                 this.printPayload = res.data.data.payload;

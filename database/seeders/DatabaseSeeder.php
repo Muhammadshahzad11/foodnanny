@@ -71,6 +71,7 @@ class DatabaseSeeder extends Seeder
         $this->call(OrderSetupTableSeeder::class);
         $this->call(DeliveryLocationTableSeeder::class);
         $this->call(SubscriberTableSeeder::class);
+        $this->call(ModuleTestDataSeeder::class);
 //        $this->call(PushNotificationTableSeeder::class);
 //        $this->call(OrderTableSeeder::class);
 //        $this->call(ReviewTableSeeder::class);

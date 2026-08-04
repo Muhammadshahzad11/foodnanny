@@ -1,8 +1,12 @@
 <template>
-    <aside :class="!sidebar ? 'max-lg:!translate-x-0 ltr:-translate-x-full rtl:translate-x-full' : ''" class="flex-shrink-0 w-64 h-dvh lg:h-[calc(100dvh_-_68px)] fixed top-0 lg:top-16 ltr:left-0 rtl:right-0 z-30 thin-scrolling bg-white ltr:max-lg:-translate-x-full rtl:max-lg:translate-x-full ltr:max-lg:shadow-db-sidebar-right rtl:max-lg:shadow-db-sidebar-left">
+    <aside :class="!sidebar ? 'max-lg:!translate-x-0 ltr:-translate-x-full rtl:translate-x-full' : ''" class="flex-shrink-0 w-64 h-dvh lg:h-[calc(100dvh_-_80px)] fixed top-0 lg:top-20 ltr:left-0 rtl:right-0 z-30 thin-scrolling bg-white ltr:max-lg:-translate-x-full rtl:max-lg:translate-x-full ltr:max-lg:shadow-db-sidebar-right rtl:max-lg:shadow-db-sidebar-left">
         <div class="flex lg:hidden items-center justify-between p-4">
             <router-link :to="{ name: location ? 'frontend.restaurant' : 'frontend.home' }">
-                <img class="w-28" :src="setting.theme_logo" alt="logo">
+                <img
+                    class="h-12 w-auto max-w-[200px] object-contain object-left"
+                    :src="setting.theme_logo"
+                    alt="Cost to Cost Foods"
+                >
             </router-link>
             <button @click.prevent="closeSidebar" class="lab-line-circle-cross text-lg text-danger"></button>
         </div>

@@ -180,6 +180,7 @@ import {useWaiterOrderStore} from "../../../stores/waiterOrder.js";
 import {useWaiterTableStore} from "../../../stores/waiterTable.js";
 import appService from "../../../services/appService.js";
 import alertService from "../../../services/alertService.js";
+import {apiErrorMessage} from "../../../services/apiError.js";
 import _ from "lodash";
 
 export default {
@@ -280,7 +281,7 @@ export default {
             try {
                 this.loading.isActive = true;
                 const tableId = this.$route.params.id;
-                const tableRes = await this.waiterTableStore.show(tableId);
+                const tableRes = await this.waiterTableStore.view(tableId);
                 this.table = tableRes.data.data;
 
                 const openOrder = this.table.open_order;
@@ -293,8 +294,16 @@ export default {
                     this.waiterOrderStore.setContext({tableId: Number(tableId)});
                 }
 
-                await this.itemCategories();
-                await this.itemList();
+                try {
+                    await this.itemCategories();
+                } catch (e) {
+                    alertService.warning(apiErrorMessage(e, this.$t('message.failed_to_load_categories')));
+                }
+                try {
+                    await this.itemList();
+                } catch (e) {
+                    alertService.warning(apiErrorMessage(e, this.$t('message.failed_to_load_menu_items')));
+                }
                 try {
                     const offerRes = await this.posOfferStore.fetch();
                     this.offer = offerRes.data.data || {};
@@ -304,7 +313,7 @@ export default {
                 this.loading.isActive = false;
             } catch (err) {
                 this.loading.isActive = false;
-                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+                alertService.error(apiErrorMessage(err, this.$t('message.failed_to_open_table_order')));
             }
         },
         hydrateCartFromOrder(order) {
@@ -314,12 +323,22 @@ export default {
             }
 
             const payload = order.order_items.map((item) => {
-                const variations = typeof item.item_variations === 'string'
-                    ? JSON.parse(item.item_variations || '{}')
-                    : (item.item_variations || {});
-                const extras = typeof item.item_extras === 'string'
-                    ? JSON.parse(item.item_extras || '{}')
-                    : (item.item_extras || {});
+                let variations = item.item_variations || {};
+                let extras = item.item_extras || {};
+                try {
+                    if (typeof item.item_variations === 'string') {
+                        variations = JSON.parse(item.item_variations || '{}');
+                    }
+                } catch (e) {
+                    variations = {};
+                }
+                try {
+                    if (typeof item.item_extras === 'string') {
+                        extras = JSON.parse(item.item_extras || '{}');
+                    }
+                } catch (e) {
+                    extras = {};
+                }
 
                 return {
                     discount: item.discount,
@@ -335,10 +354,18 @@ export default {
                     item_variation_total: item.item_variation_total,
                     item_variations: {
                         variations: Array.isArray(variations)
-                            ? Object.fromEntries(variations.map((v) => [v.item_attribute_id, v.id]))
+                            ? Object.fromEntries(
+                                variations
+                                    .filter((v) => v && v.item_attribute_id != null && v.id != null)
+                                    .map((v) => [v.item_attribute_id, v.id])
+                            )
                             : (variations.variations || {}),
                         names: Array.isArray(variations)
-                            ? Object.fromEntries(variations.map((v) => [v.variation_name || v.name, v.name]))
+                            ? Object.fromEntries(
+                                variations
+                                    .filter((v) => v && (v.variation_name || v.name))
+                                    .map((v) => [v.variation_name || v.name, v.name])
+                            )
                             : (variations.names || {}),
                     },
                     name: item.item_name || item.name || item.item?.name || `Item #${item.item_id}`,
@@ -471,12 +498,17 @@ export default {
                 alertService.success(this.$t('message.waiter_draft_saved'));
             } catch (err) {
                 this.loading.isActive = false;
-                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+                alertService.error(apiErrorMessage(err, this.$t('message.failed_to_save_draft')));
             }
         },
         async sendKitchen() {
             try {
                 this.loading.isActive = true;
+                if (this.carts.length === 0) {
+                    this.loading.isActive = false;
+                    alertService.warning(this.$t('message.waiter_order_requires_items'));
+                    return;
+                }
                 if (!this.waiterOrderStore.context.orderId) {
                     await this.waiterOrderStore.create(this.buildPayload(true));
                 } else {
@@ -493,7 +525,7 @@ export default {
                 alertService.success(this.$t('message.waiter_order_sent_kitchen'));
             } catch (err) {
                 this.loading.isActive = false;
-                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+                alertService.error(apiErrorMessage(err, this.$t('message.failed_to_send_kitchen')));
             }
         },
         async cancelDraft() {
@@ -508,7 +540,7 @@ export default {
                 this.$router.push({name: 'admin.waiter.tables'});
             } catch (err) {
                 this.loading.isActive = false;
-                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+                alertService.error(apiErrorMessage(err, this.$t('message.failed_to_cancel_draft')));
             }
         }
     }

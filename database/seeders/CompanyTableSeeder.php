@@ -17,7 +17,7 @@ class CompanyTableSeeder extends Seeder
     public function run(): void
     {
         Settings::group('company')->set([
-            'company_name'         => 'FoodNanny - Multi Restaurant Food Delivery App with PWA Website & Laravel Admin with AI Assistant',
+            'company_name'         => 'Cost to Cost Foods',
             'company_email'        => 'info@foodnanny.net',
             'company_phone'        => '+13333846282',
             'company_website'      => 'https://demo.foodnanny.xyz',
@@ -30,7 +30,7 @@ class CompanyTableSeeder extends Seeder
 
         $envService = new EnvEditor();
         $envService->addData([
-            'APP_NAME' => "FoodNanny - Multi Restaurant Food Delivery App with PWA Website & Laravel Admin with AI Assistant"
+            'APP_NAME' => "Cost to Cost Foods"
         ]);
         Artisan::call('optimize:clear');
     }

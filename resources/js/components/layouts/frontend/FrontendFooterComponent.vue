@@ -5,9 +5,15 @@
         <div class="container">
             <div class="row">
                 <div class="col-12 md:col-4">
-                    <div class="w-full max-w-xs tablet:text-center tablet:mx-auto">
-                        <router-link aria-current="page" class="flex-shrink-0" :to="{ name: 'frontend.home' }">
-                            <img class="w-28 sm:w-32" :src="setting.theme_footer_logo" alt="logo">
+                    <div class="w-full max-w-sm tablet:text-center tablet:mx-auto">
+                        <router-link aria-current="page" class="flex-shrink-0 inline-flex tablet:justify-center" :to="{ name: 'frontend.home' }">
+                            <span class="inline-flex items-center rounded-2xl bg-white px-4 py-3 shadow-sm">
+                                <img
+                                    class="h-14 sm:h-16 md:h-20 w-auto max-w-[260px] sm:max-w-[320px] object-contain object-left"
+                                    :src="setting.theme_footer_logo"
+                                    alt="Cost to Cost Foods"
+                                >
+                            </span>
                         </router-link>
 
                         <h4 class="mt-5 mb-3 text-xs text-white">{{ $t('message.subscribe_to_our_newsletter') }}</h4>

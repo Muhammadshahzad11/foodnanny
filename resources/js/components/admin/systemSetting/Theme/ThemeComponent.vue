@@ -9,30 +9,30 @@
             <form @submit.prevent="save">
                 <div class="form-row">
                     <div class="form-col-12 sm:form-col-6">
-                        <label for="theme_logo" class="db-field-title">{{ $t("label.logo") }} (142px,34px)</label>
+                        <label for="theme_logo" class="db-field-title">{{ $t("label.logo") }} (recommended 320×130)</label>
                         <input @change="changeLogo" v-bind:class="errors.theme_logo ? 'invalid' : ''" id="theme_logo" type="file" class="db-field-control" ref="themeLogoProperty" accept="image/png, image/jpeg, image/jpg"/>
                         <small class="db-field-alert" v-if="errors.theme_logo">{{ errors.theme_logo[0] }}</small>
-                        <img class="max-w-[120px] max-h-[120px] object-fill rounded-lg mt-2" alt="logo" v-if="theme_logo_reader" :src="theme_logo_reader"/>
+                        <img class="h-16 w-auto max-w-[280px] object-contain rounded-lg mt-2 bg-slate-50 p-2" alt="logo" v-if="theme_logo_reader" :src="theme_logo_reader"/>
                     </div>
 
                     <div class="form-col-12 sm:form-col-6">
                         <label for="fav_icon" class="db-field-title"> {{ $t("label.fav_icon") }} (1:1) </label>
                         <input @change="changeFavIcon" v-bind:class="errors.theme_favicon_logo ? 'invalid' : ''" id="fav_icon" type="file" class="db-field-control" ref="themeFaviconLogoProperty" accept="image/png, image/jpeg, image/jpg"/>
                         <small class="db-field-alert" v-if="errors.theme_favicon_logo">{{ errors.theme_favicon_logo[0] }}</small>
-                        <img class="max-w-[80px] max-h-[80px] object-fill rounded-lg mt-2" alt="logo" v-if="theme_favicon_logo_reader" :src="theme_favicon_logo_reader"/>
+                        <img class="w-16 h-16 object-contain rounded-lg mt-2 bg-slate-50 p-2" alt="logo" v-if="theme_favicon_logo_reader" :src="theme_favicon_logo_reader"/>
                     </div>
                     <div class="form-col-12 sm:form-col-6">
-                        <label for="footer_logo" class="db-field-title"> {{ $t("label.footer_logo") }} (142px,34px) </label>
+                        <label for="footer_logo" class="db-field-title"> {{ $t("label.footer_logo") }} (recommended 320×130) </label>
                         <input @change="changeFooterLogo" v-bind:class="errors.theme_footer_logo ? 'invalid' : ''" id="footer_logo" type="file" class="db-field-control" ref="themeFooterLogoProperty" accept="image/png, image/jpeg, image/jpg"/>
                         <small class="db-field-alert" v-if="errors.theme_footer_logo">{{ errors.theme_footer_logo[0] }}</small>
-                        <img class="max-w-[120px] max-h-[120px] object-fill rounded-lg mt-2" alt="logo" v-if="theme_footer_logo_reader" :src="theme_footer_logo_reader"/>
+                        <img class="h-16 w-auto max-w-[280px] object-contain rounded-lg mt-2 bg-slate-50 p-2" alt="logo" v-if="theme_footer_logo_reader" :src="theme_footer_logo_reader"/>
                     </div>
 
                     <div class="form-col-12 sm:form-col-6">
                         <label for="theme_primary_color" class="db-field-title">{{ $t("label.primary_color") }}</label>
                         <div class="flex items-center gap-2">
                             <input id="theme_primary_color" type="color" v-model="theme_primary_color" class="w-12 h-10 p-1 rounded-lg border border-slate-200 cursor-pointer bg-white shrink-0"/>
-                            <input v-model="theme_primary_color" type="text" v-bind:class="errors.theme_primary_color ? 'invalid' : ''" class="db-field-control uppercase" placeholder="#F36805" maxlength="7"/>
+                            <input v-model="theme_primary_color" type="text" v-bind:class="errors.theme_primary_color ? 'invalid' : ''" class="db-field-control uppercase" placeholder="#148A3C" maxlength="7"/>
                         </div>
                         <small class="db-field-alert" v-if="errors.theme_primary_color">{{ errors.theme_primary_color[0] }}</small>
                     </div>
@@ -41,7 +41,7 @@
                         <label for="theme_secondary_color" class="db-field-title">{{ $t("label.secondary_color") }}</label>
                         <div class="flex items-center gap-2">
                             <input id="theme_secondary_color" type="color" v-model="theme_secondary_color" class="w-12 h-10 p-1 rounded-lg border border-slate-200 cursor-pointer bg-white shrink-0"/>
-                            <input v-model="theme_secondary_color" type="text" v-bind:class="errors.theme_secondary_color ? 'invalid' : ''" class="db-field-control uppercase" placeholder="#1F1F39" maxlength="7"/>
+                            <input v-model="theme_secondary_color" type="text" v-bind:class="errors.theme_secondary_color ? 'invalid' : ''" class="db-field-control uppercase" placeholder="#0A3D28" maxlength="7"/>
                         </div>
                         <small class="db-field-alert" v-if="errors.theme_secondary_color">{{ errors.theme_secondary_color[0] }}</small>
                     </div>
@@ -78,8 +78,8 @@ import LoadingComponent from "../../../common/LoadingComponent.vue";
 import alertService from "../../../../services/alertService.js";
 import {useThemeStore} from "../../../../stores/theme.js";
 
-const DEFAULT_PRIMARY_COLOR = "#F36805";
-const DEFAULT_SECONDARY_COLOR = "#1F1F39";
+const DEFAULT_PRIMARY_COLOR = "#148A3C";
+const DEFAULT_SECONDARY_COLOR = "#0A3D28";
 
 export default {
     name: "ThemeComponent",
@@ -104,9 +104,11 @@ export default {
             theme_primary_color      : DEFAULT_PRIMARY_COLOR,
             theme_secondary_color    : DEFAULT_SECONDARY_COLOR,
             colorPresets             : [
+                {name: "Cost to Cost", primary: "#148A3C", secondary: "#0A3D28"},
+                {name: "Fresh Leaf", primary: "#52B448", secondary: "#06402B"},
+                {name: "Forest", primary: "#0B6B38", secondary: "#052A1C"},
                 {name: "Orange", primary: "#F36805", secondary: "#1F1F39"},
                 {name: "Red", primary: "#E63946", secondary: "#1D3557"},
-                {name: "Green", primary: "#2AC769", secondary: "#14532D"},
                 {name: "Blue", primary: "#426EFF", secondary: "#0F172A"},
                 {name: "Purple", primary: "#A953FF", secondary: "#2E1065"},
                 {name: "Pink", primary: "#FF4773", secondary: "#831843"}

@@ -2,6 +2,7 @@
     <div class="kitchen-print-root hidden print:block">
         <div v-if="payload" class="kot-sheet">
             <p class="kot-copy">{{ payload.copy || 'KITCHEN' }} COPY</p>
+            <p v-if="payload.reprint" class="kot-reprint">*** REPRINT ***</p>
             <h1 class="kot-title">{{ payload.restaurant }}</h1>
             <p class="kot-line"><strong>Order:</strong> #{{ payload.order_serial_no }}</p>
             <p class="kot-line" v-if="payload.table">
@@ -13,15 +14,20 @@
             <p class="kot-line" v-if="payload.preparation_time">
                 <strong>ETA:</strong> {{ payload.preparation_time }} min
             </p>
+            <p class="kot-line" v-if="payload.priority_label">
+                <strong>Priority:</strong> {{ payload.priority_label }}
+            </p>
             <p class="kot-note" v-if="payload.order_note">NOTE: {{ payload.order_note }}</p>
             <hr/>
             <div v-for="(item, idx) in payload.items" :key="idx" class="kot-item">
                 <p class="kot-item-name">{{ item.quantity }} × {{ item.name }}</p>
+                <p v-for="(line, i) in (item.variation_lines || [])" :key="'v'+i" class="kot-mod">- {{ line }}</p>
+                <p v-for="(line, i) in (item.extra_lines || [])" :key="'e'+i" class="kot-mod">+ {{ line }}</p>
                 <p v-if="item.instruction" class="kot-item-note">** {{ item.instruction }}</p>
             </div>
             <hr/>
             <p class="kot-foot">Printed: {{ payload.printed_at }}</p>
-            <p class="kot-foot">Kitchen Ticket</p>
+            <p class="kot-foot">Kitchen Ticket — No prices</p>
         </div>
     </div>
 </template>
@@ -68,6 +74,11 @@ export default {
     font-weight: 700;
     letter-spacing: 1px;
 }
+.kot-reprint {
+    text-align: center;
+    font-weight: 700;
+    margin: 4px 0;
+}
 .kot-title {
     text-align: center;
     font-size: 16px;
@@ -87,8 +98,12 @@ export default {
     font-weight: 700;
     font-size: 13px;
 }
+.kot-mod {
+    margin: 1px 0 1px 8px;
+}
 .kot-item-note {
     font-weight: 700;
+    margin-top: 2px;
 }
 .kot-foot {
     text-align: center;

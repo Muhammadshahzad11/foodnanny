@@ -18,8 +18,8 @@ class RootController extends Controller
         $favIcon        = $themeFavicon->faviconLogo;
         $primaryRow     = ThemeSetting::where(['group' => 'theme', 'key' => 'theme_primary_color'])->first();
         $secondaryRow   = ThemeSetting::where(['group' => 'theme', 'key' => 'theme_secondary_color'])->first();
-        $primaryColor   = AppLibrary::hexToRgb(optional($primaryRow)->color, '243 104 5');
-        $secondaryColor = AppLibrary::hexToRgb(optional($secondaryRow)->color, '31 31 57');
+        $primaryColor   = AppLibrary::hexToRgb(optional($primaryRow)->color, '20 138 60');
+        $secondaryColor = AppLibrary::hexToRgb(optional($secondaryRow)->color, '10 61 40');
         return view('master', [
             'analytics'      => $analytics,
             'favicon'        => $favIcon,

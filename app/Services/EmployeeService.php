@@ -109,6 +109,8 @@ class EmployeeService
                 ]);
                 $this->user->assignRole($request->role_id);
             });
+            app(RealtimePublisher::class)->employee($this->user->fresh(), 'created');
+
             return $this->user;
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
@@ -141,6 +143,8 @@ class EmployeeService
                 $this->user->save();
                 $this->user->syncRoles($request->role_id);
             });
+            app(RealtimePublisher::class)->employee($this->user->fresh(), 'updated');
+
             return $this->user;
         } catch (Exception $exception) {
             Log::info($exception->getMessage());

@@ -55,6 +55,7 @@ use App\Http\Controllers\Admin\RestaurantController;
 use App\Http\Controllers\Admin\RestaurantTableController;
 use App\Http\Controllers\Admin\WaiterController;
 use App\Http\Controllers\Admin\KitchenController;
+use App\Http\Controllers\Admin\InboxNotificationController;
 use App\Http\Controllers\Admin\RestaurantTableQrController;
 use App\Http\Controllers\Admin\SmsGatewayController;
 use App\Http\Controllers\Admin\AiAgentController;
@@ -347,6 +348,15 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::post('/orders/{order}/cancel-draft', [WaiterController::class, 'cancelDraft']);
     });
 
+    Route::prefix('inbox-notifications')->name('inbox-notifications.')->group(function () {
+        Route::get('/', [InboxNotificationController::class, 'index']);
+        Route::get('/recent', [InboxNotificationController::class, 'recent']);
+        Route::get('/unread-count', [InboxNotificationController::class, 'unreadCount']);
+        Route::post('/read-all', [InboxNotificationController::class, 'markAllRead']);
+        Route::post('/{notification}/read', [InboxNotificationController::class, 'markRead']);
+        Route::delete('/{notification}', [InboxNotificationController::class, 'destroy']);
+    });
+
     Route::prefix('kitchen')->name('kitchen.')->group(function () {
         Route::get('/dashboard', [KitchenController::class, 'dashboard']);
         Route::get('/orders', [KitchenController::class, 'orders']);
@@ -354,6 +364,8 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::post('/orders/{order}/accept', [KitchenController::class, 'accept']);
         Route::post('/orders/{order}/preparing', [KitchenController::class, 'preparing']);
         Route::post('/orders/{order}/ready', [KitchenController::class, 'ready']);
+        Route::post('/orders/{order}/reject', [KitchenController::class, 'reject']);
+        Route::post('/orders/{order}/cancel', [KitchenController::class, 'cancel']);
         Route::post('/orders/{order}/priority', [KitchenController::class, 'priority']);
         Route::post('/orders/{order}/print-data', [KitchenController::class, 'printData']);
     });

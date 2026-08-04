@@ -54,7 +54,8 @@ app.use(pinia)
 app.use(VueSimpleAlert)
 app.use(VueApexCharts);
 app.use(Toast, {
-    timeout: 2000,
+    position: "top-right",
+    timeout: 30000,
     closeOnClick: true,
     pauseOnFocusLoss: true,
     pauseOnHover: true,
@@ -64,6 +65,7 @@ app.use(Toast, {
     hideProgressBar: false,
     closeButton: "button",
     icon: true,
-    rtl: false
+    rtl: false,
+    containerClassName: "app-toast-container",
 })
 app.mount('#app');

@@ -1,13 +1,21 @@
 <template>
     <LoadingComponent :props="loading"/>
     <header id="backend-header"
-            class="w-full flex items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 h-14 sm:h-16 fixed top-0 left-0 z-30 bg-white">
-        <div class="flex items-center gap-3 lg:gap-0 overflow-hidden">
+            class="w-full flex items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 h-16 sm:h-20 fixed top-0 left-0 z-30 bg-white shadow-xs">
+        <div class="flex items-center gap-3 lg:gap-4 overflow-hidden">
             <router-link class="flex-shrink-0" :to="{ name: location ? 'frontend.restaurant' : 'frontend.home' }">
-                <img class="w-32 hidden sm:block" :src="setting.theme_logo" alt="logo">
-                <img class="w-8 block sm:hidden" :src="setting.theme_favicon_logo" alt="logo">
+                <img
+                    class="hidden sm:block h-12 sm:h-14 w-auto max-w-[220px] lg:max-w-[280px] object-contain object-left"
+                    :src="setting.theme_logo"
+                    alt="Cost to Cost Foods"
+                >
+                <img
+                    class="block sm:hidden h-10 w-auto max-w-[160px] object-contain object-left"
+                    :src="setting.theme_logo"
+                    alt="Cost to Cost Foods"
+                >
             </router-link>
-            <hr v-if="Object.keys(restaurant).length >0" class="border-none w-px lg:mr-4 lg:ml-28 h-16 bg-gray-100">
+            <hr v-if="Object.keys(restaurant).length >0" class="border-none w-px h-12 bg-gray-100">
             <a v-if="Object.keys(restaurant).length >0" href="#" class="group flex items-center gap-2 overflow-hidden">
                 <img class="hidden lg:block w-9 flex-shrink-0" :src="restaurant.logo" alt="restaurant-logo">
                 <span
@@ -69,8 +77,12 @@
                 <i class="lab-fill-pos text-primary"></i>
             </router-link>
 
+            <NotificationBellComponent/>
+
             <button @click.prevent="handleSidebar" class="w-9 h-9 leading-9 text-center rounded-lg bg-primary/10">
-                <i class="lab-fill-bars text-primary"></i>
+                <svg class="w-[18px] h-[18px] text-primary mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <path d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
             </button>
 
             <div class="paper-group">
@@ -178,6 +190,7 @@
 
 <script>
 import LoadingComponent from "../../common/LoadingComponent.vue";
+import NotificationBellComponent from "./NotificationBellComponent.vue";
 import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
 import activityEnum from "../../../enums/modules/activityEnum.js";
 import {usePaper} from "../../../composables/paper.js";
@@ -196,10 +209,11 @@ import {useFrontendEditProfileStore} from "../../../stores/frontendEditProfile.j
 import {usePosCartStore} from "../../../stores/posCart.js";
 import {useMyRestaurantStore} from "../../../stores/myRestaurant.js";
 import {useAiStore} from "../../../stores/ai.js";
+import {useInboxNotificationStore} from "../../../stores/inboxNotification.js";
 
 export default {
     name: "BackendNavbarComponent",
-    components: {LoadingComponent},
+    components: {LoadingComponent, NotificationBellComponent},
     setup() {
         const {openModal, closeModal}  = useModal()
         const {handlePaper}            = usePaper()
@@ -213,6 +227,7 @@ export default {
         const frontendLanguageStore    = useFrontendLanguageStore();
         const restaurantSwitchStore    = useRestaurantSwitchStore();
         const frontendEditProfileStore = useFrontendEditProfileStore();
+        const inboxNotificationStore   = useInboxNotificationStore();
 
 
         return {
@@ -228,7 +243,8 @@ export default {
             frontendSettingStore,
             frontendLanguageStore,
             restaurantSwitchStore,
-            frontendEditProfileStore
+            frontendEditProfileStore,
+            inboxNotificationStore,
         }
     },
     data() {
@@ -288,6 +304,14 @@ export default {
         this.restaurantSwitchStore.fetch();
         this.myRestaurantStore.fetchDefaultRestaurant();
         this.posPermissionCheck();
+        if (this.authInfo?.id) {
+            this.inboxNotificationStore.subscribeUserChannel(this.authInfo.id);
+            this.inboxNotificationStore.fetchUnreadCount().catch(() => {});
+            this.inboxNotificationStore.fetchRecent().catch(() => {});
+        }
+    },
+    beforeUnmount() {
+        this.inboxNotificationStore.unsubscribe();
     },
     methods: {
         reset: function () {
@@ -299,6 +323,7 @@ export default {
             return appService.textShortener(text, number);
         },
         logout: function () {
+            this.inboxNotificationStore.unsubscribe();
             this.authStore.logout().then(async res => {
                 await this.commonStore.update({
                     location: null,
@@ -321,15 +346,15 @@ export default {
                 const headerElement = document?.getElementById("backend-header");
 
                 if (headerElement) {
-                    mainElement.classList.remove("pt-[70px]", "md:pt-16");
+                    mainElement.classList.remove("pt-20");
                     headerElement.classList.add("hidden");
                 } else {
-                    mainElement.classList.add("pt-[70px]", "md:pt-16");
+                    mainElement.classList.add("pt-20");
                     headerElement.classList.remove("hidden");
                 }
 
                 if (!this.fullscreenStatus) {
-                    mainElement.classList.add("pt-[70px]", "md:pt-16");
+                    mainElement.classList.add("pt-20");
                     headerElement.classList.remove("hidden");
                 }
             }

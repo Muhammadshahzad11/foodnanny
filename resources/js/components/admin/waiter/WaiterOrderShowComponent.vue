@@ -73,6 +73,7 @@
 import LoadingComponent from "../../common/LoadingComponent.vue";
 import {useWaiterOrderStore} from "../../../stores/waiterOrder.js";
 import alertService from "../../../services/alertService.js";
+import {apiErrorMessage} from "../../../services/apiError.js";
 
 export default {
     name: "WaiterOrderShowComponent",
@@ -94,7 +95,7 @@ export default {
             this.loading.isActive = false;
         }).catch((err) => {
             this.loading.isActive = false;
-            alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+            alertService.error(apiErrorMessage(err, this.$t('message.failed_to_load_order')));
         });
     }
 }

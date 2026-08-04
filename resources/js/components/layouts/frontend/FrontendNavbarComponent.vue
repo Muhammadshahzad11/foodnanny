@@ -5,7 +5,11 @@
             <div :class="mode !== 'main' ? 'flex-col' : ''" class="flex lg:flex-row items-center justify-between gap-4">
                 <div :class="mode === 'main' ? 'flex items-center justify-between' : 'max-lg:w-full max-lg:justify-between max-lg:p-0 flex-shrink-0 flex items-center gap-6'">
                     <router-link class="flex-shrink-0" :to="{ name: location ? 'frontend.restaurant' : 'frontend.home' }">
-                        <img class="w-28 sm:w-28" :src="setting.theme_logo" alt="logo">
+                        <img
+                            class="h-12 sm:h-14 md:h-16 w-auto max-w-[200px] sm:max-w-[260px] md:max-w-[320px] object-contain object-left"
+                            :src="setting.theme_logo"
+                            alt="Cost to Cost Foods"
+                        >
                     </router-link>
                     <button v-if="mode === 'option'" @click="openModal('delivery-address')" class="flex-auto flex items-center gap-2 w-full max-w-[150px] h-10 rounded-full px-3 bg-mate">
                         <i class="lab-fill-location flex-shrink-0 text-lg text-primary"></i>

@@ -294,7 +294,15 @@ class WaiterOrderService
                 $table->update(['status' => TableStatus::OCCUPIED]);
             });
 
-            return $this->show($this->order->fresh());
+            $shown = $this->show($this->order->fresh());
+            if ((int) $shown->active === Ask::YES) {
+                app(KitchenOrderService::class)->notifyNewKitchenOrder($shown);
+            }
+            if ($shown->diningTable) {
+                app(RealtimePublisher::class)->table($shown->diningTable->fresh(), 'status', TableStatus::AVAILABLE);
+            }
+
+            return $shown;
         } catch (Exception $exception) {
             DB::rollBack();
             Log::info($exception->getMessage());
@@ -374,7 +382,13 @@ class WaiterOrderService
                 $this->order = $order->fresh();
             });
 
-            return $this->show($this->order);
+            $shown = $this->show($this->order);
+            app(KitchenOrderService::class)->notifyNewKitchenOrder($shown);
+            if ($shown->diningTable) {
+                app(RealtimePublisher::class)->table($shown->diningTable->fresh(), 'status', TableStatus::AVAILABLE);
+            }
+
+            return $shown;
         } catch (Exception $exception) {
             DB::rollBack();
             Log::info($exception->getMessage());

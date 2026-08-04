@@ -138,6 +138,8 @@ return [
         'kitchen_order_not_active'                                   => 'This order is not active for the kitchen.',
         'kitchen_order_not_eligible'                                 => 'This order type is not handled by the kitchen display.',
         'kitchen_order_stale'                                        => 'This order was updated elsewhere. Refresh and try again.',
+        'kitchen_order_locked_terminal'                              => 'Completed or cancelled kitchen orders cannot be changed.',
+        'kitchen_invalid_priority'                                   => 'Invalid kitchen priority selected.',
         'item_match'                                                 => 'Item not match.',
         'minimum_order_amount'                                       => 'The minimum order amount is ',
         'coupon_date_expired'                                        => 'The coupon time is expired',
