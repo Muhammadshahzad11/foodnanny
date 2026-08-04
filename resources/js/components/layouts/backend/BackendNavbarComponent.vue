@@ -79,6 +79,8 @@
 
             <NotificationBellComponent/>
 
+            <PwaInstallButtonComponent/>
+
             <button @click.prevent="handleSidebar" class="w-9 h-9 leading-9 text-center rounded-lg bg-primary/10">
                 <svg class="w-[18px] h-[18px] text-primary mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                     <path d="M4 6h16M4 12h16M4 18h16"/>
@@ -133,6 +135,13 @@
                             <i class="lab-line-key text-lg text-paragraph group-hover:text-primary transition-all duration-300"></i>
                             <span class="text-sm leading-6 capitalize">{{ $t('button.change_password') }}</span>
                         </router-link>
+
+                        <div class="w-full border-t border-gray-100 py-2.5">
+                            <PwaInstallButtonComponent
+                                class="!w-full !justify-start !bg-transparent !text-heading !px-0 !h-auto !gap-3.5"
+                                button-class="w-full flex items-center gap-3.5 text-sm leading-6 capitalize text-heading hover:text-primary"
+                            />
+                        </div>
 
                         <button @click="logout"
                                 class="w-full flex items-center gap-3.5 py-2.5 border-t border-gray-100">
@@ -191,6 +200,7 @@
 <script>
 import LoadingComponent from "../../common/LoadingComponent.vue";
 import NotificationBellComponent from "./NotificationBellComponent.vue";
+import PwaInstallButtonComponent from "../../common/PwaInstallButtonComponent.vue";
 import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
 import activityEnum from "../../../enums/modules/activityEnum.js";
 import {usePaper} from "../../../composables/paper.js";
@@ -213,7 +223,7 @@ import {useInboxNotificationStore} from "../../../stores/inboxNotification.js";
 
 export default {
     name: "BackendNavbarComponent",
-    components: {LoadingComponent, NotificationBellComponent},
+    components: {LoadingComponent, NotificationBellComponent, PwaInstallButtonComponent},
     setup() {
         const {openModal, closeModal}  = useModal()
         const {handlePaper}            = usePaper()

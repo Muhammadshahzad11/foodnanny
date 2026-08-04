@@ -663,3 +663,19 @@ input[type="search"]::-webkit-search-results-decoration { display: none; }
 .app-toast-container.top-center {
     top: 5.5rem !important;
 }
+
+/* Module 8 — PWA standalone polish */
+@media (display-mode: standalone) {
+    body {
+        overscroll-behavior-y: none;
+    }
+    #backend-header {
+        padding-top: env(safe-area-inset-top);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+

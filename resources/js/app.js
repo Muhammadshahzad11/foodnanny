@@ -20,6 +20,13 @@ import 'swiper/css/bundle';
 import './echo.js';
 import VueApexCharts from "vue3-apexcharts";
 
+// Capture PWA install prompt before Vue mounts (browser may fire early)
+window.__ctcPwa = window.__ctcPwa || { deferredPrompt: null, installed: false };
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    window.__ctcPwa.deferredPrompt = e;
+    window.dispatchEvent(new CustomEvent('ctc-pwa-prompt-ready'));
+});
 
 /* Start axios code*/
 const API_URL = ENV.API_URL;

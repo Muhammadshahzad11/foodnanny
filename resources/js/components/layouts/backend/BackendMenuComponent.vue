@@ -64,6 +64,10 @@
                 </li>
             </ul>
         </nav>
+
+        <div class="p-4 border-t border-[#EFF0F6]">
+            <PwaInstallButtonComponent class="!w-full !justify-center"/>
+        </div>
     </aside>
 </template>
 <script>
@@ -73,11 +77,12 @@ import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
 import {useAuthStore} from "../../../stores/auth.js";
 import appService from "../../../services/appService.js";
 import RestaurantStatusComponent from "../../admin/components/RestaurantStatusComponent.vue";
+import PwaInstallButtonComponent from "../../common/PwaInstallButtonComponent.vue";
 import {useCommonStore} from "../../../stores/common.js";
 
 export default {
     name: "BackendMenuComponent",
-    components: {RestaurantStatusComponent},
+    components: {RestaurantStatusComponent, PwaInstallButtonComponent},
     setup() {
         const authStore            = useAuthStore();
         const commonStore          = useCommonStore();

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\Admin\OtpController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\PwaController;
+use App\Http\Controllers\Frontend\ManifestController;
 use App\Http\Controllers\Admin\TaxController;
 use App\Http\Controllers\Admin\ItemController;
 use App\Http\Controllers\Admin\AiController;
@@ -867,6 +868,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::prefix('pwa')->name('pwa')->group(function () {
             Route::get('/', [PwaController::class, 'index']);
             Route::post('/', [PwaController::class, 'update']);
+            Route::post('/force-update', [PwaController::class, 'forceUpdate']);
         });
 
         Route::prefix('menu')->name('menu')->group(function () {
@@ -934,6 +936,10 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         });
     });
 });
+
+Route::get('/frontend/pwa/install-config', [ManifestController::class, 'installConfig'])
+    ->middleware(['installed', 'apiKey', 'localization'])
+    ->name('frontend.pwa.install-config');
 
 Route::prefix('frontend')->name('frontend.')->middleware(['installed', 'apiKey', 'localization'])->group(function () {
     Route::prefix('setting')->name('setting.')->group(function () {

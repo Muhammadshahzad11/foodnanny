@@ -72,6 +72,10 @@
                         </ul>
                     </div>
 
+                    <PwaInstallButtonComponent
+                        button-class="flex-shrink-0 inline-flex items-center justify-center gap-1 mobile:px-2 px-3.5 h-9 rounded-full border border-border bg-white text-primary text-sm"
+                    />
+
                     <button @click.prevent="openCanvas('cart-canvas')" type="button" v-if="mode !== 'main' && currentRoute !== 'frontend.checkout'" class="flex-shrink-0 flex items-center gap-1 mobile:px-2 px-3.5 h-9 rounded-full bg-secondary text-white">
                         <i class="lab-fill-bag text-lg"></i>
                         <span class="mobile:hidden text-sm">
@@ -181,13 +185,15 @@ import NavbarDeliveryAddress from "../../frontend/components/NavbarDeliveryAddre
 import NavbarDeliveryEditAddress from "../../frontend/components/NavBarDeliveryEditAddress.vue";
 import {useFrontendCartStore} from "../../../stores/frontendCart.js";
 import {useFrontendEditProfileStore} from "../../../stores/frontendEditProfile.js";
+import PwaInstallButtonComponent from "../../common/PwaInstallButtonComponent.vue";
 
 export default {
     name: "FrontendNavbarComponent",
     components: {
         NavbarDeliveryEditAddress,
         LoadingComponent,
-        NavbarDeliveryAddress
+        NavbarDeliveryAddress,
+        PwaInstallButtonComponent,
     },
     setup() {
         const {isSticky}               = useSticky();
