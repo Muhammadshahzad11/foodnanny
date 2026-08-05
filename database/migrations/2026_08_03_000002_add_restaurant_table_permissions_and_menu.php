@@ -101,13 +101,15 @@ return new class extends Migration {
             $manager->givePermissionTo($managerPermissions);
         }
 
+        // Only attach when core menus already exist (seeded). On migrate:fresh,
+        // MenuTableSeeder inserts Tables under Setup — do not create orphan parent=0 rows.
         $menuParentId = DB::table('menus')->where('url', 'restaurant-settings')->value('parent');
         if (!$menuParentId) {
             $menuParentId = DB::table('menus')->where('language', 'setup')->where('parent', 0)->value('id');
         }
 
         $menuExists = DB::table('menus')->where('url', 'tables')->exists();
-        if (!$menuExists) {
+        if (!$menuExists && $menuParentId) {
             DB::table('menus')->insert([
                 'name'       => 'Tables',
                 'language'   => 'tables',
@@ -115,7 +117,7 @@ return new class extends Migration {
                 'icon'       => 'lab lab-line-restaurants',
                 'priority'   => 95,
                 'status'     => 1,
-                'parent'     => $menuParentId ?: 0,
+                'parent'     => $menuParentId,
                 'type'       => 1,
                 'addon'      => 10,
                 'created_at' => $now,

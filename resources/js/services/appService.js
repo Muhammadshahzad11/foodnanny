@@ -132,12 +132,13 @@ export default {
                 try {
                     const perm = permissionMap.get(route.meta.permissionUrl);
                     if (perm) {
-                        if (typeof perm.access !== "undefined") {
-                            route.meta.access = perm.access;
-                        }
+                        route.meta.access = !!perm.access;
                         if (typeof perm.title !== "undefined") {
                             route.meta.title = perm.title;
                         }
+                    } else {
+                        // No grant for this route in the active context → block (prevents stale access).
+                        route.meta.access = false;
                     }
                 } catch (routeError) {}
             });

@@ -120,24 +120,27 @@ class AppLibrary
 
     public static function numericToAssociativeArrayBuilder($array): array
     {
-        $i                 = 0;
-        $parentId          = null;
-        $parentIncrementId = null;
-        $buildArray        = [];
+        $i          = 0;
+        $buildArray = [];
+        $indexById  = [];
+
+        // Parents first, then attach children by real parent id (order-independent).
         if (count($array)) {
             foreach ($array as $arr) {
                 if (!$arr['parent']) {
-                    $parentId          = $arr['id'];
-                    $parentIncrementId = $i;
-                    $buildArray[$i]    = $arr;
+                    $buildArray[$i]         = $arr;
+                    $indexById[$arr['id']]  = $i;
                     $i++;
                 }
+            }
 
-                if ($arr['parent'] == $parentId) {
-                    $buildArray[$parentIncrementId]['children'][] = $arr;
+            foreach ($array as $arr) {
+                if ($arr['parent'] && isset($indexById[$arr['parent']])) {
+                    $buildArray[$indexById[$arr['parent']]]['children'][] = $arr;
                 }
             }
         }
+
         if ($buildArray) {
             foreach ($buildArray as $key => $build) {
                 if ($build['url'] == "#" && !isset($build['children'])) {
@@ -167,10 +170,19 @@ class AppLibrary
     {
         if ($menus && $permissions) {
             foreach ($menus as $key => $menu) {
-                if (isset($permissions[$menu['url']]) && !$permissions[$menu['url']]['access']) {
-                    if ($menu['url'] != '#') {
-                        unset($menus[$key]);
-                    }
+                if ($menu['url'] == '#') {
+                    continue;
+                }
+
+                // Hide items with no matching grant (avoids 403 from orphan menus).
+                $perm = $permissions[$menu['url']] ?? null;
+                $hasAccess = $perm && (
+                    (is_array($perm) && !empty($perm['access']))
+                    || (is_object($perm) && !empty($perm->access))
+                );
+
+                if (!$hasAccess) {
+                    unset($menus[$key]);
                 }
             }
         }

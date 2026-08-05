@@ -128,8 +128,10 @@ return new class extends Migration {
             }
         }
 
+        // Skip when menus are empty (migrate:fresh); MenuTableSeeder adds this later.
         $menuExists = DB::table('menus')->where('url', 'waiter')->exists();
-        if (!$menuExists) {
+        $coreMenus  = DB::table('menus')->where('url', 'dashboard')->exists();
+        if (!$menuExists && $coreMenus) {
             DB::table('menus')->insert([
                 'name'       => 'Waiter',
                 'language'   => 'waiter',

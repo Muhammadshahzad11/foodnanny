@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Libraries\AppLibrary;
 use App\Models\Menu;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 
 class MenuTableSeeder extends Seeder
@@ -12,7 +12,8 @@ class MenuTableSeeder extends Seeder
     /**
      * Run the database seeds.
      *
-     * @return void
+     * Parent IDs must come from real inserted rows. Never assume auto-increment
+     * starts at 1 — migrations may have inserted Kitchen/Waiter/Tables first.
      */
     public function run(): void
     {
@@ -518,6 +519,68 @@ class MenuTableSeeder extends Seeder
             ]
         ];
 
-        Menu::insert(AppLibrary::associativeToNumericArrayBuilder($menus));
+        if (Menu::query()->exists()) {
+            Menu::query()->delete();
+            if (DB::getDriverName() !== 'sqlite') {
+                DB::statement('ALTER TABLE menus AUTO_INCREMENT = 1');
+            }
+        }
+
+        foreach ($menus as $menu) {
+            $children = $menu['children'] ?? null;
+            unset($menu['children']);
+            $menu['parent'] = 0;
+            $parentId       = Menu::query()->insertGetId($menu);
+
+            if ($children) {
+                foreach ($children as $child) {
+                    $child['parent'] = $parentId;
+                    Menu::query()->insert($child);
+                }
+            }
+        }
+
+        $this->ensureModuleMenus();
+    }
+
+    /**
+     * Kitchen / Waiter are top-level module menus (also inserted by migrations
+     * when menus already exist). Keep them here so fresh seed is complete.
+     */
+    private function ensureModuleMenus(): void
+    {
+        $now = now();
+
+        if (!Menu::query()->where('url', 'kitchen')->exists()) {
+            Menu::query()->insert([
+                'name'       => 'Kitchen',
+                'language'   => 'kitchen',
+                'url'        => 'kitchen',
+                'icon'       => 'lab lab-line-flame',
+                'priority'   => 34,
+                'status'     => 1,
+                'parent'     => 0,
+                'type'       => 1,
+                'addon'      => 10,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        if (!Menu::query()->where('url', 'waiter')->exists()) {
+            Menu::query()->insert([
+                'name'       => 'Waiter',
+                'language'   => 'waiter',
+                'url'        => 'waiter',
+                'icon'       => 'lab lab-line-users',
+                'priority'   => 35,
+                'status'     => 1,
+                'parent'     => 0,
+                'type'       => 1,
+                'addon'      => 10,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
     }
 }

@@ -233,43 +233,19 @@ class LoginController extends Controller
             ], 400);
         }
 
-        $permission      = $this->permissionService->allPermission($user, $user->roles[0]);
-        $adminPermission = $permission->filter(function ($p) {
-            if ($p->type == PermissionType::BOTH || $p->type == PermissionType::ADMIN) {
-                return $p;
-            }
-        });
-
-        $restaurantPermission = $permission->filter(function ($p) {
-            if ($p->type == PermissionType::BOTH || $p->type == PermissionType::RESTAURANT_OWNER) {
-                return $p;
-            }
-        });
-
-        $restaurantId = $user->restaurant_id;
-        $permission   = $permission->filter(function ($p) use ($restaurantId) {
-            if ($restaurantId == 0 && ($p->type == PermissionType::BOTH || $p->type == PermissionType::ADMIN)) {
-                return $p;
-            } elseif ($restaurantId > 0 && ($p->type == PermissionType::BOTH || $p->type == PermissionType::RESTAURANT_OWNER)) {
-                return $p;
-            }
-        });
-
-        $adminPermission      = PermissionResource::collection($adminPermission);
-        $restaurantPermission = PermissionResource::collection($restaurantPermission);
-        $menuServiceMenu      = $this->menuService->menu($user, $user->roles[0]);
+        $payload = $this->buildPermissionPayload($user);
 
         return new JsonResponse([
             'message'                       => trans('all.message.login_success'),
             'token'                         => $this->token,
             'user'                          => new LoginUserResource($user),
-            'admin_menu'                    => MenuResource::collection(collect($menuServiceMenu['adminPermission'])),
-            'restaurant_menu'               => MenuResource::collection(collect($menuServiceMenu['restaurantPermission'])),
-            'admin_permission'              => $adminPermission,
-            'restaurant_permission'         => $restaurantPermission,
-            'permission'                    => PermissionResource::collection($permission),
-            'admin_default_permission'      => count($menuServiceMenu['adminPermission']) > 0 ? AppLibrary::defaultPermission($adminPermission) : (object)[],
-            'restaurant_default_permission' => count($menuServiceMenu['restaurantPermission']) > 0 ? AppLibrary::defaultPermission($restaurantPermission) : (object)[],
+            'admin_menu'                    => $payload['admin_menu'],
+            'restaurant_menu'               => $payload['restaurant_menu'],
+            'admin_permission'              => $payload['admin_permission'],
+            'restaurant_permission'         => $payload['restaurant_permission'],
+            'permission'                    => $payload['permission'],
+            'admin_default_permission'      => $payload['admin_default_permission'],
+            'restaurant_default_permission' => $payload['restaurant_default_permission'],
         ], 201);
     }
 
@@ -301,6 +277,27 @@ class LoginController extends Controller
             ], 400);
         }
 
+        return new JsonResponse($this->buildPermissionPayload($user), 200);
+    }
+
+    /**
+     * Active restaurant context comes from default_accesses (supports admin switch).
+     */
+    private function activeRestaurantId(): int
+    {
+        try {
+            $access = $this->defaultAccessService->show();
+            if (isset($access['restaurant_id'])) {
+                return (int) $access['restaurant_id'];
+            }
+        } catch (\Exception) {
+        }
+
+        return (int) (Auth::user()?->restaurant_id ?? 0);
+    }
+
+    private function buildPermissionPayload($user): array
+    {
         $permission      = $this->permissionService->allPermission($user, $user->roles[0]);
         $adminPermission = $permission->filter(function ($p) {
             if ($p->type == PermissionType::BOTH || $p->type == PermissionType::ADMIN) {
@@ -314,11 +311,16 @@ class LoginController extends Controller
             }
         });
 
-        $restaurantId = $user->restaurant_id;
-        $permission   = $permission->filter(function ($p) use ($restaurantId) {
+        $restaurantId = $this->activeRestaurantId();
+        if ($restaurantId === 0 && (int) $user->restaurant_id > 0) {
+            $restaurantId = (int) $user->restaurant_id;
+        }
+
+        $activePermission = $permission->filter(function ($p) use ($restaurantId) {
             if ($restaurantId == 0 && ($p->type == PermissionType::BOTH || $p->type == PermissionType::ADMIN)) {
                 return $p;
-            } elseif ($restaurantId > 0 && ($p->type == PermissionType::BOTH || $p->type == PermissionType::RESTAURANT_OWNER)) {
+            }
+            if ($restaurantId > 0 && ($p->type == PermissionType::BOTH || $p->type == PermissionType::RESTAURANT_OWNER)) {
                 return $p;
             }
         });
@@ -327,14 +329,14 @@ class LoginController extends Controller
         $restaurantPermission = PermissionResource::collection($restaurantPermission);
         $menuServiceMenu      = $this->menuService->menu($user, $user->roles[0]);
 
-        return new JsonResponse([
+        return [
             'admin_menu'                    => MenuResource::collection(collect($menuServiceMenu['adminPermission'])),
             'restaurant_menu'               => MenuResource::collection(collect($menuServiceMenu['restaurantPermission'])),
             'admin_permission'              => $adminPermission,
             'restaurant_permission'         => $restaurantPermission,
-            'permission'                    => PermissionResource::collection($permission),
-            'admin_default_permission'      => count($menuServiceMenu['adminPermission']) > 0 ? AppLibrary::defaultPermission($adminPermission) : (object)[],
-            'restaurant_default_permission' => count($menuServiceMenu['restaurantPermission']) > 0 ? AppLibrary::defaultPermission($restaurantPermission) : (object)[],
-        ], 200);
+            'permission'                    => PermissionResource::collection($activePermission),
+            'admin_default_permission'      => count($menuServiceMenu['adminPermission']) > 0 ? AppLibrary::defaultPermission($adminPermission) : (object) [],
+            'restaurant_default_permission' => count($menuServiceMenu['restaurantPermission']) > 0 ? AppLibrary::defaultPermission($restaurantPermission) : (object) [],
+        ];
     }
 }

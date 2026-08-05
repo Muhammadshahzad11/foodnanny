@@ -87,21 +87,42 @@ class ModuleTestDataSeeder extends Seeder
 
         if (!$restaurant) {
             $restaurant = Restaurant::withoutGlobalScopes()->create([
-                'name'         => 'Cost to Cost Foods',
-                'slug'         => 'cost-to-cost-foods',
-                'email'        => 'kitchen@costtocostfoods.test',
-                'phone'        => '+1-555-0100',
-                'country_code' => '+1',
-                'status'       => Status::ACTIVE,
-                'creator_type' => User::class,
-                'creator_id'   => 1,
-                'editor_type'  => User::class,
-                'editor_id'    => 1,
+                'name'           => 'Cost to Cost Foods',
+                'slug'           => 'cost-to-cost-foods',
+                'email'          => 'kitchen@costtocostfoods.test',
+                'phone'          => '1700000100',
+                'country_code'   => '+1',
+                'city'           => 'Peshawar',
+                'state'          => 'Khyber Pakhtunkhwa',
+                'zip_code'       => '25000',
+                'address'        => 'University Town, Peshawar',
+                'latitude'       => '33.9921',
+                'longitude'      => '71.4957',
+                'status'         => Status::ACTIVE,
+                'current_status' => Status::ACTIVE,
+                'creator_type'   => User::class,
+                'creator_id'     => 1,
+                'editor_type'    => User::class,
+                'editor_id'      => 1,
             ]);
         } else {
             $restaurant->update([
-                'name'   => $restaurant->name ?: 'Cost to Cost Foods',
-                'status' => Status::ACTIVE,
+                'name'           => $restaurant->name ?: 'Cost to Cost Foods',
+                'status'         => Status::ACTIVE,
+                'current_status' => Status::ACTIVE,
+            ]);
+        }
+
+        if (!DB::table('order_setups')->where('restaurant_id', $restaurant->id)->exists()) {
+            DB::table('order_setups')->insert([
+                'restaurant_id'                => $restaurant->id,
+                'food_preparation_time'        => 30,
+                'schedule_order_slot_duration' => 15,
+                'takeaway'                     => 5,
+                'delivery'                     => 5,
+                'minimum_order_limit'          => 1,
+                'created_at'                   => now(),
+                'updated_at'                   => now(),
             ]);
         }
 
@@ -157,9 +178,23 @@ class ModuleTestDataSeeder extends Seeder
             ->values();
 
         if ($items->isEmpty()) {
-            $categoryId = DB::table('item_categories')->where('restaurant_id', $restaurant->id)->value('id')
-                ?? DB::table('item_categories')->value('id')
-                ?? 1;
+            $categoryId = DB::table('item_categories')->where('restaurant_id', $restaurant->id)->value('id');
+            if (!$categoryId) {
+                $categoryId = DB::table('item_categories')->insertGetId([
+                    'restaurant_id' => $restaurant->id,
+                    'name'          => 'Main Menu',
+                    'slug'          => 'main-menu-' . $restaurant->id,
+                    'description'   => 'Default category',
+                    'status'        => Status::ACTIVE,
+                    'sort'          => 1,
+                    'creator_type'  => User::class,
+                    'creator_id'    => 1,
+                    'editor_type'   => User::class,
+                    'editor_id'     => 1,
+                    'created_at'    => now(),
+                    'updated_at'    => now(),
+                ]);
+            }
 
             $seed = [
                 ['Classic Beef Burger', 12.99],

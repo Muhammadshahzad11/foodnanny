@@ -61,8 +61,28 @@ class RolePermissionTableSeeder extends Seeder
                 ['name' => 'table_qr_generate'],
                 ['name' => 'table_qr_download'],
                 ['name' => 'table_qr_regenerate'],
+                ['name' => 'waiter'],
+                ['name' => 'waiter_dashboard'],
+                ['name' => 'waiter_tables'],
+                ['name' => 'waiter_orders'],
+                ['name' => 'waiter_orders_create'],
+                ['name' => 'waiter_orders_edit'],
+                ['name' => 'waiter_orders_send'],
+                ['name' => 'waiter_orders_cancel_draft'],
+                ['name' => 'kitchen'],
+                ['name' => 'kitchen_dashboard'],
+                ['name' => 'kitchen_view'],
+                ['name' => 'kitchen_accept'],
+                ['name' => 'kitchen_prepare'],
+                ['name' => 'kitchen_ready'],
+                ['name' => 'kitchen_print'],
+                ['name' => 'kitchen_reject'],
+                ['name' => 'kitchen_cancel'],
             ];
-            $restaurantOwnerPermissions = Permission::whereIn('name', $restaurantOwnerPermissions)->get();
+            $restaurantOwnerPermissions = Permission::whereIn(
+                'name',
+                collect($restaurantOwnerPermissions)->pluck('name')
+            )->get();
             $restaurantOwner->givePermissionTo($restaurantOwnerPermissions);
         }
 
@@ -81,7 +101,10 @@ class RolePermissionTableSeeder extends Seeder
                 ['name' => 'collections'],
                 ['name' => 'delivery-boy-settings']
             ];
-            $deliveryBoyPermissions = Permission::whereIn('name', $deliveryBoyPermissions)->get();
+            $deliveryBoyPermissions = Permission::whereIn(
+                'name',
+                collect($deliveryBoyPermissions)->pluck('name')
+            )->get();
             $deliveryBoy->givePermissionTo($deliveryBoyPermissions);
         }
 
@@ -106,7 +129,10 @@ class RolePermissionTableSeeder extends Seeder
                 ['name' => 'sales-report'],
                 ['name' => 'items-report']
             ];
-            $staffPermissions = Permission::whereIn('name', $staffPermissions)->get();
+            $staffPermissions = Permission::whereIn(
+                'name',
+                collect($staffPermissions)->pluck('name')
+            )->get();
             $staff->givePermissionTo($staffPermissions);
         }
 
@@ -135,27 +161,69 @@ class RolePermissionTableSeeder extends Seeder
                 ['name' => 'tables_edit'],
                 ['name' => 'table_qr_view'],
                 ['name' => 'table_qr_download'],
+                ['name' => 'waiter'],
+                ['name' => 'waiter_dashboard'],
+                ['name' => 'waiter_tables'],
+                ['name' => 'waiter_orders'],
+                ['name' => 'waiter_orders_create'],
+                ['name' => 'waiter_orders_edit'],
+                ['name' => 'waiter_orders_send'],
+                ['name' => 'waiter_orders_cancel_draft'],
+                ['name' => 'kitchen'],
+                ['name' => 'kitchen_dashboard'],
+                ['name' => 'kitchen_view'],
+                ['name' => 'kitchen_accept'],
+                ['name' => 'kitchen_prepare'],
+                ['name' => 'kitchen_ready'],
+                ['name' => 'kitchen_print'],
+                ['name' => 'kitchen_reject'],
+                ['name' => 'kitchen_cancel'],
             ];
-            $manager->givePermissionTo(Permission::whereIn('name', $managerPermissions)->get());
+            $manager->givePermissionTo(
+                Permission::whereIn('name', collect($managerPermissions)->pluck('name'))->get()
+            );
         }
 
         $cashier = Role::find(EnumRole::CASHIER);
         if ($cashier) {
             $cashierPermissions = [
-                ['name' => 'dashboard'],
-                ['name' => 'pos'],
-                ['name' => 'pos-orders'],
-                ['name' => 'pos-orders_show'],
+                'dashboard',
+                'pos',
+                'pos-orders',
+                'pos-orders_show',
             ];
             $cashier->givePermissionTo(Permission::whereIn('name', $cashierPermissions)->get());
         }
 
-        $basicDashboard = Permission::where('name', 'dashboard')->get();
-        foreach ([EnumRole::WAITER, EnumRole::CHEF] as $roleId) {
-            $role = Role::find($roleId);
-            if ($role && $basicDashboard->isNotEmpty()) {
-                $role->givePermissionTo($basicDashboard);
-            }
+        $waiter = Role::find(EnumRole::WAITER);
+        if ($waiter) {
+            $waiter->givePermissionTo(Permission::whereIn('name', [
+                'dashboard',
+                'waiter',
+                'waiter_dashboard',
+                'waiter_tables',
+                'waiter_orders',
+                'waiter_orders_create',
+                'waiter_orders_edit',
+                'waiter_orders_send',
+                'waiter_orders_cancel_draft',
+            ])->get());
+        }
+
+        $chef = Role::find(EnumRole::CHEF);
+        if ($chef) {
+            $chef->givePermissionTo(Permission::whereIn('name', [
+                'dashboard',
+                'kitchen',
+                'kitchen_dashboard',
+                'kitchen_view',
+                'kitchen_accept',
+                'kitchen_prepare',
+                'kitchen_ready',
+                'kitchen_print',
+                'kitchen_reject',
+                'kitchen_cancel',
+            ])->get());
         }
     }
 }
