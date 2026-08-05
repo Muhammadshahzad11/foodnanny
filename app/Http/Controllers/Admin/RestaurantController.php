@@ -37,7 +37,7 @@ class RestaurantController extends AdminController implements HasMiddleware
             new Middleware('permission:restaurants_create', only: ['store']),
             new Middleware('permission:restaurants_edit', only: ['update']),
             new Middleware('permission:restaurants_edit', only: ['userStore']),
-            new Middleware('permission:restaurants_edit', only: ['verify']),
+            new Middleware('permission:restaurants_edit', only: ['approve']),
             new Middleware('permission:restaurants_delete', only: ['destroy']),
             new Middleware('permission:restaurants_show', only: ['changeImage']),
             new Middleware('permission:restaurants_show', only: ['changeLogo']),
@@ -131,6 +131,18 @@ class RestaurantController extends AdminController implements HasMiddleware
     {
         try {
             return new RestaurantDetailsResource($this->restaurantService->userStore($request, $restaurant));
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    public function approve(Restaurant $restaurant): RestaurantDetailsResource|\Illuminate\Http\Response|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            $approved = $this->restaurantService->approve($restaurant);
+            return (new RestaurantDetailsResource($approved))->additional([
+                'message' => trans('all.message.restaurant_approved_successfully'),
+            ]);
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
         }

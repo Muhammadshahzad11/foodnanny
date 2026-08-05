@@ -34,7 +34,7 @@ class SiteTableSeeder extends Seeder
             'site_phone_verification'                                 => Activity::ENABLE,
             'site_default_language'                                   => 1,
             'site_google_map_key'                                     => 'AIzaSyBvRR2Xoh_6-RY8-6WkU4JE9M9zg1LaL-I',
-            'site_copyright'                                          => $envService->getValue('DEMO') ? '© Foodnanny 2026, All Rights Reserved.' : '',
+            'site_copyright'                                          => $envService->getValue('DEMO') ? '© Cost to Cost Foods 2026, All Rights Reserved.' : '',
             'site_language_switch'                                    => Activity::ENABLE,
             'site_app_debug'                                          => Activity::DISABLE,
             'site_auto_localization'                                  => Activity::ENABLE,

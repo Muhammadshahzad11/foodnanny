@@ -1,4 +1,5 @@
 const LoginComponent                       = () => import("../../components/frontend/auth/LoginComponent.vue");
+const LoginVerifyComponent                 = () => import("../../components/frontend/auth/LoginVerifyComponent.vue");
 const ForgotPasswordComponent              = () => import("../../components/frontend/auth/ForgotPasswordComponent.vue");
 const SignupPhoneComponent                 = () => import("../../components/frontend/auth/SignupPhoneComponent.vue");
 const GuestLoginComponent                  = () => import("../../components/frontend/auth/GuestLoginComponent.vue");
@@ -9,6 +10,7 @@ const RestaurantPhoneComponent             = () => import("../../components/fron
 const RestaurantVerifyComponent            = () => import("../../components/frontend/auth/RestaurantVerifyComponent.vue");
 const RestaurantOwnerComponent             = () => import("../../components/frontend/auth/RestaurantOwnerComponent.vue");
 const RestaurantInfoComponent              = () => import("../../components/frontend/auth/RestaurantInfoComponent.vue");
+const RestaurantThankYouComponent          = () => import("../../components/frontend/auth/RestaurantThankYouComponent.vue");
 const SignupVerifyComponent                = () => import("../../components/frontend/auth/SignupVerifyComponent.vue");
 const SignupRegisterComponent              = () => import("../../components/frontend/auth/SignupRegisterComponent.vue");
 const GuestVerifyComponent                 = () => import("../../components/frontend/auth/GuestVerifyComponent.vue");
@@ -20,6 +22,16 @@ export default [
         path: '/login',
         component: LoginComponent,
         name: 'auth.login',
+        meta: {
+            template: "frontend",
+            auth: false,
+            mode: "main"
+        },
+    },
+    {
+        path: '/login/verify',
+        component: LoginVerifyComponent,
+        name: 'auth.loginVerify',
         meta: {
             template: "frontend",
             auth: false,
@@ -140,6 +152,16 @@ export default [
         path: '/signup-restaurant/info',
         component: RestaurantInfoComponent,
         name: 'auth.signupRestaurantInfo',
+        meta: {
+            template: "frontend",
+            auth: false,
+            mode: "main"
+        }
+    },
+    {
+        path: '/signup-restaurant/thank-you',
+        component: RestaurantThankYouComponent,
+        name: 'auth.signupRestaurantThankYou',
         meta: {
             template: "frontend",
             auth: false,

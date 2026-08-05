@@ -25,8 +25,8 @@
     <!-- THEME COLORS (admin configurable) -->
     <style>
         :root {
-            --primary: {{ $primaryColor ?? '243 104 5' }};
-            --secondary: {{ $secondaryColor ?? '31 31 57' }};
+            --primary: {{ $primaryColor ?? '20 138 60' }};
+            --secondary: {{ $secondaryColor ?? '10 61 40' }};
         }
     </style>
 

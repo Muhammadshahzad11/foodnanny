@@ -11,11 +11,38 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 class Pwa extends Model implements HasMedia
 {
     use HasFactory;
-
     use InteractsWithMedia;
 
-    protected $fillable = ['id'];
-    protected $table = "pwas";
+    protected $table = 'pwas';
+
+    protected $fillable = [
+        'id',
+        'name',
+        'short_name',
+        'description',
+        'theme_color',
+        'background_color',
+        'orientation',
+        'display_mode',
+        'offline_mode',
+        'auto_update',
+        'cache_strategy',
+        'enable_install_popup',
+        'popup_delay_seconds',
+        'popup_frequency_hours',
+        'cache_version',
+        'force_updated_at',
+    ];
+
+    protected $casts = [
+        'offline_mode' => 'boolean',
+        'auto_update' => 'boolean',
+        'enable_install_popup' => 'boolean',
+        'popup_delay_seconds' => 'integer',
+        'popup_frequency_hours' => 'integer',
+        'cache_version' => 'integer',
+        'force_updated_at' => 'datetime',
+    ];
 
     public function getSplashAttribute(): string
     {

@@ -23,6 +23,8 @@ class Order extends Model implements HasMedia
         'token',
         'user_id',
         'restaurant_id',
+        'table_id',
+        'waiter_id',
         'subtotal',
         'discount',
         'delivery_fee',
@@ -42,8 +44,15 @@ class Order extends Model implements HasMedia
         'delivery_boy_request',
         'service_fee',
         'reason',
+        'order_note',
+        'kitchen_priority',
+        'kitchen_station_id',
+        'kitchen_accepted_by',
+        'kitchen_accepted_at',
+        'kitchen_preparing_by',
+        'kitchen_ready_by',
         'source',
-        'active', 
+        'active',
         'creator_type',
         'creator_id',
         'editor_type',
@@ -56,6 +65,8 @@ class Order extends Model implements HasMedia
         'token'                => 'string',
         'user_id'              => 'integer',
         'restaurant_id'        => 'integer',
+        'table_id'             => 'integer',
+        'waiter_id'            => 'integer',
         'subtotal'             => 'decimal:6',
         'discount'             => 'decimal:6',
         'delivery_fee'         => 'decimal:6',
@@ -75,6 +86,13 @@ class Order extends Model implements HasMedia
         'delivery_boy_request' => 'integer',
         'service_fee'          => 'decimal:6',
         'reason'               => 'string',
+        'order_note'           => 'string',
+        'kitchen_priority'     => 'integer',
+        'kitchen_station_id'   => 'integer',
+        'kitchen_accepted_by'  => 'integer',
+        'kitchen_accepted_at'  => 'datetime',
+        'kitchen_preparing_by' => 'integer',
+        'kitchen_ready_by'     => 'integer',
         'source'               => 'integer',
         'active'               => 'integer', 
         'creator_type'         => 'string',
@@ -112,6 +130,46 @@ class Order extends Model implements HasMedia
     public function restaurant(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
+    }
+
+    public function diningTable(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(RestaurantTable::class, 'table_id');
+    }
+
+    public function waiter(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'waiter_id', 'id')->withTrashed();
+    }
+
+    public function kitchenStation(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(KitchenStation::class, 'kitchen_station_id');
+    }
+
+    public function kitchenAcceptedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'kitchen_accepted_by')->withTrashed();
+    }
+
+    public function kitchenPreparingBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'kitchen_preparing_by')->withTrashed();
+    }
+
+    public function kitchenReadyBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'kitchen_ready_by')->withTrashed();
+    }
+
+    public function kitchenTickets(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(KitchenTicket::class);
+    }
+
+    public function kitchenStatusLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(KitchenStatusLog::class);
     }
 
     public function deliveryBoy(): \Illuminate\Database\Eloquent\Relations\BelongsTo

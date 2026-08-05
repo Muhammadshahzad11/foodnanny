@@ -16,14 +16,23 @@
                         <form @submit.prevent="searchLocation"
                               class="flex items-center gap-4 w-full max-w-md sm:max-w-lg h-12 sm:h-[60px] rounded-full shadow-xs bg-white relative">
                             <button type="button" id="map-current-location"
-                                    class="lab-line-gps text-xl flex-shrink-0 text-primary ltr:ml-3 rtl:mr-3 absolute ltr:left-2 rtl:right-2 z-[1]"></button>
+                                    title="Use current location"
+                                    :disabled="locating"
+                                    @click.prevent="useCurrentLocation"
+                                    class="lab-line-gps text-xl flex-shrink-0 text-primary ltr:ml-3 rtl:mr-3 absolute ltr:left-2 rtl:right-2 z-[1] hover:opacity-80 disabled:opacity-40"></button>
                             <input id="map-autocomplete-input" type="search" v-model="modelLocation"
                                    ref="homeLocationName" :placeholder="$t('label.enter_your_location')"
-                                   class="w-full h-full ltr:pl-12 ltr:pr-24 ltr:sm:pr-32 rtl:pl-24 rtl:sm:pl-32 rtl:pr-12">
-                            <button :class="modelLocation === '' || modelLocation === null ? 'bg-primary/50' : ''"
-                                    :disabled="modelLocation === '' || modelLocation === null"
+                                   class="w-full h-full ltr:pl-12 ltr:pr-28 ltr:sm:pr-36 rtl:pl-28 rtl:sm:pl-36 rtl:pr-12">
+                            <button v-if="modelLocation"
+                                    type="button"
+                                    title="Clear location"
+                                    @click.prevent="clearLocationInput"
+                                    class="lab-fill-close-circle text-lg text-danger absolute ltr:right-[5.5rem] sm:ltr:right-[7.5rem] rtl:left-[5.5rem] sm:rtl:left-[7.5rem] z-[1]"></button>
+                            <button type="submit"
+                                    :class="!canSearch ? 'bg-primary/50' : ''"
+                                    :disabled="!canSearch || locating"
                                     class="h-full px-4 sm:px-6 rounded-full text-base sm:text-lg capitalize font-medium bg-primary text-white absolute ltr:right-0 rtl:left-0">
-                                {{ $t('button.search') }}
+                                {{ locating ? '...' : $t('button.search') }}
                             </button>
                         </form>
                     </div>
@@ -161,8 +170,9 @@ import DisplayModeEnum from "../../../enums/modules/displayModeEnum.js";
 import {useFrontendAboutStepsStore} from "../../../stores/frontendAboutSteps.js";
 import StatusEnum from "../../../enums/modules/statusEnum.js";
 import {useFrontendBenefitStore} from "../../../stores/frontendBenefit.js";
-import _ from "lodash";
 import ENV from "../../../config/env.js";
+import locationService from "../../../services/locationService.js";
+import alertService from "../../../services/alertService.js";
 
 export default {
     name: "HomeComponent",
@@ -189,6 +199,7 @@ export default {
             loading: {
                 isActive: false,
             },
+            locating: false,
             modelLocation: null,
             position: {
                 name: null,
@@ -199,7 +210,6 @@ export default {
                     lng: null
                 }
             },
-            currentLocation: {},
             modules: [Pagination],
             breakpoints: {
                 0: {slidesPerView: 1},
@@ -241,7 +251,7 @@ export default {
             this.loading.isActive = false;
         });
 
-        await this.mainMap();
+        await this.initPlacesAutocomplete();
     },
     computed: {
         setting: function () {
@@ -255,142 +265,136 @@ export default {
         },
         benefits: function () {
             return this.frontendBenefitStore.lists;
+        },
+        canSearch() {
+            const typed = String(this.modelLocation || '').trim();
+            return typed.length > 0 || (this.position.location.lat != null && this.position.location.lng != null);
         }
     },
     methods: {
-        mainMap: async function () {
-            if(ENV.GOOGLE_MAP_KEY) {
-                const Places       = await google.maps.importLibrary("places")
-                let input          = document.getElementById('map-autocomplete-input');
-                const autocomplete = new Places.Autocomplete(input);
-
+        async initPlacesAutocomplete() {
+            if (!ENV.GOOGLE_MAP_KEY || typeof google === 'undefined') {
+                return;
+            }
+            try {
+                const Places = await google.maps.importLibrary("places");
+                const input = document.getElementById('map-autocomplete-input');
+                if (!input) return;
+                const autocomplete = new Places.Autocomplete(input, {
+                    fields: ['address_components', 'formatted_address', 'geometry', 'name'],
+                });
                 autocomplete.addListener('place_changed', () => {
-                    const place          = autocomplete.getPlace();
-                    this.currentLocation = {
-                        lat: place.geometry.location.lat(),
-                        lng: place.geometry.location.lng()
-                    };
-                    this.setPosition();
+                    const place = autocomplete.getPlace();
+                    if (!place?.geometry?.location) return;
+                    const lat = place.geometry.location.lat();
+                    const lng = place.geometry.location.lng();
+                    const name = place.formatted_address || this.$refs.homeLocationName?.value || '';
+                    const area = locationService.areaFromPlace(place);
+                    this.modelLocation = name;
+                    this.applyCoords(lat, lng, name, area);
                 });
-
-                await this.setCurrentLocation();
-
-                let currentLocationButton = document.getElementById('map-current-location');
-                currentLocationButton.addEventListener("click", async () => {
-                    await this.setCurrentLocation();
-                });
+            } catch (e) {
+                // Autocomplete optional; GPS + typed search still work
             }
         },
-        setPosition: function () {
-            let other             = {
-                "roadNo": null,
-                "block": null,
-                "area": null,
-                "city": null,
-                "zipCode": null,
-                "state": null,
-                "country": null,
+        applyCoords(lat, lng, name, area = {}) {
+            const label = name || this.modelLocation || 'Current location';
+            this.position = {
+                name: label,
+                address: label,
+                other: {
+                    city: area.city || null,
+                    district: area.district || null,
+                    state: area.state || null,
+                },
+                location: { lat, lng }
             };
-            let formatted_address = "";
-            const latLngLiteral   = new google.maps.LatLng(this.currentLocation.lat, this.currentLocation.lng);
-            const geocoder        = new google.maps.Geocoder();
-            geocoder.geocode({latLng: latLngLiteral}).then(res => {
-                for (let i = 0; i < res.results.length; i++) {
-                    for (let j = 0; j < res.results[i].address_components.length; j++) {
+        },
+        clearLocationInput() {
+            this.modelLocation = null;
+            this.position = {
+                name: null,
+                address: null,
+                other: {},
+                location: { lat: null, lng: null }
+            };
+            this.commonStore.clearLocation();
+        },
+        async goToRestaurants(lat, lng, name, area = {}) {
+            const payload = {
+                location: name || 'Current location',
+                latitude: lat,
+                longitude: lng,
+                city: area.city || null,
+                district: area.district || null,
+                state: area.state || null,
+            };
+            if (!this.commonStore.order_type) {
+                payload.order_type = 5; // Delivery
+            }
+            await this.commonStore.update(payload);
+            this.$router.push({ name: 'frontend.restaurant' });
+        },
+        async useCurrentLocation() {
+            this.locating = true;
+            this.loading.isActive = true;
+            try {
+                const coords = await locationService.getCurrentPosition();
+                const geo = await locationService.reverseGeocode(coords.lat, coords.lng);
+                this.modelLocation = geo.name;
+                this.applyCoords(coords.lat, coords.lng, geo.name, geo);
+                await this.goToRestaurants(coords.lat, coords.lng, geo.name, geo);
+            } catch (e) {
+                const msg = e?.message === 'geolocation_unsupported'
+                    ? "Your browser doesn't support geolocation."
+                    : 'Could not get your current location. Please allow location access and try again.';
+                alertService.error(msg);
+            } finally {
+                this.locating = false;
+                this.loading.isActive = false;
+            }
+        },
+        async searchLocation() {
+            if (this.locating) return;
+            this.locating = true;
+            this.loading.isActive = true;
+            try {
+                const typed = String(this.modelLocation || '').trim();
+                let lat = this.position.location.lat;
+                let lng = this.position.location.lng;
+                let name = this.position.name || typed;
+                let area = {
+                    city: this.position.other?.city || this.commonStore.city,
+                    district: this.position.other?.district || this.commonStore.district,
+                    state: this.position.other?.state || this.commonStore.state,
+                };
 
-                        if (res.results[i].address_components[j].types[0] === "route" && other.roadNo === null) {
-                            other.roadNo = res.results[i].address_components[j].long_name;
-                        }
+                const coordsMatchTyped = lat != null && lng != null
+                    && typed
+                    && String(this.position.name || '').trim() === typed;
 
-                        if (res.results[i].address_components[j].types[0] === "neighborhood" && res.results[i].address_components[j].types[1] === "political" && other.block === null) {
-                            other.block = res.results[i].address_components[j].long_name;
-                        }
-
-                        if (res.results[i].address_components[j].types[0] === "political" && res.results[i].address_components[j].types[1] === "sublocality" && res.results[i].address_components[j].types[2] === "sublocality_level_1" && other.area === null) {
-                            other.area = res.results[i].address_components[j].long_name;
-                        }
-
-                        if (res.results[i].address_components[j].types[0] === "locality" && res.results[i].address_components[j].types[1] === "political" && other.city === null) {
-                            other.city = res.results[i].address_components[j].long_name;
-                        }
-
-                        for (let k = 0; k < res.results[i].address_components[j].types.length; k++) {
-                            if (res.results[i].address_components[j].types[k] === "postal_code" && other.zipCode === null) {
-                                other.zipCode = res.results[i].address_components[j].long_name;
-                            }
-                        }
-
-                        if (res.results[i].address_components[j].types[0] === "administrative_area_level_1" && res.results[i].address_components[j].types[1] === "political" && other.state === null) {
-                            other.state = res.results[i].address_components[j].long_name;
-                        }
-
-
-                        if (res.results[i].address_components[j].types[0] === "country" && other.country === null) {
-                            other.country = res.results[i].address_components[j].long_name;
-                        }
+                if (!coordsMatchTyped) {
+                    if (!typed) {
+                        alertService.error(this.$t('label.enter_your_location') || 'Enter your location');
+                        return;
                     }
+                    const geo = await locationService.forwardGeocode(typed);
+                    lat = geo.lat;
+                    lng = geo.lng;
+                    name = geo.name;
+                    area = geo;
+                    this.modelLocation = geo.name;
+                    this.applyCoords(lat, lng, name, geo);
+                } else if (!area.city && !area.district && !area.state && lat != null && lng != null) {
+                    area = await locationService.reverseGeocode(lat, lng);
                 }
 
-                _.forEach(other, (value, index) => {
-                    if (value !== null && value !== "") {
-                        formatted_address += value;
-                        if (index !== "country") {
-                            formatted_address += ", ";
-                        }
-                        formatted_address += "";
-                    }
-                });
-                this.position = {
-                    name: this.$refs.homeLocationName.value,
-                    address: formatted_address,
-                    other: other,
-                    location: this.currentLocation
-                };
-            }).catch((error) => {
-                this.position = {
-                    name: null,
-                    address: null,
-                    other: {},
-                    location: {
-                        lat: null,
-                        lng: null
-                    }
-                };
-            });
-        },
-        setCurrentLocation: async function () {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        this.currentLocation = {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude,
-                        };
-
-                        const latLngLiteral = new google.maps.LatLng(this.currentLocation.lat, this.currentLocation.lng);
-                        const geocoder      = new google.maps.Geocoder();
-                        geocoder.geocode({latLng: latLngLiteral}).then(res => {
-                            if (res.results.length > 0) {
-                                this.modelLocation = res.results[0].formatted_address;
-                                this.setPosition();
-                            }
-                        });
-                    }, () => {
-                        alert('The Geolocation service failed.');
-                    }
-                );
-            } else {
-                alert("Your browser doesn't support geolocation.");
-            }
-        },
-        searchLocation: async function () {
-            if (this.position.location.lat !== null && this.position.location.lng !== null) {
-                await this.commonStore.update({
-                    location: this.position.name,
-                    latitude: this.position.location.lat,
-                    longitude: this.position.location.lng
-                });
-                this.$router.push({name: 'frontend.restaurant'});
+                await this.goToRestaurants(lat, lng, name, area);
+            } catch (e) {
+                alertService.error('Location not found. Try another address or use current location.');
+            } finally {
+                this.locating = false;
+                this.loading.isActive = false;
             }
         }
     }

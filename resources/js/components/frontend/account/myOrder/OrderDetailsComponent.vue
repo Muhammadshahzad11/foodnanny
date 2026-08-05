@@ -19,6 +19,15 @@
                             <span class="text-sm capitalize text-paragraph">{{ $t('label.order_type') }}:</span>
                             <span class="text-sm capitalize">{{ enums.orderTypeEnumArray[order.order_type] }}</span>
                         </div>
+                        <div class="flex flex-wrap items-center gap-2 mb-1.5" v-if="order.table">
+                            <span class="text-sm capitalize text-paragraph">{{ $t('label.table') }}:</span>
+                            <span class="text-sm capitalize">
+                                {{ order.table.name || order.table.table_number }}
+                                <span v-if="order.table.table_number && order.table.name">
+                                    ({{ order.table.table_number }})
+                                </span>
+                            </span>
+                        </div>
                         <div class="flex flex-wrap items-center gap-2 mb-6">
                             <span class="text-sm capitalize text-paragraph">{{ $t('label.order_from') }}:</span>
                             <span class="flex-auto text-sm font-medium capitalize">{{
@@ -445,7 +454,8 @@ export default {
                 messageChannelTypeEnum: messageChannelTypeEnum,
                 orderTypeEnumArray: {
                     [orderTypeEnum.DELIVERY]: this.$t("label.delivery"),
-                    [orderTypeEnum.TAKEAWAY]: this.$t("label.takeaway")
+                    [orderTypeEnum.TAKEAWAY]: this.$t("label.takeaway"),
+                    [orderTypeEnum.DINING_TABLE]: this.$t("label.dining_table")
                 },
                 paymentTypeEnumArray: {
                     [paymentTypeEnum.CASH_ON_DELIVERY]: this.$t("label.cash_on_delivery"),

@@ -21,7 +21,7 @@ class OtpManagerService
     /**
      * @throws Exception
      */
-    public function phoneOTP(Request $request): bool
+    public function phoneOTP(Request $request): string
     {
         try {
             $otp = DB::table('one_time_passwords')->where([
@@ -56,7 +56,7 @@ class OtpManagerService
                 }
             }
 
-            return true;
+            return (string) $token;
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);

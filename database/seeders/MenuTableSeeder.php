@@ -22,7 +22,7 @@ class MenuTableSeeder extends Seeder
                 'language'   => 'dashboard',
                 'url'        => 'dashboard',
                 'icon'       => 'lab lab-line-dashboard',
-                'priority'   => 100,
+                'priority'   => 20,
                 'status'     => 1,
                 'created_at' => now(),
                 'updated_at' => now()
@@ -32,7 +32,17 @@ class MenuTableSeeder extends Seeder
                 'language'   => 'restaurants',
                 'url'        => 'restaurants',
                 'icon'       => 'lab lab-line-restaurants',
-                'priority'   => 100,
+                'priority'   => 30,
+                'status'     => 1,
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
+                'name'       => 'Cuisines',
+                'language'   => 'cuisines',
+                'url'        => 'cuisines',
+                'icon'       => 'lab lab-line-cuisine',
+                'priority'   => 31,
                 'status'     => 1,
                 'created_at' => now(),
                 'updated_at' => now()
@@ -42,7 +52,7 @@ class MenuTableSeeder extends Seeder
                 'language'   => 'items',
                 'url'        => 'items',
                 'icon'       => 'lab lab-items',
-                'priority'   => 100,
+                'priority'   => 40,
                 'status'     => 1,
                 'created_at' => now(),
                 'updated_at' => now()
@@ -470,6 +480,16 @@ class MenuTableSeeder extends Seeder
                         'url'        => 'restaurant-settings',
                         'icon'       => 'lab lab-line-restaurant-setting',
                         'priority'   => 100,
+                        'status'     => 1,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ],
+                    [
+                        'name'       => 'Tables',
+                        'language'   => 'tables',
+                        'url'        => 'tables',
+                        'icon'       => 'lab lab-line-restaurants',
+                        'priority'   => 95,
                         'status'     => 1,
                         'created_at' => now(),
                         'updated_at' => now()

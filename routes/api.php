@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\Admin\OtpController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\PwaController;
+use App\Http\Controllers\Frontend\ManifestController;
 use App\Http\Controllers\Admin\TaxController;
 use App\Http\Controllers\Admin\ItemController;
 use App\Http\Controllers\Admin\AiController;
@@ -52,6 +53,11 @@ use App\Http\Controllers\Admin\CollectionController;
 use App\Http\Controllers\Admin\OrderSetupController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RestaurantController;
+use App\Http\Controllers\Admin\RestaurantTableController;
+use App\Http\Controllers\Admin\WaiterController;
+use App\Http\Controllers\Admin\KitchenController;
+use App\Http\Controllers\Admin\InboxNotificationController;
+use App\Http\Controllers\Admin\RestaurantTableQrController;
 use App\Http\Controllers\Admin\SmsGatewayController;
 use App\Http\Controllers\Admin\AiAgentController;
 use App\Http\Controllers\Admin\SubscriberController;
@@ -121,6 +127,7 @@ use App\Http\Controllers\Frontend\RiderTipController as FrontendRiderTipControll
 use App\Http\Controllers\Frontend\TimeSlotController as FrontendTimeSlotController;
 use App\Http\Controllers\Frontend\AboutStepsController as FrontendAboutStepsController;
 use App\Http\Controllers\Frontend\RestaurantController as FrontendRestaurantController;
+use App\Http\Controllers\Frontend\TableQrResolveController;
 use App\Http\Controllers\Frontend\SubscriberController as FrontendSubscriberController;
 use App\Http\Controllers\Frontend\CountryCodeController as FrontendCountryCodeController;
 use App\Http\Controllers\Frontend\ItemCategoryController as FrontendItemCategoryController;
@@ -142,7 +149,8 @@ Route::middleware(['installed', 'apiKey', 'auth:sanctum'])->post('/broadcasting/
 Route::prefix('auth')->middleware(['installed', 'apiKey', 'localization'])->name('auth.')->namespace('Auth')->group(function () {
     Route::post('/is-auth', [LoginController::class, 'isAuth']);
     Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:login-email');
-    Route::post('/login-phone', [LoginController::class, 'phoneLogin'])->middleware('throttle:login-phone');;
+    Route::post('/login-phone/otp', [LoginController::class, 'sendPhoneLoginOtp'])->middleware('throttle:otp-send');
+    Route::post('/login-phone', [LoginController::class, 'phoneLogin'])->middleware('throttle:login-phone');
 
     Route::prefix('signup')->name('signup.')->group(function () {
         Route::post('/phone', [SignupController::class, 'phone'])->middleware('throttle:otp-send');
@@ -178,6 +186,7 @@ Route::prefix('auth')->middleware(['installed', 'apiKey', 'localization'])->name
         Route::middleware('verify.api')->group(function () {
             Route::post('/logout', [LoginController::class, 'logout']);
             Route::post('/delete-account', [DeactivateController::class, 'deleteAccount']);
+            Route::get('/menus', [LoginController::class, 'menus']);
         });
     });
 });
@@ -321,6 +330,63 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         });
     });
 
+    Route::prefix('table')->name('table.')->group(function () {
+        Route::get('/', [RestaurantTableController::class, 'index']);
+        Route::post('/', [RestaurantTableController::class, 'store']);
+        Route::get('/show/{restaurantTable}', [RestaurantTableController::class, 'show']);
+        Route::match(['put', 'patch'], '/{restaurantTable}', [RestaurantTableController::class, 'update']);
+        Route::delete('/{restaurantTable}', [RestaurantTableController::class, 'destroy']);
+        Route::post('/change-status/{restaurantTable}', [RestaurantTableController::class, 'changeStatus']);
+    });
+
+    Route::prefix('waiter')->name('waiter.')->group(function () {
+        Route::get('/dashboard', [WaiterController::class, 'dashboard']);
+        Route::get('/tables', [WaiterController::class, 'tables']);
+        Route::get('/tables/{restaurantTable}', [WaiterController::class, 'tableShow']);
+        Route::get('/orders', [WaiterController::class, 'orders']);
+        Route::post('/orders', [WaiterController::class, 'store']);
+        Route::get('/orders/{order}', [WaiterController::class, 'orderShow']);
+        Route::match(['put', 'patch'], '/orders/{order}', [WaiterController::class, 'update']);
+        Route::post('/orders/{order}/send-kitchen', [WaiterController::class, 'sendToKitchen']);
+        Route::post('/orders/{order}/cancel-draft', [WaiterController::class, 'cancelDraft']);
+        Route::post('/orders/{order}/print-data', [WaiterController::class, 'printData']);
+    });
+
+    Route::prefix('inbox-notifications')->name('inbox-notifications.')->group(function () {
+        Route::get('/', [InboxNotificationController::class, 'index']);
+        Route::get('/recent', [InboxNotificationController::class, 'recent']);
+        Route::get('/unread-count', [InboxNotificationController::class, 'unreadCount']);
+        Route::post('/read-all', [InboxNotificationController::class, 'markAllRead']);
+        Route::post('/{notification}/read', [InboxNotificationController::class, 'markRead']);
+        Route::delete('/{notification}', [InboxNotificationController::class, 'destroy']);
+    });
+
+    Route::prefix('kitchen')->name('kitchen.')->group(function () {
+        Route::get('/dashboard', [KitchenController::class, 'dashboard']);
+        Route::get('/orders', [KitchenController::class, 'orders']);
+        Route::get('/orders/{order}', [KitchenController::class, 'orderShow']);
+        Route::post('/orders/{order}/accept', [KitchenController::class, 'accept']);
+        Route::post('/orders/{order}/preparing', [KitchenController::class, 'preparing']);
+        Route::post('/orders/{order}/ready', [KitchenController::class, 'ready']);
+        Route::post('/orders/{order}/complete', [KitchenController::class, 'complete']);
+        Route::post('/orders/{order}/reject', [KitchenController::class, 'reject']);
+        Route::post('/orders/{order}/cancel', [KitchenController::class, 'cancel']);
+        Route::post('/orders/{order}/priority', [KitchenController::class, 'priority']);
+        Route::post('/orders/{order}/print-data', [KitchenController::class, 'printData']);
+    });
+
+    Route::prefix('table-qr')->name('table-qr.')->group(function () {
+        Route::get('/preview/{restaurantTable}', [RestaurantTableQrController::class, 'preview']);
+        Route::post('/generate/{restaurantTable}', [RestaurantTableQrController::class, 'generate']);
+        Route::post('/regenerate/{restaurantTable}', [RestaurantTableQrController::class, 'regenerate']);
+        Route::get('/download/{restaurantTable}', [RestaurantTableQrController::class, 'download']);
+        Route::post('/generate-missing', [RestaurantTableQrController::class, 'generateMissing']);
+        Route::post('/generate-all', [RestaurantTableQrController::class, 'generateAll']);
+        Route::post('/regenerate-selected', [RestaurantTableQrController::class, 'regenerateSelected']);
+        Route::post('/bulk-download', [RestaurantTableQrController::class, 'bulkDownload']);
+        Route::post('/print-data', [RestaurantTableQrController::class, 'printData']);
+    });
+
     Route::prefix('employee')->name('employee.')->group(function () {
         Route::get('/', [EmployeeController::class, 'index']);
         Route::post('/', [EmployeeController::class, 'store']);
@@ -462,6 +528,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::post('/change-image/{restaurant}', [RestaurantController::class, 'changeImage']);
         Route::post('/change-logo/{restaurant}', [RestaurantController::class, 'changeLogo']);
         Route::post('/user/{restaurant}', [RestaurantController::class, 'userStore']);
+        Route::post('/approve/{restaurant}', [RestaurantController::class, 'approve']);
     });
 
     Route::prefix('payout')->name('payout.')->group(function () {
@@ -806,6 +873,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::prefix('pwa')->name('pwa')->group(function () {
             Route::get('/', [PwaController::class, 'index']);
             Route::post('/', [PwaController::class, 'update']);
+            Route::post('/force-update', [PwaController::class, 'forceUpdate']);
         });
 
         Route::prefix('menu')->name('menu')->group(function () {
@@ -874,6 +942,10 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
     });
 });
 
+Route::get('/frontend/pwa/install-config', [ManifestController::class, 'installConfig'])
+    ->middleware(['installed', 'apiKey', 'localization'])
+    ->name('frontend.pwa.install-config');
+
 Route::prefix('frontend')->name('frontend.')->middleware(['installed', 'apiKey', 'localization'])->group(function () {
     Route::prefix('setting')->name('setting.')->group(function () {
         Route::get('/', [SettingController::class, 'index']);
@@ -903,6 +975,10 @@ Route::prefix('frontend')->name('frontend.')->middleware(['installed', 'apiKey',
         Route::get('/', [FrontendPageController::class, 'index']);
         Route::get('/show/{page:slug}', [FrontendPageController::class, 'show']);
         Route::get('/page-info/{page}', [FrontendPageController::class, 'show']);
+    });
+
+    Route::prefix('table-qr')->name('table-qr.')->group(function () {
+        Route::get('/resolve/{token}', [TableQrResolveController::class, 'resolve']);
     });
 
     Route::prefix('language')->name('language.')->group(function () {

@@ -13,7 +13,7 @@
     </div>
     <div v-if="theme === 'admin'">
         <main :class="sidebar ? 'ltr:lg:pl-64 rtl:lg:pr-64' : 'ltr:pl-0 rtl:pr-0'"
-            class="pt-[70px] md:pt-16 font-admin text-paragraph transition-all duration-300">
+            class="pt-20 font-admin text-paragraph transition-all duration-300">
             <BackendNavbarComponent />
             <BackendMenuComponent />
             <section class="p-3 lg:p-5">
@@ -23,6 +23,10 @@
             <BackendAiSidebarComponent />
         </main>
     </div>
+
+    <!-- Global for every role + website visitor -->
+    <PwaInstallPromptComponent />
+    <PwaUpdatePromptComponent />
 </template>
 
 <script>
@@ -42,6 +46,8 @@ import { useAutoLocalizationStore } from "../stores/autoLocalization.js";
 import FrontendCookiesComponent from "./layouts/frontend/FrontendCookiesComponent.vue";
 import FrontendMobileNavbarComponent from "./layouts/frontend/FrontendMobileNavbarComponent.vue";
 import FrontendPWAComponent from "./layouts/frontend/FrontendPWAComponent.vue";
+import PwaInstallPromptComponent from "./common/PwaInstallPromptComponent.vue";
+import PwaUpdatePromptComponent from "./common/PwaUpdatePromptComponent.vue";
 import FirebaseNotificationComponent from "./common/FirebaseNotificationComponent.vue";
 import LoadingComponent from "./common/LoadingComponent.vue";
 import activityEnum from "../enums/modules/activityEnum.js";
@@ -55,6 +61,8 @@ export default {
         LoadingComponent,
         FirebaseNotificationComponent,
         FrontendPWAComponent,
+        PwaInstallPromptComponent,
+        PwaUpdatePromptComponent,
         FrontendFooterComponent,
         BackendMenuComponent,
         FrontendNavbarComponent,

@@ -105,7 +105,7 @@ export default {
                         lineCap: "round",
                         curve: "smooth"
                     },
-                    colors: ["#F36805"],
+                    colors: ["#148A3C"],
                     grid: {show: false},
                     yaxis: {show: false},
                     dataLabels: {enabled: false}

@@ -3,7 +3,7 @@
  */
 
 @font-face {
-  font-display: auto;
+  font-display: swap;
   font-family: "Iconly";
   font-style: normal;
   font-weight: 400;
@@ -11,16 +11,33 @@
   src: url("./iconly.eot?#iefix") format("embedded-opentype"), url("./iconly.woff2?1768289205463") format("woff2"), url("./iconly.woff?1768289205463") format("woff"), url("./iconly.ttf?1768289205463") format("truetype"), url("./iconly.svg?1768289205463#Iconly") format("svg");
 }
 
-[class="lab"], [class^="lab-"], [class*=" lab-"] {
+/* Match lab-* even when utility classes come first (e.g. "text-sm lab-fill-x") */
+.lab,
+[class^="lab-"],
+[class*=" lab-"],
+[class*="lab-line-"],
+[class*="lab-fill-"],
+[class*="lab-online-"] {
   display: inline-block;
   font-family: "Iconly" !important;
   font-weight: 400;
-  font-style: normal;
+  font-style: normal !important;
   font-variant: normal;
   text-rendering: auto;
   line-height: 1;
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
+}
+
+.lab::before,
+[class^="lab-"]::before,
+[class*=" lab-"]::before,
+[class*="lab-line-"]::before,
+[class*="lab-fill-"]::before,
+[class*="lab-online-"]::before {
+  font-family: "Iconly" !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
 }
 
 .lab-line-filter:before {

@@ -20,8 +20,8 @@ class ThemeTableSeeder extends Seeder
             'theme_logo'            => "",
             'theme_favicon_logo'    => "",
             'theme_footer_logo'     => "",
-            'theme_primary_color'   => "#F36805",
-            'theme_secondary_color' => "#1F1F39",
+            'theme_primary_color'   => "#148A3C",
+            'theme_secondary_color' => "#0A3D28",
         ]);
 
         if(file_exists(public_path('/images/seeder/theme/logo.png'))) {

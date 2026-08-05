@@ -125,6 +125,7 @@ class EmployeeController extends AdminController implements HasMiddleware
     public function myOrder(PaginateRequest $request, User $employee): \Illuminate\Http\Response|\Illuminate\Http\Resources\Json\AnonymousResourceCollection|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            $this->employeeService->show($employee);
             return OrderResource::collection($this->orderService->userOrder($request, $employee));
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);

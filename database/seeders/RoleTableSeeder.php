@@ -45,6 +45,30 @@ class RoleTableSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'name'       => 'Waiter',
+                'guard_name' => 'sanctum',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name'       => 'Chef',
+                'guard_name' => 'sanctum',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name'       => 'Cashier',
+                'guard_name' => 'sanctum',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name'       => 'Manager',
+                'guard_name' => 'sanctum',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
     }
 }

@@ -4,9 +4,9 @@
 
 @layer base {
     :root {
-        --primary: 243 104 5;
-        --secondary: 31 31 57;
-        --heading: 31 31 57;
+        --primary: 20 138 60;
+        --secondary: 10 61 40;
+        --heading: 10 61 40;
         --placeholder: 160 163 189;
         --paragraph: 110 113 145;
         --border-light: #f1f5f9;
@@ -26,6 +26,15 @@
     button,
     label,
     span { @apply inline-block; font-style: initial; }
+
+    /* Keep Iconly glyphs visible when utility classes precede lab-* */
+    .lab,
+    [class*="lab-line-"],
+    [class*="lab-fill-"],
+    [class*="lab-online-"] {
+        font-family: var(--icon-font), "Iconly" !important;
+        font-style: normal !important;
+    }
 
     form { @apply block w-full focus-within:outline-0 focus-visible:outline-0 }
 
@@ -644,3 +653,29 @@ input[type="search"]::-webkit-search-results-decoration { display: none; }
 .apexcharts-tooltip-series-group { @apply !py-1.5 !px-3 }
 
 .time-slot-gap { margin: 12px; }
+
+/* Keep toasts below fixed admin header (h-16 / h-20) */
+.Vue-Toastification__container.top-right,
+.Vue-Toastification__container.top-left,
+.Vue-Toastification__container.top-center,
+.app-toast-container.top-right,
+.app-toast-container.top-left,
+.app-toast-container.top-center {
+    top: 5.5rem !important;
+}
+
+/* Module 8 — PWA standalone polish */
+@media (display-mode: standalone) {
+    body {
+        overscroll-behavior-y: none;
+    }
+    #backend-header {
+        padding-top: env(safe-area-inset-top);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+

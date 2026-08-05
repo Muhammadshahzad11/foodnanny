@@ -20,6 +20,13 @@ import 'swiper/css/bundle';
 import './echo.js';
 import VueApexCharts from "vue3-apexcharts";
 
+// Capture PWA install prompt before Vue mounts (browser may fire early)
+window.__ctcPwa = window.__ctcPwa || { deferredPrompt: null, installed: false };
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    window.__ctcPwa.deferredPrompt = e;
+    window.dispatchEvent(new CustomEvent('ctc-pwa-prompt-ready'));
+});
 
 /* Start axios code*/
 const API_URL = ENV.API_URL;
@@ -54,7 +61,8 @@ app.use(pinia)
 app.use(VueSimpleAlert)
 app.use(VueApexCharts);
 app.use(Toast, {
-    timeout: 2000,
+    position: "top-right",
+    timeout: 30000,
     closeOnClick: true,
     pauseOnFocusLoss: true,
     pauseOnHover: true,
@@ -64,6 +72,7 @@ app.use(Toast, {
     hideProgressBar: false,
     closeButton: "button",
     icon: true,
-    rtl: false
+    rtl: false,
+    containerClassName: "app-toast-container",
 })
 app.mount('#app');

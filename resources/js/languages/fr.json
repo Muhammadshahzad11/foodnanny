@@ -814,7 +814,11 @@
         "translated_languages": "Langues traduites",
         "no_language_found": "Aucune langue trouvée",
         "add_translation": "Ajouter une traduction",
-        "edit_translation": "Modifier la traduction"
+        "edit_translation": "Modifier la traduction",
+        "restaurant_registration_received": "Inscription reçue",
+        "go_to_login": "Aller à la connexion",
+        "registration_complete": "Inscription terminée",
+        "step_of": "Étape {current} sur {total}"
     },
     "button": {
         "action": "Action",
@@ -947,7 +951,9 @@
         "view_all": "Voir tout",
         "add_token": "Ajouter un jeton",
         "mark_done": "Marquer comme terminé",
-        "start_preparing": "Commencer la préparation"
+        "start_preparing": "Commencer la préparation",
+        "approve": "Approuver",
+        "add_and_send_to_kitchen": "Ajouter et envoyer en cuisine"
     },
     "number": {
         "0": "0",
@@ -1120,6 +1126,13 @@
         "item_name_is_required_to_generate_name": "Le nom de l'article est requis pour générer le nom par IA",
         "something_wrong": "Quelque chose s'est mal passé",
         "say_anything_about_food": "Posez-moi n'importe quelle question sur la nourriture",
-        "your_language_has_been_set_automatically": "Votre langue a été définie automatiquement"
+        "your_language_has_been_set_automatically": "Votre langue a été définie automatiquement",
+        "restaurant_thank_you_intro": "Merci d'avoir inscrit votre restaurant auprès de Cost to Cost Foods. Nous avons bien reçu vos informations.",
+        "restaurant_thank_you_approval_title": "Approbation de l'administrateur requise",
+        "restaurant_thank_you_approval_body": "Notre équipe examinera le profil de votre restaurant. Une fois approuvé par un administrateur, votre compte sera activé.",
+        "restaurant_thank_you_login_note": "Vous ne pourrez pas vous connecter tant que votre restaurant n'est pas approuvé. Après approbation, utilisez le même e-mail ou téléphone pour vous connecter.",
+        "restaurant_approve_confirm": "Approuver cette inscription de restaurant et autoriser le propriétaire à se connecter ?",
+        "restaurant_approved_successfully": "Restaurant approuvé avec succès. Le propriétaire peut maintenant se connecter.",
+        "restaurant_pending_approval": "L'inscription de votre restaurant est en attente d'approbation. Vous pourrez vous connecter une fois qu'un administrateur l'aura approuvée."
     }
 }

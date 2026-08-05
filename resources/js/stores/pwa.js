@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 
 export const usePwaStore = defineStore('pwa', {
     state: () => ({
-        lists: []
+        lists: {}
     }),
     actions: {
         fetch: function () {
@@ -21,9 +21,19 @@ export const usePwaStore = defineStore('pwa', {
         },
         save: function (payload) {
             return new Promise((resolve, reject) => {
-                let method = axios.post;
-                let url = "/admin/system-setting/pwa";
-                method(url, payload.form)
+                axios.post("/admin/system-setting/pwa", payload.form)
+                    .then((res) => {
+                        this.lists = res.data.data;
+                        resolve(res);
+                    })
+                    .catch((err) => {
+                        reject(err);
+                    });
+            });
+        },
+        forceUpdate: function () {
+            return new Promise((resolve, reject) => {
+                axios.post("/admin/system-setting/pwa/force-update")
                     .then((res) => {
                         this.lists = res.data.data;
                         resolve(res);

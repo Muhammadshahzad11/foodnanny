@@ -57,6 +57,7 @@ import LoadingContentComponent from "../../common/LoadingContentComponent.vue";
 import {useCanvas} from "../../../composables/canvas.js";
 import {useAiStore} from "../../../stores/ai.js";
 import alertService from "../../../services/alertService.js";
+import {apiErrorMessage} from "../../../services/apiError.js";
 
 export default {
     name: "BackendAiSidebarComponent",
@@ -102,12 +103,13 @@ export default {
                         this.$nextTick(() => {
                             this.scrollToBottom();
                         });
-                    }).catch((err) => {
+                    }).catch(() => {
                         this.loading.isActive = false;
                     });
                 }
-            }).catch((err) => {
-                alertService.error(this.$t('message.something_wrong'));
+            }).catch(() => {
+                // AI is optional — never toast on status/permission/network failures
+                this.aiStore.status = false;
             });
         },
         sendMessage: function () {
@@ -135,12 +137,12 @@ export default {
                         });
                     }).catch((err) => {
                         this.isTyping = false;
-                        alertService.error(this.$t('message.something_wrong'));
+                        alertService.error(apiErrorMessage(err, this.$t('message.ai_response_failed')));
                     })
                 }
             }).catch((err) => {
                 this.isTyping = false;
-                alertService.error(err.response?.data?.message || err.message);
+                alertService.error(apiErrorMessage(err, this.$t('message.ai_send_failed')));
             });
         },
         scrollToBottom: function () {

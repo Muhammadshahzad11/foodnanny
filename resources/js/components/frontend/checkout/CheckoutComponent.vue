@@ -14,7 +14,17 @@
 
                 <div class="col-12 md:col-7">
                     <div class="mb-6 rounded-2xl shadow-xs bg-white">
-                        <div v-if="checkoutProps.form.order_type === orderTypeEnum.TAKEAWAY"
+                        <div v-if="isDineIn"
+                             class="px-4 pt-4 pb-5 border-b border-gray-100">
+                            <h3 class="mb-2 text-lg font-medium capitalize">{{ $t('label.dining_table') }}</h3>
+                            <p class="mb-1 text-sm text-heading">
+                                {{ $t('label.table') }}:
+                                <span class="font-medium">{{ dineInTableLabel }}</span>
+                            </p>
+                            <p class="text-xs text-paragraph">{{ $t('message.dine_in_checkout_note') }}</p>
+                        </div>
+
+                        <div v-if="!isDineIn && checkoutProps.form.order_type === orderTypeEnum.TAKEAWAY"
                              class="px-4 pt-4 pb-5 border-b border-gray-100">
                             <MapComponent :key="mapKey" v-if="mapShow"
                                           :location="{lat: restaurant.latitude, lng: restaurant.longitude}"
@@ -26,7 +36,7 @@
                             </div>
                         </div>
 
-                        <div v-if="checkoutProps.form.order_type === orderTypeEnum.DELIVERY"
+                        <div v-if="!isDineIn && checkoutProps.form.order_type === orderTypeEnum.DELIVERY"
                              class="px-4 pt-4 pb-5 border-b border-gray-100">
                             <div class="flex items-center gap-3 mb-5">
                                 <h3 class="flex-auto text-lg font-medium capitalize">
@@ -71,7 +81,7 @@
                             </Swiper>
                         </div>
 
-                        <div class="p-4">
+                        <div class="p-4" v-if="!isDineIn">
                             <h3 class="mb-5 text-lg font-medium capitalize">
                                 {{
                                     checkoutProps.form.order_type === orderTypeEnum.DELIVERY ? $t('label.delivery') : $t('label.takeaway')
@@ -173,7 +183,7 @@
                             </span>
                         </h4>
                         <nav
-                            v-if="carts.length > 0 && orderType !== null && (restaurant.order_setup.delivery === activityEnum.ENABLE || restaurant.order_setup.takeaway === activityEnum.ENABLE)"
+                            v-if="!isDineIn && carts.length > 0 && orderType !== null && restaurant.order_setup && (restaurant.order_setup.delivery === activityEnum.ENABLE || restaurant.order_setup.takeaway === activityEnum.ENABLE)"
                             class="w-fit mx-auto mb-4 flex items-center justify-center p-1 rounded-full bg-mate">
                             <button @click.prevent="changeOrderType(orderTypeEnum.DELIVERY)"
                                     v-if="restaurant.order_setup.delivery === activityEnum.ENABLE"
@@ -188,9 +198,14 @@
                                 {{ $t('label.takeaway') }}
                             </button>
                         </nav>
+                        <div
+                            v-if="isDineIn"
+                            class="mb-4 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-heading">
+                            {{ $t('label.dining_table') }}: <span class="font-medium">{{ dineInTableLabel }}</span>
+                        </div>
 
                         <ul v-if="carts.length > 0" class="mb-4">
-                            <li v-for="cart in carts" class="py-4 border-t last:border-b border-gray-100">
+                            <li v-for="(cart, index) in carts" :key="index" class="py-4 border-t last:border-b border-gray-100">
                                 <div class="flex items-start gap-3">
                                     <div
                                         class="flex-shrink-0 w-6 h-6 leading-6 text-center rounded-full text-xs mt-5 ltr:-mr-6 rtl:-ml-6 relative text-white bg-secondary">
@@ -217,6 +232,19 @@
                                                 currencyFormat(cart.total, setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position)
                                             }}
                                         </h4>
+                                    </div>
+                                    <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                                        <button @click.prevent="removeItem(index)" type="button"
+                                                class="text-xs font-medium text-danger hover:underline">
+                                            {{ $t('button.remove') }}
+                                        </button>
+                                        <div class="flex items-center w-16 h-6 gap-1">
+                                            <button @click.prevent="quantityDecrement(index)" type="button"
+                                                    class="lab-line-minus-circle font-medium hover:text-primary"></button>
+                                            <span class="w-full text-center text-sm">{{ cart.quantity }}</span>
+                                            <button @click.prevent="quantityIncrement(index)" type="button"
+                                                    class="lab-line-add-circle font-medium hover:text-primary"></button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -420,6 +448,7 @@ import {useFrontendTimeSlotStore} from "../../../stores/frontendTimeSlot.js";
 import {useFrontendPaymentGatewayStore} from "../../../stores/frontendPaymentGateway.js";
 import _ from "lodash";
 import {useFrontendCartStore} from "../../../stores/frontendCart.js";
+import {useDineInContextStore} from "../../../stores/dineInContext.js";
 import {useFrontendRiderTipStore} from "../../../stores/frontendRiderTip.js";
 import {useCommonStore} from "../../../stores/common.js";
 import DisplayModeEnum from "../../../enums/modules/displayModeEnum.js";
@@ -451,6 +480,7 @@ export default {
         const authStore                   = useAuthStore();
         const commonStore                 = useCommonStore();
         const frontendCartStore           = useFrontendCartStore();
+        const dineInContextStore          = useDineInContextStore();
         const frontendOrderStore          = useFrontendOrderStore();
         const frontendSettingStore        = useFrontendSettingStore();
         const frontendAddressStore        = useFrontendAddressStore();
@@ -465,6 +495,7 @@ export default {
             authStore,
             commonStore,
             frontendCartStore,
+            dineInContextStore,
             frontendOrderStore,
             frontendSettingStore,
             frontendAddressStore,
@@ -517,6 +548,8 @@ export default {
                     service_fee: 0,
                     rider_tip: 0,
                     extra_delivery_fee: null,
+                    table_id: null,
+                    qr_token: null,
                     items: []
                 }
             },
@@ -554,6 +587,14 @@ export default {
         },
         orderType: function () {
             return this.frontendCartStore.orderType;
+        },
+        isDineIn: function () {
+            return this.orderType === orderTypeEnum.DINING_TABLE
+                || (this.dineInContextStore.isActive
+                    && this.dineInContextStore.matchesRestaurant(this.restaurant?.id || this.restaurant?.slug));
+        },
+        dineInTableLabel: function () {
+            return this.dineInContextStore.tableLabel || this.$t('label.dining_table');
         },
         carts: function () {
             return this.frontendCartStore.lists;
@@ -608,11 +649,27 @@ export default {
         }
     },
     mounted() {
-        this.checkoutProps.form.order_type = this.orderType;
+        if (this.isDineIn) {
+            this.frontendCartStore.applyDineInContext(
+                this.dineInContextStore.context || {
+                    table_id: this.frontendCartStore.tableId,
+                    qr_token: this.frontendCartStore.qrToken,
+                }
+            );
+            this.checkoutProps.form.order_type = orderTypeEnum.DINING_TABLE;
+            this.checkoutProps.form.table_id = this.frontendCartStore.tableId || this.dineInContextStore.context?.table_id;
+            this.checkoutProps.form.qr_token = this.frontendCartStore.qrToken || this.dineInContextStore.context?.qr_token;
+            this.checkoutProps.form.delivery_fee = 0;
+            this.checkoutProps.form.address_id = null;
+            this.checkoutProps.form.is_advance_order = isAdvanceOrderEnum.NO;
+            this.checkoutProps.form.delivery_time = null;
+        } else {
+            this.checkoutProps.form.order_type = this.orderType;
+        }
         this.loading.isActive              = true;
         this.frontendAddressStore.fetch(this.addressProps).then(res => {
             this.loading.isActive = false;
-            if (res.data.data.length > 0) {
+            if (!this.isDineIn && res.data.data.length > 0) {
                 if (Object.keys(this.address).length > 0) {
                     this.checkoutProps.form.address_id = this.address.id
                     this.localAddress                  = this.address;
@@ -622,19 +679,21 @@ export default {
         }).catch((err) => {
             this.loading.isActive = false;
         });
-        this.loading.isActive = true;
-        this.frontendTimeSlotStore.fetchToday(this.restaurant.id).then(res => {
-            this.loading.isActive = false;
-        }).catch((err) => {
-            this.loading.isActive = false;
-        });
+        if (!this.isDineIn) {
+            this.loading.isActive = true;
+            this.frontendTimeSlotStore.fetchToday(this.restaurant.id).then(res => {
+                this.loading.isActive = false;
+            }).catch((err) => {
+                this.loading.isActive = false;
+            });
 
-        this.loading.isActive = true;
-        this.frontendTimeSlotStore.fetchTomorrow(this.restaurant.id).then(res => {
-            this.loading.isActive = false;
-        }).catch((err) => {
-            this.loading.isActive = false;
-        });
+            this.loading.isActive = true;
+            this.frontendTimeSlotStore.fetchTomorrow(this.restaurant.id).then(res => {
+                this.loading.isActive = false;
+            }).catch((err) => {
+                this.loading.isActive = false;
+            });
+        }
 
         this.loading.isActive = true;
         this.frontendPaymentGatewayStore.fetch({status: this.statusEnum.ACTIVE}).then(res => {
@@ -664,7 +723,7 @@ export default {
             this.loading.isActive = false;
         });
 
-        if (Object.keys(this.timeSlot).length > 0) {
+        if (!this.isDineIn && Object.keys(this.timeSlot).length > 0) {
             this.localDeliveryTimeLabel              = this.timeSlot.label;
             this.checkoutProps.form.delivery_time    = this.timeSlot.delivery_time;
             this.checkoutProps.form.is_advance_order = this.timeSlot.is_advance_order;
@@ -699,8 +758,47 @@ export default {
             this.handleTab(e, id);
         },
         changeOrderType: function (e) {
+            if (this.isDineIn) {
+                return;
+            }
             this.localOrderType = e;
             this.frontendCartStore.callUpdateOrderType(this.localOrderType);
+            this.checkoutProps.form.order_type = e;
+        },
+        quantityIncrement: function (id) {
+            this.frontendCartStore.setQuantity({id: id, status: "increment"}).catch(error => {
+                if (error === 'max_quantity_error') {
+                    alertService.error(this.$t('message.already_added_max_quantity'));
+                }
+            });
+        },
+        quantityDecrement: function (id) {
+            const slug = this.restaurant?.slug;
+            this.frontendCartStore.setQuantity({id: id, status: "decrement"});
+            if (this.frontendCartStore.lists.length === 0) {
+                if (slug) {
+                    this.$router.push({
+                        name: 'frontend.singleRestaurant',
+                        params: {slug},
+                    });
+                } else {
+                    this.$router.push({name: 'frontend.home'});
+                }
+            }
+        },
+        removeItem: function (id) {
+            const slug = this.restaurant?.slug;
+            this.frontendCartStore.removeItem(id);
+            if (this.frontendCartStore.lists.length === 0) {
+                if (slug) {
+                    this.$router.push({
+                        name: 'frontend.singleRestaurant',
+                        params: {slug},
+                    });
+                } else {
+                    this.$router.push({name: 'frontend.home'});
+                }
+            }
         },
         currencyFormat: function (amount, decimal, currency, position) {
             return appService.currencyFormat(amount, decimal, currency, position);
@@ -735,13 +833,24 @@ export default {
                     this.addressProps.switchLabel = this.localAddress.label;
                 }
 
-                this.addressProps.isMap = true;
+                this.addressProps.isMap = false;
                 this.openModal('new-address-modal');
             }
         },
         changeAddress: function (address) {
-            const distance = appService.distance(parseFloat(address.latitude), parseFloat(address.longitude), parseFloat(this.restaurant.latitude), parseFloat(this.restaurant.longitude));
-            if (distance <= this.setting.site_delivery_boy_order_radius) {
+            const addressLat = parseFloat(address.latitude);
+            const addressLng = parseFloat(address.longitude);
+            const restaurantLat = parseFloat(this.restaurant.latitude);
+            const restaurantLng = parseFloat(this.restaurant.longitude);
+            const hasCoords = !Number.isNaN(addressLat) && !Number.isNaN(addressLng)
+                && !Number.isNaN(restaurantLat) && !Number.isNaN(restaurantLng);
+
+            // Allow address when coords are incomplete (manual testing without maps)
+            const withinRadius = !hasCoords
+                || appService.distance(addressLat, addressLng, restaurantLat, restaurantLng)
+                    <= this.setting.site_delivery_boy_order_radius;
+
+            if (withinRadius) {
                 this.localAddress                  = address;
                 this.checkoutProps.form.address_id = address.id;
                 this.deliveryChargeCalculation();
@@ -826,6 +935,21 @@ export default {
             this.checkoutProps.form.rider_tip      = Object.keys(this.riderTipMethod).length > 0 ? this.riderTipMethod.amount : 0;
             this.checkoutProps.form.items          = [];
 
+            if (this.isDineIn) {
+                this.checkoutProps.form.order_type = orderTypeEnum.DINING_TABLE;
+                this.checkoutProps.form.table_id = this.frontendCartStore.tableId || this.dineInContextStore.context?.table_id;
+                this.checkoutProps.form.qr_token = this.frontendCartStore.qrToken || this.dineInContextStore.context?.qr_token;
+                this.checkoutProps.form.delivery_fee = 0;
+                this.checkoutProps.form.rider_tip = 0;
+                this.checkoutProps.form.address_id = null;
+                this.checkoutProps.form.delivery_time = null;
+                this.checkoutProps.form.is_advance_order = isAdvanceOrderEnum.NO;
+                this.checkoutProps.form.total = parseFloat(this.total);
+            } else {
+                this.checkoutProps.form.table_id = null;
+                this.checkoutProps.form.qr_token = null;
+            }
+
             _.forEach(this.carts, (item) => {
                 let item_variations = [];
                 if (Object.keys(item.item_variations.variations).length > 0) {
@@ -886,7 +1010,12 @@ export default {
 
             this.frontendOrderStore.save(this.checkoutProps.form).then(orderResponse => {
                 this.loading.isActive = false;
-                let paymentSlug       = Object.keys(this.paymentMethod).length > 0 ? this.paymentMethod.slug : '';
+                const wasDineIn = this.isDineIn;
+                const paymentSlug = Object.keys(this.paymentMethod).length > 0 ? this.paymentMethod.slug : '';
+                this.frontendCartStore.callResetCart();
+                if (wasDineIn) {
+                    this.dineInContextStore.clear();
+                }
                 if (paymentSlug) {
                     window.location.href = ENV.API_URL + "/payment/" + paymentSlug + "/pay/" + orderResponse.data.data.id;
                 } else {

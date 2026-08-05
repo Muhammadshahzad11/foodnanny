@@ -431,7 +431,7 @@
         "first_name": "Nombre",
         "last_name": "Apellido",
         "old_password": "Contraseña antigua",
-        "owner": "Dueño",
+        "owner": "Propietario",
         "owner_info": "Información del dueño",
         "sales": "ventas",
         "item_description": "Descripción del artículo",
@@ -776,7 +776,7 @@
         "error_code": "Código de error",
         "all_orders": "Todos los pedidos",
         "confirmed": "Confirmado",
-        "done": "Hecho",
+        "done": "Listo",
         "schedule": "Programar",
         "online_orders": "Pedidos en línea",
         "online": "En línea",
@@ -814,7 +814,11 @@
         "no_language_found": "No se encontró ningún idioma",
         "add_translation": "Agregar traducción",
         "edit_translation": "Editar traducción",
-        "Tel": "Tel"
+        "Tel": "Tel",
+        "restaurant_registration_received": "Registro recibido",
+        "go_to_login": "Ir a iniciar sesión",
+        "registration_complete": "Registro completo",
+        "step_of": "Paso {current} de {total}"
     },
     "button": {
         "action": "Acción",
@@ -947,7 +951,9 @@
         "view_all": "Ver todo",
         "add_token": "Añadir token",
         "mark_done": "Marcar como hecho",
-        "start_preparing": "Empezar preparación"
+        "start_preparing": "Empezar preparación",
+        "approve": "Aprobar",
+        "add_and_send_to_kitchen": "Agregar y enviar a cocina"
     },
     "number": {
         "0": "0",
@@ -1120,6 +1126,13 @@
         "item_name_is_required_to_generate_name": "Se requiere el nombre del artículo para generar el nombre por IA",
         "something_wrong": "Algo salió mal",
         "say_anything_about_food": "Pregúntame cualquier cosa sobre comida",
-        "your_language_has_been_set_automatically": "Tu idioma se ha configurado automáticamente"
+        "your_language_has_been_set_automatically": "Tu idioma se ha configurado automáticamente",
+        "restaurant_thank_you_intro": "Gracias por registrar su restaurante con Cost to Cost Foods. Hemos recibido sus datos.",
+        "restaurant_thank_you_approval_title": "Se requiere aprobación del administrador",
+        "restaurant_thank_you_approval_body": "Nuestro equipo revisará el perfil de su restaurante. Cuando un administrador lo apruebe, su cuenta se activará.",
+        "restaurant_thank_you_login_note": "No podrá iniciar sesión hasta que se apruebe su restaurante. Después de la aprobación, use el mismo correo o teléfono para iniciar sesión.",
+        "restaurant_approve_confirm": "¿Aprobar este registro de restaurante y permitir que el propietario inicie sesión?",
+        "restaurant_approved_successfully": "Restaurante aprobado correctamente. El propietario ya puede iniciar sesión.",
+        "restaurant_pending_approval": "El registro de su restaurante está pendiente de aprobación del administrador. Podrá iniciar sesión cuando un administrador lo apruebe."
     }
 }

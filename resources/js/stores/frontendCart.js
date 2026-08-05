@@ -17,6 +17,8 @@ export const useFrontendCartStore = defineStore('frontendCart', {
         tax: 0,
         orderType: null,
         restaurant: {},
+        tableId: null,
+        qrToken: null,
         cutlery: false,
         paymentMethod: {},
         riderTip: {},
@@ -31,16 +33,27 @@ export const useFrontendCartStore = defineStore('frontendCart', {
                     this.discount = 0;
 
                     if (Object.keys(payload.restaurant).length > 0) {
+                        const incomingSetup = payload.restaurant.order_setup || null;
+
                         if (Object.keys(this.restaurant).length === 0) {
                             this.restaurant = payload.restaurant;
-
-                            if (payload.restaurant.order_setup.delivery === activityEnum.ENABLE && payload.restaurant.order_setup.takeaway === activityEnum.ENABLE) {
-                                this.orderType = orderTypeEnum.DELIVERY;
-                            } else if (payload.restaurant.order_setup.delivery === activityEnum.ENABLE) {
-                                this.orderType = orderTypeEnum.DELIVERY;
-                            } else if (payload.restaurant.order_setup.takeaway === activityEnum.ENABLE) {
-                                this.orderType = orderTypeEnum.TAKEAWAY;
+                        } else {
+                            // Refresh order_setup if cart was created before setup existed
+                            if (incomingSetup && (!this.restaurant.order_setup || !this.restaurant.order_setup.delivery)) {
+                                this.restaurant = {
+                                    ...this.restaurant,
+                                    ...payload.restaurant,
+                                    order_setup: incomingSetup,
+                                };
                             }
+                        }
+
+                        if (payload.dineIn && payload.dineIn.table_id) {
+                            this.orderType = orderTypeEnum.DINING_TABLE;
+                            this.tableId = payload.dineIn.table_id;
+                            this.qrToken = payload.dineIn.qr_token || null;
+                        } else if (this.orderType === null || this.orderType === undefined) {
+                            this.resolveDefaultOrderType(this.restaurant.order_setup || incomingSetup || {});
                         }
                     }
 
@@ -199,11 +212,25 @@ export const useFrontendCartStore = defineStore('frontendCart', {
                 }
 
                 if (this.lists.length === 0) {
-                    this.restaurant = {};
+                    this.callResetCart();
+                } else {
+                    this.callSubtotal();
                 }
-                this.callSubtotal();
                 resolve(true);
             });
+        },
+        removeItem: function (index) {
+            if (typeof index === 'undefined' || index < 0 || index >= this.lists.length) {
+                return;
+            }
+            this.coupon = {};
+            this.discount = 0;
+            this.lists.splice(index, 1);
+            if (this.lists.length === 0) {
+                this.callResetCart();
+            } else {
+                this.callSubtotal();
+            }
         },
         setCoupon: function (payload) {
             this.coupon = payload;
@@ -230,12 +257,49 @@ export const useFrontendCartStore = defineStore('frontendCart', {
         callUpdateOrderType: function (payload) {
             this.coupon = {};
             this.discount = 0;
-            if (orderTypeEnum.DELIVERY === payload || orderTypeEnum.TAKEAWAY === payload) {
+            if (orderTypeEnum.DELIVERY === payload || orderTypeEnum.TAKEAWAY === payload || orderTypeEnum.DINING_TABLE === payload) {
                 this.orderType = payload;
+                if (payload !== orderTypeEnum.DINING_TABLE) {
+                    this.tableId = null;
+                    this.qrToken = null;
+                }
             } else {
                 this.orderType = null;
             }
             this.callSubtotal();
+        },
+        resolveDefaultOrderType: function (orderSetup) {
+            if (this.orderType === orderTypeEnum.DINING_TABLE) {
+                return;
+            }
+            const setup = orderSetup || this.restaurant?.order_setup || {};
+            if (Number(setup.delivery) === activityEnum.ENABLE) {
+                this.orderType = orderTypeEnum.DELIVERY;
+            } else if (Number(setup.takeaway) === activityEnum.ENABLE) {
+                this.orderType = orderTypeEnum.TAKEAWAY;
+            }
+        },
+        ensureOrderType: function () {
+            if (this.orderType !== null && this.orderType !== undefined) {
+                return;
+            }
+            this.resolveDefaultOrderType(this.restaurant?.order_setup || {});
+        },
+        applyDineInContext: function (context) {
+            if (!context?.table_id) {
+                return;
+            }
+            this.orderType = orderTypeEnum.DINING_TABLE;
+            this.tableId = context.table_id;
+            this.qrToken = context.qr_token || null;
+            this.callSubtotal();
+        },
+        clearDineInContext: function () {
+            if (this.orderType === orderTypeEnum.DINING_TABLE) {
+                this.orderType = null;
+            }
+            this.tableId = null;
+            this.qrToken = null;
         },
         setServiceFee: function (payload) {
             if (payload > 0) {
@@ -272,6 +336,8 @@ export const useFrontendCartStore = defineStore('frontendCart', {
             this.orderType     = null;
             this.cutlery       = false;
             this.restaurant    = {};
+            this.tableId       = null;
+            this.qrToken       = null;
             this.paymentMethod = {};
             this.riderTip      = {};
             this.address       = {};

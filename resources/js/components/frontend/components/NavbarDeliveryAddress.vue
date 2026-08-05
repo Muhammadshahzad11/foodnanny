@@ -17,7 +17,12 @@
                                     class="lab-line-search text-xl ltr:ml-3 rtl:mr-3 absolute ltr:left-3 rtl:right-3 z-[1]"></button>
                             <input type="text" v-model="modelLocation" id="nav-map-autocomplete-input"
                                    ref="locationName" :placeholder="$t('label.enter_your_location')"
-                                   class="w-full h-full text-ellipsis ltr:pl-12 ltr:pr-12 ltr:sm:pr-12 rtl:pl-12 rtl:sm:pl-12 rtl:pr-12">
+                                   class="w-full h-full text-ellipsis ltr:pl-12 ltr:pr-20 ltr:sm:pr-20 rtl:pl-20 rtl:sm:pl-20 rtl:pr-12">
+                            <button v-if="modelLocation"
+                                    type="button"
+                                    title="Clear location"
+                                    @click.prevent="clearLocationInput"
+                                    class="lab-fill-close-circle text-lg text-danger absolute ltr:right-10 rtl:left-10 z-[1]"></button>
                             <button type="button" id="nav-map-current-location"
                                     class="lab-line-gps text-xl text-primary absolute ltr:right-3 rtl:left-3"></button>
                         </div>
@@ -231,13 +236,30 @@ export default {
         },
         searchLocation: async function () {
             if (this.position.location.lat !== null && this.position.location.lng !== null) {
+                const other = this.position.other || {};
                 await this.commonStore.update({
                     location: this.position.name,
                     latitude: this.position.location.lat,
-                    longitude: this.position.location.lng
+                    longitude: this.position.location.lng,
+                    city: other.city || null,
+                    district: other.area || other.block || other.city || null,
+                    state: other.state || null,
                 });
                 this.closeModal('delivery-address');
             }
+        },
+        clearLocationInput: async function () {
+            this.modelLocation = null;
+            this.position = {
+                name: null,
+                address: null,
+                other: {},
+                location: { lat: null, lng: null }
+            };
+            this.currentLocation = {};
+            await this.commonStore.clearLocation();
+            this.closeModal('delivery-address');
+            this.$router.push({ name: 'frontend.home' });
         },
     },
     watch: {

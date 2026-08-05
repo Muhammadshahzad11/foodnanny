@@ -37,10 +37,14 @@ class SignupController extends Controller
             if ($user) {
                 return response(['status' => false, 'message' => trans("all.message.phone_exist")], 422);
             } else {
+                $payload = ['status' => true, 'message' => trans("all.message.check_your_phone_for_code")];
                 if (Settings::group('site')->get('site_phone_verification') == Activity::ENABLE) {
-                    $this->otpManagerService->phoneOTP($request);
+                    $otp = $this->otpManagerService->phoneOTP($request);
+                    if (filter_var(env('SHOW_OTP', true), FILTER_VALIDATE_BOOLEAN)) {
+                        $payload['otp'] = $otp;
+                    }
                 }
-                return response(['status' => true, 'message' => trans("all.message.check_your_phone_for_code")], 200);
+                return response($payload, 200);
             }
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);

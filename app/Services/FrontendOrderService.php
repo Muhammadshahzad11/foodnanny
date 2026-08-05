@@ -98,8 +98,19 @@ class FrontendOrderService
                 }
 
                 $restaurant          = Restaurant::with('orderSetup')->where(['id' => $request->restaurant_id])->first();
+                $payload             = $request->validated();
+                unset($payload['qr_token']);
+
+                if ((int) ($payload['order_type'] ?? 0) !== \App\Enums\OrderType::DINING_TABLE) {
+                    unset($payload['table_id']);
+                } else {
+                    $payload['delivery_fee'] = 0;
+                    $payload['rider_tip']    = 0;
+                    $payload['address_id']   = null;
+                }
+
                 $this->frontendOrder = FrontendOrder::create(
-                    $request->validated() + [
+                    $payload + [
                         'user_id'          => Auth::user()->id,
                         'status'           => OrderStatus::PENDING,
                         'order_datetime'   => date('Y-m-d H:i:s'),
@@ -187,7 +198,7 @@ class FrontendOrderService
     {
         try {
             if ($frontendOrder->user_id == Auth::user()->id) {
-                return $frontendOrder->load('orderItems', 'user', 'address', 'restaurant', 'deliveryBoy', 'coupon', 'transaction');
+                return $frontendOrder->load('orderItems', 'user', 'address', 'restaurant', 'deliveryBoy', 'coupon', 'transaction', 'diningTable');
             }
             return [];
         } catch (Exception $exception) {

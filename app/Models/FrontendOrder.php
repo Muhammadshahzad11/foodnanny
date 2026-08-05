@@ -15,6 +15,7 @@ class FrontendOrder extends Model
     protected $table = "orders";
     protected $fillable = [
         'restaurant_id',
+        'table_id',
         'order_serial_no',
         'token',
         'user_id',
@@ -46,6 +47,7 @@ class FrontendOrder extends Model
     protected $casts = [
         'id'                   => 'integer',
         'restaurant_id'        => 'integer',
+        'table_id'             => 'integer',
         'order_serial_no'      => 'string',
         'token'                => 'string',
         'user_id'              => 'integer',
@@ -146,5 +148,10 @@ class FrontendOrder extends Model
     public function restaurant(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Restaurant::class, 'id', 'restaurant_id');
+    }
+
+    public function diningTable(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(RestaurantTable::class, 'table_id');
     }
 }

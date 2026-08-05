@@ -37,6 +37,7 @@ import {useFrontendCartStore} from "../../../stores/frontendCart.js";
 import appService from "../../../services/appService.js";
 import router from "../../../router/index.js";
 import {useDefaultAccessStore} from "../../../stores/defaultAccess.js";
+import {useDineInContextStore} from "../../../stores/dineInContext.js";
 
 export default {
     name: "GuestVerifyComponent",
@@ -47,13 +48,15 @@ export default {
         const frontendCartStore        = useFrontendCartStore();
         const defaultAccessStore       = useDefaultAccessStore();
         const frontendGuestSignupStore = useFrontendGuestSignupStore();
+        const dineInContextStore       = useDineInContextStore();
 
         return {
             authStore,
             commonStore,
             frontendCartStore,
             defaultAccessStore,
-            frontendGuestSignupStore
+            frontendGuestSignupStore,
+            dineInContextStore
         }
     },
     data() {
@@ -96,6 +99,9 @@ export default {
             if (code && phone) {
                 this.props.form.code  = code;
                 this.props.form.phone = phone;
+                if (this.frontendGuestSignupStore.token) {
+                    this.props.form.token = this.frontendGuestSignupStore.token;
+                }
             } else {
                 this.$router.push({name: 'auth.guestLogin'});
             }
@@ -106,10 +112,14 @@ export default {
                 this.frontendGuestSignupStore.callPhone({
                     code: this.frontendGuestSignupStore.code,
                     phone: this.frontendGuestSignupStore.phone
-                }).then(res => {
+                }).then(async res => {
                     this.loading.isActive = false;
                     this.errors           = "";
                     alertService.success(res.data.message);
+                    if (res.data?.otp) {
+                        this.props.form.token = String(res.data.otp);
+                        await alertService.showOtp(res.data.otp);
+                    }
                 }).catch((err) => {
                     this.loading.isActive = false;
                     this.errors           = err.response.data.message;
@@ -137,13 +147,11 @@ export default {
                         token: ""
                     };
 
-                    if (this.carts.length > 0 && this.location) {
-                        await this.$router.push({name: "frontend.checkout"});
-                    } else if (this.location) {
-                        await this.$router.push({name: "frontend.restaurant"});
-                    } else {
-                        await this.$router.push({name: "frontend.home"});
-                    }
+                    await appService.redirectAfterAuth(this.$router, {
+                        carts: this.carts,
+                        location: this.location,
+                        dineInContext: this.dineInContextStore,
+                    });
                 }).catch((err) => {
                     this.loading.isActive = false;
                     this.errors           = err.response.data.message;

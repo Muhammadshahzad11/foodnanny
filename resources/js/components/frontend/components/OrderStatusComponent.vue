@@ -41,6 +41,8 @@
             class="w-32 h-32 mx-auto mb-3" :src="setting.image_order_delivered" alt="gif">
         <img v-if="parseInt(props.status) === parseInt(enums.orderStatusEnum.DELIVERED) && parseInt(props.order_type) === parseInt(enums.orderTypeEnum.TAKEAWAY)"
             class="w-32 h-32 mx-auto mb-3" :src="setting.image_order_complete" alt="gif">
+        <img v-if="parseInt(props.status) === parseInt(enums.orderStatusEnum.DELIVERED) && parseInt(props.order_type) === parseInt(enums.orderTypeEnum.DINING_TABLE)"
+            class="w-32 h-32 mx-auto mb-3" :src="setting.image_order_complete" alt="gif">
         <img v-if="parseInt(props.status) === parseInt(enums.orderStatusEnum.PENDING) || parseInt(props.status) === parseInt(enums.orderStatusEnum.ACCEPT)"
             class="w-32 h-32 mx-auto mb-3" :src="setting.image_order_placed" alt="gif">
         <img v-if="parseInt(props.status) === parseInt(enums.orderStatusEnum.PREPARING)"
@@ -77,7 +79,7 @@
             </li>
         </ul>
 
-        <ul class="w-full flex items-center mb-6" v-if="parseInt(props.order_type) === parseInt(enums.orderTypeEnum.TAKEAWAY)">
+        <ul class="w-full flex items-center mb-6" v-if="parseInt(props.order_type) === parseInt(enums.orderTypeEnum.TAKEAWAY) || parseInt(props.order_type) === parseInt(enums.orderTypeEnum.DINING_TABLE)">
             <li class="group w-full last:w-fit flex items-center">
                 <i :class="parseInt(enums.orderStatusEnum.PENDING) <=parseInt(props.status)  ? 'text-white bg-primary' : 'text-primary bg-[#FFEBDD]'" class="lab lab-fill-like flex-shrink-0 w-8 h-8 leading-8 text-center rounded-full"></i>
                 <hr :class="parseInt(enums.orderStatusEnum.PENDING) <=parseInt(props.status) ? 'bg-primary' : 'bg-[#FFEBDD]'" class="flex-auto w-full h-1 border-0 group-last:hidden"/>
@@ -167,7 +169,8 @@ export default {
                 },
                 orderTypeEnumArray: {
                     [orderTypeEnum.DELIVERY]: this.$t("label.delivery"),
-                    [orderTypeEnum.TAKEAWAY]: this.$t("label.takeaway")
+                    [orderTypeEnum.TAKEAWAY]: this.$t("label.takeaway"),
+                    [orderTypeEnum.DINING_TABLE]: this.$t("label.dining_table")
                 },
                 deliveryArray: {
                     [orderStatusEnum.PENDING]: this.$t("label.pending"),

@@ -430,7 +430,7 @@
         "first_name": "Vorname",
         "last_name": "Nachname",
         "old_password": "Altes Passwort",
-        "owner": "Besitzer",
+        "owner": "Inhaber",
         "owner_info": "Besitzerinformationen",
         "sales": "Verkäufe",
         "item_description": "Artikelbeschreibung",
@@ -592,7 +592,7 @@
         "online_commission": "Online-Provision",
         "about_our_privacy": "Über unsere Datenschutzbestimmungen",
         "cookies_settings": "Cookie-Einstellungen",
-        "verify": "Verifizieren",
+        "verify": "Prüfen",
         "warning": "Warnung",
         "delivery_man": "Lieferant",
         "reply_from": "Antwort von",
@@ -776,7 +776,7 @@
         "error_code": "Fehlercode",
         "all_orders": "Alle Bestellungen",
         "confirmed": "Bestätigt",
-        "done": "Erledigt",
+        "done": "Fertig",
         "schedule": "Zeitplan",
         "online_orders": "Online-Bestellungen",
         "online": "Online",
@@ -814,7 +814,11 @@
         "translated_languages": "Übersetzte Sprachen",
         "no_language_found": "Keine Sprache gefunden",
         "add_translation": "Übersetzung hinzufügen",
-        "edit_translation": "Übersetzung bearbeiten"
+        "edit_translation": "Übersetzung bearbeiten",
+        "restaurant_registration_received": "Registrierung erhalten",
+        "go_to_login": "Zum Login",
+        "registration_complete": "Registrierung abgeschlossen",
+        "step_of": "Schritt {current} von {total}"
     },
     "button": {
         "action": "Aktion",
@@ -947,7 +951,9 @@
         "view_all": "Alle ansehen",
         "add_token": "Token hinzufügen",
         "mark_done": "Als erledigt markieren",
-        "start_preparing": "Zubereitung starten"
+        "start_preparing": "Zubereitung starten",
+        "approve": "Genehmigen",
+        "add_and_send_to_kitchen": "Hinzufügen & an Küche senden"
     },
     "number": {
         "0": "0",
@@ -1120,6 +1126,13 @@
         "item_name_is_required_to_generate_name": "Artikelname ist erforderlich, um einen KI-Namen zu generieren",
         "something_wrong": "Etwas ist schief gelaufen",
         "say_anything_about_food": "Frag mich alles über Essen",
-        "your_language_has_been_set_automatically": "Ihre Sprache wurde automatisch eingestellt"
+        "your_language_has_been_set_automatically": "Ihre Sprache wurde automatisch eingestellt",
+        "restaurant_thank_you_intro": "Vielen Dank, dass Sie Ihr Restaurant bei Cost to Cost Foods eingetragen haben. Wir haben Ihre Angaben erhalten.",
+        "restaurant_thank_you_approval_title": "Admin-Freigabe erforderlich",
+        "restaurant_thank_you_approval_body": "Unser Team prüft Ihr Restaurantprofil. Sobald ein Administrator es freigibt, wird Ihr Konto aktiviert.",
+        "restaurant_thank_you_login_note": "Sie können sich erst anmelden, wenn Ihr Restaurant freigegeben wurde. Nach der Freigabe melden Sie sich mit derselben E-Mail oder Telefonnummer an.",
+        "restaurant_approve_confirm": "Diese Restaurant-Registrierung freigeben und dem Inhaber die Anmeldung erlauben?",
+        "restaurant_approved_successfully": "Restaurant erfolgreich freigegeben. Der Inhaber kann sich jetzt anmelden.",
+        "restaurant_pending_approval": "Ihre Restaurant-Registrierung wartet auf die Freigabe durch einen Administrator. Sie können sich anmelden, sobald sie freigegeben wurde."
     }
 }

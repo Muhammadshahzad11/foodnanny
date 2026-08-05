@@ -29,7 +29,10 @@ class RestaurantByLatLongRadiusRequest extends FormRequest
             'longitude'           => ['required', 'numeric'],
             'delivery_order_type' => ['required', 'numeric'],
             'cuisine_id'          => ['nullable', 'numeric'],
-            'name'                => ['nullable', 'string']
+            'name'                => ['nullable', 'string'],
+            'city'                => ['nullable', 'string', 'max:190'],
+            'district'            => ['nullable', 'string', 'max:190'],
+            'state'               => ['nullable', 'string', 'max:190'],
         ];
     }
 }

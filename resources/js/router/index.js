@@ -13,9 +13,13 @@ import deliveryBoyRoutes from "./modules/deliveryBoyRoutes.js"
 import restaurantSettingRoutes from "./modules/restaurantSettingRoutes.js"
 import couponRoutes from "./modules/couponRoutes.js"
 import employeeRoutes from "./modules/employeeRoutes.js";
+import tableRoutes from "./modules/tableRoutes.js";
+import waiterRoutes from "./modules/waiterRoutes.js";
+import kitchenRoutes from "./modules/kitchenRoutes.js";
 import customerRoutes from "./modules/customerRoutes.js";
 import restaurantOwnerRoutes from "./modules/restaurantOwnerRoutes.js";
 import restaurantRoutes from "./modules/restaurantRoutes.js";
+import cuisineRoutes from "./modules/cuisineRoutes.js";
 import offerRoutes from "./modules/offerRoutes.js";
 import campaignAndOfferRoutes from "./modules/campaignAndOfferRoutes.js";
 import payoutRoutes from "./modules/payoutRoutes.js";
@@ -96,9 +100,13 @@ const routes = baseRoutes.concat(
     restaurantSettingRoutes,
     couponRoutes,
     employeeRoutes,
+    tableRoutes,
+    waiterRoutes,
+    kitchenRoutes,
     customerRoutes,
     restaurantOwnerRoutes,
     restaurantRoutes,
+    cuisineRoutes,
     offerRoutes,
     campaignAndOfferRoutes,
     payoutRoutes,
@@ -142,7 +150,10 @@ router.beforeEach((to, from, next) => {
         const authStore = useAuthStore();
         if (to.meta.auth) {
             if (!authStore.status) {
-                next({name: "auth.login"});
+                next({
+                    name: "auth.login",
+                    query: {redirect: to.fullPath},
+                });
             } else {
                 if (to.meta.template === 'admin') {
                     if (typeof to.meta.access !== "undefined" && to.meta.access) {
@@ -157,7 +168,12 @@ router.beforeEach((to, from, next) => {
                 }
             }
         } else if (to.name === "auth.login" && authStore.status) {
-            next({name: "frontend.home"});
+            const redirect = to.query?.redirect;
+            if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) {
+                next(redirect);
+            } else {
+                next({name: "frontend.home"});
+            }
         } else {
             next();
         }

@@ -121,7 +121,7 @@
         </div>
     </section>
 
-    <div v-if="(Object.keys($route.query).length > 0 && $route.query.id > 0) && cart.length > 0 && Object.keys(order).length > 0"
+    <div v-if="(Object.keys($route.query).length > 0 && $route.query.id > 0) && Object.keys(order).length > 0"
         id="confirm-order"
         class="fixed inset-0 z-50 p-3 w-screen h-dvh overflow-y-auto bg-black/50 transition-all duration-300 opacity-0 invisible">
         <div class="max-w-sm w-full rounded-xl mx-auto bg-white transition-all duration-300">
@@ -137,6 +137,12 @@
                 <h4 class="capitalize text-lg font-medium text-center mb-5 text-primary">
                     {{ $t('label.order_confirmed') }}
                 </h4>
+                <p v-if="order.table" class="mb-4 text-center text-sm text-paragraph">
+                    {{ $t('label.dining_table') }}:
+                    <span class="font-medium text-heading">
+                        {{ order.table.name || order.table.table_number }}
+                    </span>
+                </p>
                 <router-link @click.prevent="OrderModalClose('confirm-order')"
                              class="w-full rounded-3xl text-center font-medium leading-6 py-3 bg-primary text-white"
                              :to="{ name: 'frontend.myOrder.details', params: { id: order.id } }">
@@ -197,7 +203,8 @@ export default {
                 },
                 orderTypeEnumArray: {
                     [orderTypeEnum.DELIVERY]: this.$t("label.delivery"),
-                    [orderTypeEnum.TAKEAWAY]: this.$t("label.takeaway")
+                    [orderTypeEnum.TAKEAWAY]: this.$t("label.takeaway"),
+                    [orderTypeEnum.DINING_TABLE]: this.$t("label.dining_table")
                 }
             },
             active: {
@@ -248,7 +255,8 @@ export default {
 
             if (Object.keys(this.$route.query).length > 0) {
                 this.loading.isActive = true;
-                this.frontendOrderStore.view(this.$route.query.id).then(res => {
+                this.frontendOrderStore.view(this.$route.query.id).then(async res => {
+                    await this.$nextTick();
                     this.openModal('confirm-order');
                     this.loading.isActive = false;
                 }).catch((err) => {

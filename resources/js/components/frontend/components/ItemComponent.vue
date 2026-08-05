@@ -288,6 +288,7 @@ import LoadingContentComponent from "../../common/LoadingContentComponent.vue";
 import {Swiper, SwiperSlide} from 'swiper/vue';
 import {useFrontendRestaurantStore} from "../../../stores/frontendRestaurant.js";
 import {useFrontendCartStore} from "../../../stores/frontendCart.js";
+import {useDineInContextStore} from "../../../stores/dineInContext.js";
 import alertService from "../../../services/alertService.js";
 
 export default {
@@ -311,6 +312,7 @@ export default {
         const commonStore             = useCommonStore();
         const frontendItemStore       = useFrontendItemStore();
         const frontendCartStore       = useFrontendCartStore();
+        const dineInContextStore      = useDineInContextStore();
         const frontendSettingStore    = useFrontendSettingStore();
         const frontendRestaurantStore = useFrontendRestaurantStore();
 
@@ -320,6 +322,7 @@ export default {
             commonStore,
             frontendItemStore,
             frontendCartStore,
+            dineInContextStore,
             frontendSettingStore,
             frontendRestaurantStore
         }
@@ -706,7 +709,8 @@ export default {
                     }
                     await this.cartModel.fetchCarts({
                         restaurant: res.data.data,
-                        items: this.itemArrays
+                        items: this.itemArrays,
+                        dineIn: this.dineInPayloadForRestaurant(res.data.data)
                     }).then(res => {
                         this.item                           = {};
                         this.temp.name                      = "";
@@ -747,6 +751,19 @@ export default {
                     this.loading.isActive = false;
                 })
             }
+        },
+        dineInPayloadForRestaurant: function (restaurant) {
+            if (!this.dineInContextStore.isActive) {
+                return null;
+            }
+            if (!this.dineInContextStore.matchesRestaurant(restaurant?.id)
+                && !this.dineInContextStore.matchesRestaurant(restaurant?.slug)) {
+                return null;
+            }
+            return {
+                table_id: this.dineInContextStore.context.table_id,
+                qr_token: this.dineInContextStore.context.qr_token,
+            };
         }
     }
 }

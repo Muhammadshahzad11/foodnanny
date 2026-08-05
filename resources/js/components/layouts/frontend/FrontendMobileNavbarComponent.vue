@@ -22,6 +22,13 @@
             <span class="text-xs capitalize">{{ $t('label.favorite') }}</span>
         </router-link>
 
+        <button type="button" class="flex flex-col items-center gap-1 text-text transition-all duration-300 hover:text-primary" @click.prevent="openPwaInstall">
+            <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 21h14"/>
+            </svg>
+            <span class="text-xs capitalize">{{ $t('button.install') }}</span>
+        </button>
+
         <RouterLink v-if="!logged" :to="{ name: 'auth.login' }" class="flex flex-col items-center gap-1 text-text transition-all duration-300 hover:text-primary">
             <i class="lab-fill-profile-circle text-lg leading-none"></i>
             <span class="text-xs capitalize">{{ $t('label.login') }}</span>
@@ -112,6 +119,7 @@ import {useFrontendEditProfileStore} from "../../../stores/frontendEditProfile.j
 import alertService from "../../../services/alertService.js";
 import {useDefaultAccessStore} from "../../../stores/defaultAccess.js";
 import roleEnum from "../../../enums/modules/roleEnum.js";
+import {usePwaInstall} from "../../../composables/usePwaInstall.js";
 
 export default {
     name: "FrontendMobileNavbarComponent",
@@ -122,6 +130,7 @@ export default {
         const frontendCartStore         = useFrontendCartStore();
         const defaultAccessStore        = useDefaultAccessStore();
         const frontendEditProfileStore  = useFrontendEditProfileStore();
+        const pwaInstall                = usePwaInstall();
 
         return {
             openCanvas,
@@ -130,7 +139,8 @@ export default {
             commonStore,
             frontendCartStore,
             defaultAccessStore,
-            frontendEditProfileStore
+            frontendEditProfileStore,
+            ...pwaInstall,
         }
     },
     data() {
@@ -184,6 +194,11 @@ export default {
         }
     },
     methods: {
+        openPwaInstall: async function () {
+            await this.init();
+            await this.promptInstall();
+            this.openInstallUi();
+        },
         logout: function () {
             this.closeCanvas('mobile-profile-canvas');
             this.authStore.logout().then(async res => {

@@ -43,10 +43,14 @@ class RestaurantSignupController extends Controller
             if ($user) {
                 return response(['status' => false, 'message' => trans("all.message.phone_exist")], 422);
             } else {
+                $payload = ['status' => true, 'message' => trans("all.message.check_your_phone_for_code")];
                 if (Settings::group('site')->get('site_phone_verification') == Activity::ENABLE) {
-                    $this->otpManagerService->phoneOTP($request);
+                    $otp = $this->otpManagerService->phoneOTP($request);
+                    if (filter_var(env('SHOW_OTP', true), FILTER_VALIDATE_BOOLEAN)) {
+                        $payload['otp'] = $otp;
+                    }
                 }
-                return response(['status' => true, 'message' => trans("all.message.check_your_phone_for_code")], 200);
+                return response($payload, 200);
             }
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
@@ -86,7 +90,8 @@ class RestaurantSignupController extends Controller
                     'email_verified_at'    => Carbon::now()->getTimestamp(),
                     'is_guest'             => Ask::NO,
                     'password'             => Hash::make($request->post('owner_password')),
-                    'status'               => Status::ACTIVE,
+                    // Pending admin approval — owner cannot login until restaurant is approved
+                    'status'               => Status::INACTIVE,
                     'terms_and_conditions' => $request->post('page_id') > 0 ? $request->post('terms_and_conditions') : Ask::NO
                 ]);
                 $user->assignRole(EnumRole::RESTAURANT_OWNER);
@@ -98,6 +103,11 @@ class RestaurantSignupController extends Controller
                     'country_code'         => $request->post('restaurant_country_code'),
                     'phone'                => $request->post('restaurant_phone'),
                     'address'              => $request->post('restaurant_address'),
+                    'city'                 => $request->post('restaurant_city'),
+                    'state'                => $request->post('restaurant_state'),
+                    'zip_code'             => $request->post('restaurant_zip_code'),
+                    'latitude'             => $request->post('restaurant_latitude') ?: null,
+                    'longitude'            => $request->post('restaurant_longitude') ?: null,
                     'status'               => Status::INACTIVE,
                     'current_status'       => Status::INACTIVE,
                     'apply'                => Apply::RESTAURANT_OWNER,
@@ -115,11 +125,15 @@ class RestaurantSignupController extends Controller
                     'food_preparation_time'        => 30,
                     'schedule_order_slot_duration' => 15,
                     'takeaway'                     => Activity::ENABLE,
-                    'delivery'                     => Activity::DISABLE,
+                    'delivery'                     => Activity::ENABLE,
                     'minimum_order_limit'          => 1
                 ]);
             });
-            return response(['status' => true, 'message' => trans('all.message.restaurant_register_successfully')], 200);
+            return response([
+                'status'  => true,
+                'message' => trans('all.message.restaurant_register_pending_approval'),
+                'pending' => true,
+            ], 200);
         } catch (Exception $exception) {
             DB::rollBack();
             Log::info($exception->getMessage());

@@ -130,6 +130,16 @@ export const useRestaurantStore = defineStore('restaurant', {
                 });
             });
         },
+        approve: function (payload) {
+            return new Promise((resolve, reject) => {
+                axios.post(`/admin/restaurant/approve/${payload.id}`).then((res) => {
+                    this.fetch(payload.search).then().catch();
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
         export: function (payload) {
             return new Promise((resolve, reject) => {
                 let url = 'admin/restaurant/export';

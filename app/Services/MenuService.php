@@ -22,8 +22,8 @@ class MenuService
     public function menu(User $user, Role $role): array
     {
         try {
-            $adminMenus      = Menu::get()->toArray();
-            $restaurantMenus = Menu::get()->toArray();
+            $adminMenus      = Menu::orderBy('priority')->orderBy('id')->get()->toArray();
+            $restaurantMenus = Menu::orderBy('priority')->orderBy('id')->get()->toArray();
 
             $adminAllPermissions      = Permission::get();
             $restaurantAllPermissions = Permission::get();

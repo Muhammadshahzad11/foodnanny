@@ -2,6 +2,7 @@
     <LoadingComponent :props="loading"/>
     <section class="pb-16">
         <div class="w-full max-w-[360px] mx-auto mt-8 mb-12 p-5 rounded-2xl bg-white shadow-xs">
+            <RestaurantSignupStepsComponent current="verify"/>
             <h3 class="capitalize text-xl mb-6 font-semibold text-center">
                 {{ $t('label.verify_number') }}
             </h3>
@@ -27,22 +28,26 @@
 
 <script>
 import LoadingComponent from "../../common/LoadingComponent.vue";
+import RestaurantSignupStepsComponent from "./RestaurantSignupStepsComponent.vue";
 import {useFrontendRestaurantSignupStore} from "../../../stores/frontendRestaurantSignup.js";
 import alertService from "../../../services/alertService.js";
 import {useAuthStore} from "../../../stores/auth.js";
 import {useCommonStore} from "../../../stores/common.js";
+import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
 
 export default {
     name: "RestaurantVerifyComponent",
-    components: {LoadingComponent},
+    components: {LoadingComponent, RestaurantSignupStepsComponent},
     setup() {
         const authStore                     = useAuthStore();
         const commonStore                   = useCommonStore();
+        const frontendSettingStore          = useFrontendSettingStore();
         const frontendRestaurantSignupStore = useFrontendRestaurantSignupStore();
 
         return {
             authStore,
             commonStore,
+            frontendSettingStore,
             frontendRestaurantSignupStore
         }
     },
@@ -88,10 +93,14 @@ export default {
                 this.frontendRestaurantSignupStore.callPhone({
                     code: this.frontendRestaurantSignupStore.code,
                     phone: this.frontendRestaurantSignupStore.phone
-                }).then(res => {
+                }).then(async (res) => {
                     this.loading.isActive = false;
                     this.errors           = "";
-                    alertService.success(res.data.message);
+                    alertService.successQuick(res.data.message);
+                    if (res.data?.otp) {
+                        this.props.form.token = String(res.data.otp);
+                        await alertService.showOtp(res.data.otp);
+                    }
                 }).catch((err) => {
                     this.loading.isActive = false;
                     this.errors           = err.response.data.message;
@@ -106,7 +115,7 @@ export default {
                 this.loading.isActive = true;
                 this.frontendRestaurantSignupStore.callVerify(this.props.form).then((res) => {
                     this.loading.isActive = false;
-                    alertService.success(res.data.message);
+                    alertService.successQuick(res.data.message);
                     this.props.form = {
                         code: "",
                         phone: "",

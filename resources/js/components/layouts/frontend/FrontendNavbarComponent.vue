@@ -5,14 +5,28 @@
             <div :class="mode !== 'main' ? 'flex-col' : ''" class="flex lg:flex-row items-center justify-between gap-4">
                 <div :class="mode === 'main' ? 'flex items-center justify-between' : 'max-lg:w-full max-lg:justify-between max-lg:p-0 flex-shrink-0 flex items-center gap-6'">
                     <router-link class="flex-shrink-0" :to="{ name: location ? 'frontend.restaurant' : 'frontend.home' }">
-                        <img class="w-28 sm:w-28" :src="setting.theme_logo" alt="logo">
+                        <img
+                            class="h-12 sm:h-14 md:h-16 w-auto max-w-[200px] sm:max-w-[260px] md:max-w-[320px] object-contain object-left"
+                            :src="setting.theme_logo"
+                            alt="Cost to Cost Foods"
+                        >
                     </router-link>
-                    <button v-if="mode === 'option'" @click="openModal('delivery-address')" class="flex-auto flex items-center gap-2 w-full max-w-[150px] h-10 rounded-full px-3 bg-mate">
-                        <i class="lab-fill-location flex-shrink-0 text-lg text-primary"></i>
-                        <span class="text-sm w-full mt-[1px] whitespace-nowrap overflow-hidden text-ellipsis">
-                            {{ location }}
-                        </span>
-                    </button>
+                    <div v-if="mode === 'option'" class="flex-auto flex items-center gap-1 w-full max-w-[190px]">
+                        <button @click="openModal('delivery-address')" class="flex-auto flex items-center gap-2 min-w-0 h-10 rounded-full px-3 bg-mate">
+                            <i class="lab-fill-location flex-shrink-0 text-lg text-primary"></i>
+                            <span class="text-sm w-full mt-[1px] whitespace-nowrap overflow-hidden text-ellipsis text-left">
+                                {{ location }}
+                            </span>
+                        </button>
+                        <button
+                            type="button"
+                            title="Clear location"
+                            @click.prevent="clearLocation"
+                            class="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-mate text-danger hover:bg-rose-50"
+                        >
+                            <i class="lab-fill-close-circle text-lg"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div v-if="mode === 'option'" :class="isScrollingUp ? 'max-lg:!flex' : 'max-lg:!hidden'" class="w-full max-lg:flex flex items-center gap-3 max-lg:origin-top max-lg:py-3 max-lg:border-t max-lg:border-slate-100">
@@ -67,6 +81,10 @@
                             </li>
                         </ul>
                     </div>
+
+                    <PwaInstallButtonComponent
+                        button-class="flex-shrink-0 inline-flex items-center justify-center gap-1 mobile:px-2 px-3.5 h-9 rounded-full border border-border bg-white text-primary text-sm"
+                    />
 
                     <button @click.prevent="openCanvas('cart-canvas')" type="button" v-if="mode !== 'main' && currentRoute !== 'frontend.checkout'" class="flex-shrink-0 flex items-center gap-1 mobile:px-2 px-3.5 h-9 rounded-full bg-secondary text-white">
                         <i class="lab-fill-bag text-lg"></i>
@@ -177,13 +195,15 @@ import NavbarDeliveryAddress from "../../frontend/components/NavbarDeliveryAddre
 import NavbarDeliveryEditAddress from "../../frontend/components/NavBarDeliveryEditAddress.vue";
 import {useFrontendCartStore} from "../../../stores/frontendCart.js";
 import {useFrontendEditProfileStore} from "../../../stores/frontendEditProfile.js";
+import PwaInstallButtonComponent from "../../common/PwaInstallButtonComponent.vue";
 
 export default {
     name: "FrontendNavbarComponent",
     components: {
         NavbarDeliveryEditAddress,
         LoadingComponent,
-        NavbarDeliveryAddress
+        NavbarDeliveryAddress,
+        PwaInstallButtonComponent,
     },
     setup() {
         const {isSticky}               = useSticky();
@@ -371,6 +391,11 @@ export default {
             this.commonStore.update({
                 search_restaurant: this.localRestaurant
             })
+        },
+        clearLocation: async function () {
+            await this.commonStore.clearLocation();
+            this.localRestaurant = null;
+            this.$router.push({ name: 'frontend.home' });
         },
         saveImage: function () {
             if (this.$refs.imageProperty.files[0]) {

@@ -139,8 +139,8 @@
                             <span v-if="restaurant.phone"> {{ restaurant.country_code + '' + restaurant.phone }} </span>
                         </td>
                         <td class="db-table-body-td">
-                                <span :class="statusClass(restaurant.status)">
-                                    {{ enums.statusEnumArray[restaurant.status] }}
+                                <span :class="restaurantStatusClass(restaurant)">
+                                    {{ restaurantStatusLabel(restaurant) }}
                                 </span>
                         </td>
                         <td class="db-table-body-td hidden-print"
@@ -150,6 +150,9 @@
                                                      v-if="permissionChecker('restaurants_show')"/>
                                 <SmIconSidebarModalEditComponent @click="edit(restaurant)"
                                                                  v-if="permissionChecker('restaurants_edit')"/>
+                                <SmIconModalVerifyComponent @click="approve(restaurant)"
+                                                            :label="$t('button.approve')"
+                                                            v-if="permissionChecker('restaurants_edit') && isPendingRestaurant(restaurant)"/>
                                 <SmIconDeleteComponent @click="destroy(restaurant.id)"
                                                        v-if="permissionChecker('restaurants_delete')"/>
                             </div>
@@ -194,6 +197,7 @@ import TableLimitComponent from "../components/TableLimitComponent.vue";
 import SmIconSidebarModalEditComponent from "../components/buttons/SmIconSidebarModalEditComponent.vue";
 import SmIconDeleteComponent from "../components/buttons/SmIconDeleteComponent.vue";
 import SmIconViewComponent from "../components/buttons/SmIconViewComponent.vue";
+import SmIconModalVerifyComponent from "../components/buttons/SmIconModalVerifyComponent.vue";
 import FilterComponent from "../components/buttons/collapse/FilterComponent.vue";
 import ExportComponent from "../components/buttons/export/ExportComponent.vue";
 import PrintComponent from "../components/buttons/export/PrintComponent.vue";
@@ -219,6 +223,7 @@ export default {
         SmIconSidebarModalEditComponent,
         SmIconDeleteComponent,
         SmIconViewComponent,
+        SmIconModalVerifyComponent,
         FilterComponent,
         ExportComponent,
         PrintComponent,
@@ -336,6 +341,22 @@ export default {
         statusClass: function (status) {
             return appService.statusClass(status);
         },
+        isPendingRestaurant: function (restaurant) {
+            return restaurant.status == statusEnum.INACTIVE
+                && restaurant.apply == applyByEnum.RESTAURANT_OWNER;
+        },
+        restaurantStatusLabel: function (restaurant) {
+            if (this.isPendingRestaurant(restaurant)) {
+                return this.$t("label.pending");
+            }
+            return this.enums.statusEnumArray[restaurant.status];
+        },
+        restaurantStatusClass: function (restaurant) {
+            if (this.isPendingRestaurant(restaurant)) {
+                return "db-table-badge text-amber-700 bg-amber-100";
+            }
+            return this.statusClass(restaurant.status);
+        },
         textShortener: function (text, number = 30) {
             return appService.textShortener(text, number);
         },
@@ -396,6 +417,35 @@ export default {
         },
         cuisineUpdate: function (objects) {
             return objects.map(object => object.cuisine_id);
+        },
+        approve: function (restaurant) {
+            return new VueSimpleAlert.confirm(
+                this.$t("message.restaurant_approve_confirm"),
+                this.$t("message.are_you_sure"),
+                "warning",
+                {
+                    confirmButtonText: this.$t("button.approve"),
+                    cancelButtonText: this.$t("button.no_cancel"),
+                    confirmButtonColor: "#1AB759",
+                    cancelButtonColor: "#E93C3C"
+                }
+            ).then(() => {
+                try {
+                    this.loading.isActive = true;
+                    this.restaurantStore.approve({id: restaurant.id, search: this.props.search}).then((res) => {
+                        this.loading.isActive = false;
+                        alertService.success(res.data?.message || this.$t("message.restaurant_approved_successfully"));
+                    }).catch((err) => {
+                        this.loading.isActive = false;
+                        alertService.error(err.response?.data?.message || err.message);
+                    });
+                } catch (err) {
+                    this.loading.isActive = false;
+                    alertService.error(err.message);
+                }
+            }).catch(() => {
+                this.loading.isActive = false;
+            });
         },
         destroy: function (id) {
             return new VueSimpleAlert.confirm(

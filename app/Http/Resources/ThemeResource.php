@@ -27,8 +27,8 @@ class ThemeResource extends JsonResource
             "theme_logo"            => $this->themeImage('theme_logo')->logo,
             "theme_favicon_logo"    => $this->themeImage('theme_favicon_logo')->faviconLogo,
             "theme_footer_logo"     => $this->themeImage('theme_footer_logo')->footerLogo,
-            "theme_primary_color"   => $this->themeColor('theme_primary_color', '#F36805'),
-            "theme_secondary_color" => $this->themeColor('theme_secondary_color', '#1F1F39')
+            "theme_primary_color"   => $this->themeColor('theme_primary_color', '#148A3C'),
+            "theme_secondary_color" => $this->themeColor('theme_secondary_color', '#0A3D28')
         ];
     }
 

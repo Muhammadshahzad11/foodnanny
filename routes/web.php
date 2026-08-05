@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Frontend\ManifestController;
+use App\Http\Controllers\Frontend\OfflineController;
 use App\Http\Controllers\Frontend\PaymentController;
 use App\Http\Controllers\Installer\InstallerController;
 use App\Http\Controllers\RootController;
@@ -32,4 +33,6 @@ Route::prefix('payment')->name('payment.')->middleware(['installed'])->group(fun
     Route::get('/successful/{frontendOrder}', [PaymentController::class, 'successful'])->name('successful');
 });
 Route::get('/manifest.json',[ManifestController::class, 'show'])->middleware(['installed'])->name('laravelpwa.manifest');
+Route::get('/offline', OfflineController::class)->middleware(['installed'])->name('pwa.offline');
+Route::get('/pwa/install-config', [ManifestController::class, 'installConfig'])->middleware(['installed'])->name('pwa.install-config');
 Route::any('/{any}', [RootController::class, 'index'])->middleware(['installed'])->where(['any' => '.*']);

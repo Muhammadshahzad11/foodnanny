@@ -7,6 +7,7 @@ use App\Models\Item;
 use App\Models\Order;
 use App\Models\Coupon;
 use App\Models\TimeSlot;
+use App\Models\RestaurantTable;
 use App\Models\ItemAddon;
 use App\Models\ItemExtra;
 use App\Models\OrderItem;
@@ -17,6 +18,7 @@ use App\Models\ItemVariation;
 use App\Observers\TaxObserver;
 use App\Observers\ItemObserver;
 use App\Observers\OrderObserver;
+use App\Observers\RestaurantTableObserver;
 use App\Observers\CouponObserver;
 use App\Observers\TimeSlotObserver;
 use App\Observers\ItemAddonObserver;
@@ -48,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
     {
         OrderSetup::observe(OrderSetupObserver::class);
         Tax::observe(TaxObserver::class);
+        RestaurantTable::observe(RestaurantTableObserver::class);
         Coupon::observe(CouponObserver::class);
         ItemCategory::observe(ItemCategoryObserver::class);
         TimeSlot::observe(TimeSlotObserver::class);

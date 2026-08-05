@@ -592,7 +592,7 @@
         "online_commission": "অনলাইন কমিশন",
         "about_our_privacy": "আমাদের গোপনীয়তা সম্পর্কে",
         "cookies_settings": "কুকিজ সেটিংস",
-        "verify": "যাচাই করুন",
+        "verify": "যাচাই",
         "warning": "সতর্কতা",
         "delivery_man": "ডেলিভারি ম্যান",
         "reply_from": "প্রতিউত্তর থেকে",
@@ -814,7 +814,11 @@
         "translated_languages": "অনূদিত ভাষাসমূহ",
         "no_language_found": "কোনো ভাষা পাওয়া যায়নি",
         "add_translation": "অনুবাদ যোগ করুন",
-        "edit_translation": "অনুবাদ সম্পাদনা করুন"
+        "edit_translation": "অনুবাদ সম্পাদনা করুন",
+        "restaurant_registration_received": "নিবন্ধন গ্রহণ করা হয়েছে",
+        "go_to_login": "লগইনে যান",
+        "registration_complete": "নিবন্ধন সম্পূর্ণ",
+        "step_of": "ধাপ {current} / {total}"
     },
     "button": {
         "action": "কর্ম",
@@ -947,7 +951,9 @@
         "view_all": "সব দেখুন",
         "add_token": "টোকেন যোগ করুন",
         "mark_done": "সম্পন্ন চিহ্নিত করুন",
-        "start_preparing": "প্রস্তুত করা শুরু করুন"
+        "start_preparing": "প্রস্তুত করা শুরু করুন",
+        "approve": "অনুমোদন করুন",
+        "add_and_send_to_kitchen": "যোগ করে কিচেনে পাঠান"
     },
     "number": {
         "0": "০",
@@ -1120,6 +1126,13 @@
         "item_name_is_required_to_generate_name": "AI নাম তৈরি করতে আইটেমের নাম প্রয়োজন",
         "something_wrong": "কিছু ভুল",
         "say_anything_about_food": "খাবার সম্পর্কে কিছু জিজ্ঞাসা করো",
-        "your_language_has_been_set_automatically": "আপনার ভাষা স্বয়ংক্রিয়ভাবে সেট করা হয়েছে"
+        "your_language_has_been_set_automatically": "আপনার ভাষা স্বয়ংক্রিয়ভাবে সেট করা হয়েছে",
+        "restaurant_thank_you_intro": "Cost to Cost Foods-এ আপনার রেস্তোরাঁ তালিকাভুক্ত করার জন্য ধন্যবাদ। আমরা আপনার নিবন্ধন পেয়েছি।",
+        "restaurant_thank_you_approval_title": "অ্যাডমিন অনুমোদন প্রয়োজন",
+        "restaurant_thank_you_approval_body": "আমাদের টিম আপনার রেস্তোরাঁ প্রোফাইল পর্যালোচনা করবে। অ্যাডমিন অনুমোদন করলে আপনার অ্যাকাউন্ট সক্রিয় হবে।",
+        "restaurant_thank_you_login_note": "অনুমোদনের আগে আপনি লগইন করতে পারবেন না। অনুমোদনের পর একই ইমেইল বা ফোন দিয়ে লগইন করুন।",
+        "restaurant_approve_confirm": "এই রেস্তোরাঁ নিবন্ধন অনুমোদন করে মালিককে লগইন করতে দিতে চান?",
+        "restaurant_approved_successfully": "রেস্তোরাঁ সফলভাবে অনুমোদিত হয়েছে। মালিক এখন লগইন করতে পারবেন।",
+        "restaurant_pending_approval": "আপনার রেস্তোরাঁ নিবন্ধন অ্যাডমিন অনুমোদনের অপেক্ষায় আছে। অনুমোদনের পর আপনি লগইন করতে পারবেন।"
     }
 }

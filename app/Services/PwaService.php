@@ -4,10 +4,14 @@ namespace App\Services;
 
 use Exception;
 use App\Models\Pwa;
+use App\Enums\PwaCacheStrategy;
+use App\Enums\PwaDisplayMode;
+use App\Enums\PwaOrientation;
 use App\Http\Requests\PwaRequest;
 use Illuminate\Support\Facades\Log;
 use Dipokhalder\EnvEditor\EnvEditor;
 use App\Libraries\QueryExceptionLibrary;
+use Dipokhalder\Settings\Facades\Settings;
 
 class PwaService
 {
@@ -23,8 +27,8 @@ class PwaService
      */
     public function list()
     {
-         try {
-              return Pwa::first();
+        try {
+            return $this->ensureRecord();
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);
@@ -37,121 +41,128 @@ class PwaService
     public function update(PwaRequest $request)
     {
         try {
-            $pwa = Pwa::first();
-            
-            if(!$pwa) {
-                $pwa = Pwa::create(['id' => 1]);
-            }
-            if ($request->pwa_splash) {
+            $pwa = $this->ensureRecord();
+
+            $pwa->fill([
+                'name' => $request->input('name', $pwa->name),
+                'short_name' => $request->input('short_name', $pwa->short_name),
+                'description' => $request->input('description', $pwa->description),
+                'theme_color' => $request->input('theme_color', $pwa->theme_color),
+                'background_color' => $request->input('background_color', $pwa->background_color),
+                'orientation' => $request->input('orientation', $pwa->orientation),
+                'display_mode' => $request->input('display_mode', $pwa->display_mode),
+                'offline_mode' => $request->boolean('offline_mode', (bool) $pwa->offline_mode),
+                'auto_update' => $request->boolean('auto_update', (bool) $pwa->auto_update),
+                'cache_strategy' => $request->input('cache_strategy', $pwa->cache_strategy),
+                'enable_install_popup' => $request->boolean('enable_install_popup', (bool) $pwa->enable_install_popup),
+                'popup_delay_seconds' => (int) $request->input('popup_delay_seconds', $pwa->popup_delay_seconds),
+                'popup_frequency_hours' => (int) $request->input('popup_frequency_hours', $pwa->popup_frequency_hours),
+            ]);
+            $pwa->save();
+
+            if ($request->hasFile('pwa_splash')) {
                 $pwa->clearMediaCollection('pwa_splash');
-                $pwa->addMedia($request->pwa_splash)->toMediaCollection('pwa_splash');
+                $pwa->addMedia($request->file('pwa_splash'))->toMediaCollection('pwa_splash');
             }
-            if ($request->pwa_icon) {
+            if ($request->hasFile('pwa_icon')) {
                 $pwa->clearMediaCollection('pwa_icon');
-                $pwa->addMedia($request->pwa_icon)->toMediaCollection('pwa_icon');
+                $pwa->addMedia($request->file('pwa_icon'))->toMediaCollection('pwa_icon');
             }
 
-            if (!empty($pwa->getFirstMediaUrl('pwa_icon'))) {
-                $icons = $pwa->getMedia('pwa_icon')->first();
-                if($url = $icons->getUrl('D_72x72')){
-                    $this->envService->addData([
-                        'D_72x72' =>  $icons->getUrl('D_72x72')
-                    ]);
-                }
-                if($url = $icons->getUrl('D_96x96')){
-                    $this->envService->addData([
-                        'D_96x96' =>  $icons->getUrl('D_96x96')
-                    ]);
-                }
-                if($url = $icons->getUrl('D_128x128')){
-                    $this->envService->addData([
-                        'D_128x128' =>  $icons->getUrl('D_128x128')
-                    ]);
-                }
-                if($url = $icons->getUrl('D_144x144')){
-                    $this->envService->addData([
-                        'D_144x144' =>  $icons->getUrl('D_144x144')
-                    ]);
-                }
-                if($url = $icons->getUrl('D_152x152')){
-                    $this->envService->addData([
-                        'D_152x152' =>  $icons->getUrl('D_152x152')
-                    ]);
-                }
-                if($url = $icons->getUrl('D_192x192')){
-                    $this->envService->addData([
-                        'D_192x192' =>  $icons->getUrl('D_192x192')
-                    ]);
-                }
-                if($url = $icons->getUrl('D_384x384')){
-                    $this->envService->addData([
-                        'D_384x384' =>  $icons->getUrl('D_384x384')
-                    ]);
-                }
-                if($url = $icons->getUrl('D_512x512')){
-                    $this->envService->addData([
-                        'D_512x512' =>  $icons->getUrl('D_512x512')
-                    ]);
-                }
-            }
+            $this->syncEnvIcons($pwa);
+            $this->syncEnvSplashes($pwa);
+            $this->syncConfigDefaults($pwa);
 
-            if (!empty($pwa->getFirstMediaUrl('pwa_splash'))) {
-                $splash = $pwa->getMedia('pwa_splash')->first();
-                if($url = $splash->getUrl('D_640x1136')){
-                    $this->envService->addData([
-                        'D_640x1136' =>  $splash->getUrl('D_640x1136')
-                    ]);
-                }
-                if($url = $splash->getUrl('D_750x1334')){
-                    $this->envService->addData([
-                        'D_750x1334' =>  $splash->getUrl('D_750x1334')
-                    ]);
-                }
-                if($url = $splash->getUrl('D_828x1792')){
-                    $this->envService->addData([
-                        'D_828x1792' =>  $splash->getUrl('D_828x1792')
-                    ]);
-                }
-                if($url = $splash->getUrl('D_1125x2436')){
-                    $this->envService->addData([
-                        'D_1125x2436' =>  $splash->getUrl('D_1125x2436')
-                    ]);
-                }
-                if($url = $splash->getUrl('D_1242x2208')){
-                    $this->envService->addData([
-                        'D_1242x2208' =>  $splash->getUrl('D_1242x2208')
-                    ]);
-                }
-                if($url = $splash->getUrl('D_1242x2688')){
-                    $this->envService->addData([
-                        'D_1242x2688' =>  $splash->getUrl('D_1242x2688')
-                    ]);
-                }
-                if($url = $splash->getUrl('D_1536x2048')){
-                    $this->envService->addData([
-                        'D_1536x2048' =>  $splash->getUrl('D_1536x2048')
-                    ]);
-                }
-                if($url = $splash->getUrl('D_1668x2224')){
-                    $this->envService->addData([
-                        'D_1668x2224' =>  $splash->getUrl('D_1668x2224')
-                    ]);
-                }
-                if($url = $splash->getUrl('D_1668x2388')){
-                    $this->envService->addData([
-                        'D_1668x2388' =>  $splash->getUrl('D_1668x2388')
-                    ]);
-                }
-                if($url = $splash->getUrl('D_2048x2732')){
-                    $this->envService->addData([
-                        'D_2048x2732' =>  $splash->getUrl('D_2048x2732')
-                    ]);
-                }
-            }
-            return $pwa;
+            return $pwa->fresh();
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);
+        }
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function forceUpdate(): Pwa
+    {
+        try {
+            $pwa = $this->ensureRecord();
+            $pwa->cache_version = ((int) $pwa->cache_version) + 1;
+            $pwa->force_updated_at = now();
+            $pwa->save();
+
+            return $pwa->fresh();
+        } catch (Exception $exception) {
+            Log::info($exception->getMessage());
+            throw new Exception(QueryExceptionLibrary::message($exception), 422);
+        }
+    }
+
+    private function ensureRecord(): Pwa
+    {
+        $pwa = Pwa::query()->first();
+        if ($pwa) {
+            return $pwa;
+        }
+
+        $company = Settings::group('company')->get('company_name') ?: config('app.name', 'Cost to Cost Foods');
+
+        return Pwa::query()->create([
+            'id' => 1,
+            'name' => $company,
+            'short_name' => mb_substr($company, 0, 12),
+            'description' => 'Order food, manage tables, kitchen, and POS from ' . $company,
+            'theme_color' => '#148A3C',
+            'background_color' => '#FFFFFF',
+            'orientation' => PwaOrientation::ANY,
+            'display_mode' => PwaDisplayMode::STANDALONE,
+            'offline_mode' => true,
+            'auto_update' => true,
+            'cache_strategy' => PwaCacheStrategy::BALANCED,
+            'enable_install_popup' => true,
+            'popup_delay_seconds' => 3,
+            'popup_frequency_hours' => 24,
+            'cache_version' => 1,
+        ]);
+    }
+
+    private function syncEnvIcons(Pwa $pwa): void
+    {
+        if (empty($pwa->getFirstMediaUrl('pwa_icon'))) {
+            return;
+        }
+
+        $icons = $pwa->getMedia('pwa_icon')->first();
+        foreach (['72x72', '96x96', '128x128', '144x144', '152x152', '192x192', '384x384', '512x512'] as $size) {
+            $key = 'D_' . $size;
+            if ($url = $icons->getUrl($key)) {
+                $this->envService->addData([$key => $url]);
+            }
+        }
+    }
+
+    private function syncEnvSplashes(Pwa $pwa): void
+    {
+        if (empty($pwa->getFirstMediaUrl('pwa_splash'))) {
+            return;
+        }
+
+        $splash = $pwa->getMedia('pwa_splash')->first();
+        foreach ([
+            '640x1136', '750x1334', '828x1792', '1125x2436', '1242x2208',
+            '1242x2688', '1536x2048', '1668x2224', '1668x2388', '2048x2732',
+        ] as $size) {
+            $key = 'D_' . $size;
+            if ($url = $splash->getUrl($key)) {
+                $this->envService->addData([$key => $url]);
+            }
+        }
+    }
+
+    private function syncConfigDefaults(Pwa $pwa): void
+    {
+        if ($pwa->name) {
+            $this->envService->addData(['APP_NAME' => $pwa->name]);
         }
     }
 }

@@ -161,7 +161,7 @@ export default {
         save: function () {
             try {
                 this.loading.isActive = true;
-                this.frontendSignup.callPhone(this.props.form).then((res) => {
+                this.frontendSignup.callPhone(this.props.form).then(async (res) => {
                     this.loading.isActive = false;
                     this.props.form       = {
                         phone: "",
@@ -175,6 +175,9 @@ export default {
                             this.$router.push({name: "auth.signupRegister"});
                         } else {
                             alertService.success(res.data.message);
+                            if (res.data?.otp) {
+                                await alertService.showOtp(res.data.otp);
+                            }
                             this.$router.push({name: "auth.signupVerify"});
                         }
                     }

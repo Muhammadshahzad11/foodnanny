@@ -216,6 +216,7 @@ class OrderService
                             'item_extra_total'     => $item->item_extra_total,
                             'total_price'          => $item->total_price,
                             'status'               => Status::ACTIVE,
+                            'kitchen_status'       => \App\Enums\KitchenItemStatus::PENDING,
                             'created_at'           => now(),
                             'updated_at'           => now()
                         ];
@@ -240,7 +241,12 @@ class OrderService
                     ]);
                 }
             });
-            return $this->order;
+            $order = $this->order->fresh();
+            if ($order) {
+                app(KitchenOrderService::class)->notifyNewKitchenOrder($order);
+            }
+
+            return $order;
         } catch (Exception $exception) {
             DB::rollBack();
             Log::info($exception->getMessage());
@@ -256,12 +262,12 @@ class OrderService
         try {
             if ($auth) {
                 if ($order->user_id == Auth::user()->id) {
-                    return $order->load('user', 'address', 'restaurant', 'deliveryBoy', 'coupon', 'transaction', 'orderItems', 'posDetail', 'media');
+                    return $order->load('user', 'address', 'restaurant', 'deliveryBoy', 'coupon', 'transaction', 'orderItems', 'posDetail', 'media', 'diningTable', 'waiter');
                 } else {
                     return [];
                 }
             } else {
-                return $order->load('user', 'address', 'restaurant', 'deliveryBoy', 'coupon', 'transaction', 'orderItems', 'posDetail', 'media');
+                return $order->load('user', 'address', 'restaurant', 'deliveryBoy', 'coupon', 'transaction', 'orderItems', 'posDetail', 'media', 'diningTable', 'waiter');
             }
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
@@ -275,7 +281,7 @@ class OrderService
     public function fetchByOrderSerialNo(OrderTrackerRequest $orderTrackerRequest)
     {
         try {
-            $order = Order::where(['active' => Status::ACTIVE])->where('order_serial_no', $orderTrackerRequest->order_id)->with(['orderItems', 'restaurant', 'user', 'address', 'deliveryBoy', 'coupon', 'transaction', 'posDetail'])->first();
+            $order = Order::where(['active' => Status::ACTIVE])->where('order_serial_no', $orderTrackerRequest->order_id)->with(['orderItems', 'restaurant', 'user', 'address', 'deliveryBoy', 'coupon', 'transaction', 'posDetail', 'diningTable'])->first();
             if ($order) {
                 return $order;
             } else {
@@ -327,9 +333,9 @@ class OrderService
     public function changeStatus(Order $order, OrderStatusRequest $request): Order
     {
         try {
-            $order->load(['orderItems', 'user', 'address', 'deliveryBoy', 'coupon', 'transaction', 'posDetail', 'restaurant' => fn($query) => $query->with('cuisines')]);
+            $order->load(['orderItems', 'user', 'address', 'deliveryBoy', 'coupon', 'transaction', 'posDetail', 'diningTable', 'restaurant' => fn($query) => $query->with('cuisines')]);
             $status = [OrderStatus::ACCEPT, OrderStatus::REJECTED, OrderStatus::PREPARING, OrderStatus::PREPARED];
-            if ($order->order_type == OrderType::TAKEAWAY || $order->order_type == OrderType::POS) {
+            if ($order->order_type == OrderType::TAKEAWAY || $order->order_type == OrderType::POS || $order->order_type == OrderType::DINING_TABLE) {
                 $status[] = OrderStatus::DELIVERED;
             }
 
@@ -356,12 +362,25 @@ class OrderService
                         $this->statementCalculationService->restaurant($order);
                         $this->statementCalculationService->ownerRevenueFromRestaurant($order);
                     }
-                } elseif($order->order_type == OrderType::POS && $request->status == OrderStatus::DELIVERED) {
+                } elseif ($order->order_type == OrderType::POS && $request->status == OrderStatus::DELIVERED) {
+                    $this->statementCalculationService->restaurantPOS($order);
+                } elseif ($order->order_type == OrderType::DINING_TABLE && $request->status == OrderStatus::DELIVERED) {
+                    if ($order->payment_method == PaymentGateway::CASH_ON_DELIVERY) {
+                        $order->payment_status = PaymentStatus::PAID;
+                    }
                     $this->statementCalculationService->restaurantPOS($order);
                 }
 
                 $order->status = $request->status;
                 $order->save();
+
+                if (
+                    $order->order_type == OrderType::DINING_TABLE
+                    && in_array((int) $request->status, [OrderStatus::DELIVERED, OrderStatus::CANCELED, OrderStatus::REJECTED], true)
+                    && $order->table_id
+                ) {
+                    app(WaiterOrderService::class)->releaseTableIfIdle((int) $order->table_id);
+                }
 
                 OrderPlacedEmail::dispatch(['order_id' => $order->id, 'status' => $request->status]);
                 OrderPlacedSMS::dispatch(['order_id' => $order->id, 'status' => $request->status]);

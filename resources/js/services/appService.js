@@ -190,11 +190,14 @@ export default {
         }
     },
     currencyFormat(amount, decimal, currency, position) {
+        const safeAmount = Number(amount);
+        const safeDecimal = Number.isFinite(Number(decimal)) ? Number(decimal) : 2;
+        const safeCurrency = currency == null || currency === '' ? '' : String(currency);
+        const formatted = (Number.isFinite(safeAmount) ? safeAmount : 0).toFixed(safeDecimal);
         if (position === currencyPositionEnum.LEFT) {
-            return currency + parseFloat(amount).toFixed(decimal);
-        } else {
-            return parseFloat(amount).toFixed(decimal) + currency;
+            return safeCurrency + formatted;
         }
+        return formatted + safeCurrency;
     },
     distance: function (lat1, lng1, lat2, lng2) {
         let radiationLat1  = Math.PI * lat1 / 180
@@ -225,5 +228,35 @@ export default {
         } else {
             return "db-table-badge text-red-600 bg-red-100";
         }
+    },
+    /**
+     * After login/guest auth, return user to intended page (checkout, restaurant, etc.).
+     */
+    redirectAfterAuth: async function (router, options = {}) {
+        const carts = options.carts || [];
+        const location = options.location;
+        const dineInContext = options.dineInContext || null;
+        const redirect = router.currentRoute.value?.query?.redirect;
+
+        if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) {
+            return router.push(redirect);
+        }
+
+        if (carts.length > 0) {
+            return router.push({name: 'frontend.checkout'});
+        }
+
+        if (dineInContext?.isActive && dineInContext.context?.restaurant_slug) {
+            return router.push({
+                name: 'frontend.singleRestaurant',
+                params: {slug: dineInContext.context.restaurant_slug},
+            });
+        }
+
+        if (location) {
+            return router.push({name: 'frontend.restaurant'});
+        }
+
+        return router.push({name: 'frontend.home'});
     }
 }
