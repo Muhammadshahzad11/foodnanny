@@ -72,14 +72,14 @@ class DatabaseSeeder extends Seeder
         $this->call(DeliveryLocationTableSeeder::class);
         $this->call(SubscriberTableSeeder::class);
         $this->call(ModuleTestDataSeeder::class);
-//        $this->call(PushNotificationTableSeeder::class);
-//        $this->call(OrderTableSeeder::class);
-//        $this->call(ReviewTableSeeder::class);
-//        $this->call(RefundTableSeeder::class);
-//        $this->call(MessageTableSeeder::class);
-//        $this->call(CollectionTableSeeder::class);
-//        $this->call(PayoutTableSeeder::class);
-//        $this->call(CashoutTableSeeder::class);
-//        $this->call(FavoriteTableSeeder::class);
+        $this->call(PushNotificationTableSeeder::class);
+        $this->call(OrderTableSeeder::class);
+        $this->call(ReviewTableSeeder::class);
+        $this->call(RefundTableSeeder::class);
+        $this->call(MessageTableSeeder::class);
+        $this->call(CollectionTableSeeder::class);
+        $this->call(PayoutTableSeeder::class);
+        $this->call(CashoutTableSeeder::class);
+        $this->call(FavoriteTableSeeder::class);
     }
 }
