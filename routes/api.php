@@ -149,7 +149,8 @@ Route::middleware(['installed', 'apiKey', 'auth:sanctum'])->post('/broadcasting/
 Route::prefix('auth')->middleware(['installed', 'apiKey', 'localization'])->name('auth.')->namespace('Auth')->group(function () {
     Route::post('/is-auth', [LoginController::class, 'isAuth']);
     Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:login-email');
-    Route::post('/login-phone', [LoginController::class, 'phoneLogin'])->middleware('throttle:login-phone');;
+    Route::post('/login-phone/otp', [LoginController::class, 'sendPhoneLoginOtp'])->middleware('throttle:otp-send');
+    Route::post('/login-phone', [LoginController::class, 'phoneLogin'])->middleware('throttle:login-phone');
 
     Route::prefix('signup')->name('signup.')->group(function () {
         Route::post('/phone', [SignupController::class, 'phone'])->middleware('throttle:otp-send');

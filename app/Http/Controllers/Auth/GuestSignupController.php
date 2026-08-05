@@ -6,9 +6,6 @@ use App\Enums\Activity;
 use App\Enums\Ask;
 use App\Http\Requests\GuestSignupPhoneRequest;
 use App\Libraries\AppLibrary;
-use App\Services\DefaultAccessService;
-use App\Services\MenuService;
-use App\Services\PermissionService;
 use Carbon\Carbon;
 use Dipokhalder\Settings\Facades\Settings;
 use Exception;
@@ -95,10 +92,6 @@ class GuestSignupController extends Controller
             ], 400);
         }
 
-        return app(LoginController::class, [
-            MenuService::class,
-            PermissionService::class,
-            DefaultAccessService::class
-        ])->permissionManager($user);
+        return app(LoginController::class)->permissionManager($user);
     }
 }

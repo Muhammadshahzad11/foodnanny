@@ -1096,6 +1096,7 @@
         "pagination_label": "Showing {from} to {to} of {total} entries",
         "we_found": "We found {length} results for \"{search}\"",
         "have_account": "Don’t have an account?",
+        "phone_login_otp_hint": "We’ll send a one-time code to this phone. No password needed.",
         "file_update_success": "The file update successfully",
         "password_update": "Password Updated Successfully.",
         "photo_update": "Photo Updated Successfully.",

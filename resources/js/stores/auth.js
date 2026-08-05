@@ -20,6 +20,10 @@ export const useAuthStore = defineStore("auth", {
             email: null,
             token: null,
             verify: false
+        },
+        phoneLoginInfo: {
+            code: null,
+            phone: null,
         }
     }),
     actions: {
@@ -53,6 +57,25 @@ export const useAuthStore = defineStore("auth", {
                 });
             });
         },
+        setPhoneLoginInfo: function (payload) {
+            this.phoneLoginInfo = {
+                code: payload?.code || null,
+                phone: payload?.phone || null,
+            };
+        },
+        clearPhoneLoginInfo: function () {
+            this.phoneLoginInfo = {code: null, phone: null};
+        },
+        sendPhoneLoginOtp: function (payload) {
+            return new Promise((resolve, reject) => {
+                axios.post('auth/login-phone/otp', payload).then((res) => {
+                    this.setPhoneLoginInfo(payload);
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
         phoneLogin: function (payload) {
             return new Promise((resolve, reject) => {
                 axios.post('auth/login-phone', payload).then((res) => {
@@ -67,6 +90,7 @@ export const useAuthStore = defineStore("auth", {
                     this.defaultPermission = Object.keys(res.data.admin_default_permission).length > 0 ? res.data.admin_default_permission : res.data.restaurant_default_permission;
                     this.adminDefaultPermission = res.data.admin_default_permission;
                     this.restaurantDefaultPermission = res.data.restaurant_default_permission;
+                    this.clearPhoneLoginInfo();
                     resolve(res);
                 }).catch((err) => {
                     reject(err);

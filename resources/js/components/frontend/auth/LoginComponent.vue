@@ -51,14 +51,15 @@
             <small class="db-field-alert" v-if="errors.phone">{{ errors.phone[0] }}</small>
         </div>
 
-        <div class="mb-4">
+        <!-- Email login uses password; phone login uses OTP (no password) -->
+        <div v-if="toggleInput" class="mb-4">
             <label for="password" class="field-title required">{{ $t('label.password') }}</label>
             <input id="password" type="password" :class="errors.password ? 'invalid' : ''" v-model="form.password"
                    class="field-control"/>
             <small class="db-field-alert" v-if="errors.password">{{ errors.password[0] }}</small>
         </div>
 
-        <div class="flex items-center justify-between mb-6">
+        <div v-if="toggleInput" class="flex items-center justify-between mb-6">
             <div class="flex items-center gap-2">
                 <input type="checkbox" id="remember" class="field-checkbox">
                 <label for="remember" class="field-label">{{ $t('label.remember_me') }}</label>
@@ -67,9 +68,12 @@
                 {{ $t('button.forgot_password') }}
             </router-link>
         </div>
+        <p v-else class="text-xs text-paragraph mb-6">
+            {{ $t('message.phone_login_otp_hint') }}
+        </p>
 
         <button type="submit" class="field-button mb-6">
-            {{ $t('button.login') }}
+            {{ toggleInput ? $t('button.login') : $t('label.next') }}
         </button>
 
         <div class="flex items-center justify-center gap-1.5">
@@ -123,6 +127,7 @@ import {useCommonStore} from "../../../stores/common.js";
 import {useFrontendCountryCodeStore} from "../../../stores/frontendCountryCode.js";
 import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
 import {useMyRestaurantStore} from "../../../stores/myRestaurant.js";
+import askEnum from "../../../enums/modules/askEnum.js";
 
 export default {
     name: "LoginComponent",
@@ -178,6 +183,9 @@ export default {
         },
         location: function () {
             return this.commonStore.location;
+        },
+        setting: function () {
+            return this.frontendSettingStore.lists;
         }
     },
     mounted() {
@@ -220,29 +228,94 @@ export default {
             });
             this.isOpen = false
         },
+        finishLogin: async function (res) {
+            await this.defaultAccessStore.fetch();
+            await this.myRestaurantStore.resetDefaultRestaurant();
+            alertService.success(res.data.message);
+            setTimeout(() => {
+                appService.recursiveRouter(router.options.routes, this.authStore.permission)
+            }, 1000);
+
+            this.form = {
+                country_code: this.form.country_code,
+                phone: "",
+                email: "",
+                password: ""
+            };
+            this.loading.isActive = false;
+
+            await appService.redirectAfterAuth(this.$router, {
+                carts: this.carts,
+                location: this.location,
+                dineInContext: this.dineInContextStore,
+            });
+        },
         login: async function () {
             try {
                 this.loading.isActive = true;
-                let method            = this.toggleInput ? this.authStore.login : this.authStore.phoneLogin;
-                await method(this.form).then(async (res) => {
-                    await this.defaultAccessStore.fetch();
-                    await this.myRestaurantStore.resetDefaultRestaurant();
-                    alertService.success(res.data.message);
-                    setTimeout(() => {
-                        appService.recursiveRouter(router.options.routes, this.authStore.permission)
-                    }, 1000);
+                this.errors = {};
 
-                    this.form             = {
-                        phone: "",
-                        email: "",
-                        password: ""
-                    };
+                // Email + password
+                if (this.toggleInput) {
+                    await this.authStore.login(this.form).then(async (res) => {
+                        await this.finishLogin(res);
+                    }).catch((err) => {
+                        this.loading.isActive = false;
+                        if (err?.response?.data?.errors) {
+                            this.errors = err.response.data.errors;
+                        } else if (err?.response?.data?.message) {
+                            alertService.error(err.response.data.message);
+                        }
+                    });
+                    return;
+                }
+
+                // Phone + OTP
+                const otpPayload = {
+                    code: this.form.country_code || this.countryCode,
+                    phone: this.form.phone,
+                };
+
+                const isDemo = String(this.demo).toLowerCase() === 'true' || this.demo === 1 || this.demo === '1';
+                const phoneVerificationOff = this.setting?.site_phone_verification === askEnum.NO;
+
+                if (isDemo || phoneVerificationOff) {
+                    await this.authStore.phoneLogin({
+                        ...otpPayload,
+                        token: '0000',
+                    }).then(async (res) => {
+                        await this.finishLogin(res);
+                    }).catch((err) => {
+                        this.loading.isActive = false;
+                        if (err?.response?.data?.errors) {
+                            this.errors = err.response.data.errors;
+                        } else if (err?.response?.data?.message) {
+                            alertService.error(err.response.data.message);
+                        }
+                    });
+                    return;
+                }
+
+                await this.authStore.sendPhoneLoginOtp(otpPayload).then(async (res) => {
                     this.loading.isActive = false;
+                    if (res.data?.skip_otp) {
+                        await this.authStore.phoneLogin({
+                            ...otpPayload,
+                            token: '0000',
+                        }).then(async (loginRes) => {
+                            this.loading.isActive = true;
+                            await this.finishLogin(loginRes);
+                        });
+                        return;
+                    }
 
-                    await appService.redirectAfterAuth(this.$router, {
-                        carts: this.carts,
-                        location: this.location,
-                        dineInContext: this.dineInContextStore,
+                    alertService.success(res.data.message);
+                    if (res.data?.otp) {
+                        await alertService.showOtp(res.data.otp);
+                    }
+                    this.$router.push({
+                        name: 'auth.loginVerify',
+                        query: this.$route.query,
                     });
                 }).catch((err) => {
                     this.loading.isActive = false;
@@ -267,13 +340,18 @@ export default {
                 this.inputLabel  = this.$t('label.email');
                 this.inputButton = this.$t('button.use_phone_instead');
             } else {
-                this.form.email  = "";
-                this.errors      = {};
-                this.inputLabel  = this.$t('label.phone');
-                this.inputButton = this.$t('button.use_email_instead');
+                this.form.email    = "";
+                this.form.password = "";
+                this.errors        = {};
+                this.inputLabel    = this.$t('label.phone');
+                this.inputButton   = this.$t('button.use_email_instead');
             }
         },
         setupCredit: function (e) {
+            // Demo shortcuts use email + password
+            this.toggleInput = true;
+            this.inputLabel  = this.$t('label.email');
+            this.inputButton = this.$t('button.use_phone_instead');
             if (e === 'admin') {
                 this.form.country_code = '+880';
                 this.form.phone        = '1728660901';

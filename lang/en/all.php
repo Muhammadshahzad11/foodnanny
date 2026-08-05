@@ -152,6 +152,7 @@ return [
         'token_created_fail'                                         => 'The token created fail.',
         'email_does_not_exist'                                       => 'This email does not exist.',
         'phone_exist'                                                => 'This phone already exist.',
+        'phone_not_registered'                                       => 'No account found with this phone number.',
         'otp_verify_success'                                         => 'The OTP verify is successfully.',
         'register_successfully'                                      => 'Register Successfully.',
         'translations_saved_successfully'                            => 'Translations saved successfully.',

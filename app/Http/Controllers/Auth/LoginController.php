@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Auth;
 
 
-use App\Enums\Ask;
+use App\Enums\Activity;
 use App\Enums\PermissionType;
 use App\Enums\Status;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\GuestSignupPhoneRequest;
+use App\Http\Requests\VerifyPhoneRequest;
 use App\Http\Resources\LoginUserResource;
 use App\Http\Resources\MenuResource;
 use App\Http\Resources\PermissionResource;
@@ -14,11 +16,13 @@ use App\Libraries\AppLibrary;
 use App\Models\User;
 use App\Services\DefaultAccessService;
 use App\Services\MenuService;
+use App\Services\OtpManagerService;
 use App\Services\PermissionService;
+use Dipokhalder\Settings\Facades\Settings;
+use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class LoginController extends Controller
@@ -27,16 +31,19 @@ class LoginController extends Controller
     public DefaultAccessService $defaultAccessService;
     public PermissionService $permissionService;
     public MenuService $menuService;
+    public OtpManagerService $otpManagerService;
 
     public function __construct(
         MenuService          $menuService,
         PermissionService    $permissionService,
-        DefaultAccessService $defaultAccessService
+        DefaultAccessService $defaultAccessService,
+        OtpManagerService    $otpManagerService
     )
     {
         $this->menuService          = $menuService;
         $this->permissionService    = $permissionService;
         $this->defaultAccessService = $defaultAccessService;
+        $this->otpManagerService    = $otpManagerService;
     }
 
     /**
@@ -68,32 +75,94 @@ class LoginController extends Controller
     }
 
     /**
-     * @throws \Exception
+     * Send OTP for phone login (existing users only — no password).
      */
-    public function phoneLogin(Request $request): JsonResponse
+    public function sendPhoneLoginOtp(GuestSignupPhoneRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'country_code' => ['required', 'string', 'max:10'],
-            'phone'        => ['required', 'string', 'max:200'],
-            'password'     => ['required', 'string', 'min:6']
-        ]);
+        try {
+            $user = User::where([
+                'country_code' => $request->post('code'),
+                'phone'        => $request->post('phone'),
+                'status'       => Status::ACTIVE,
+            ])->first();
 
-        if ($validator->fails()) {
+            if (!$user) {
+                return new JsonResponse([
+                    'status'  => false,
+                    'message' => trans('all.message.phone_not_registered'),
+                    'errors'  => ['phone' => [trans('all.message.phone_not_registered')]],
+                ], 422);
+            }
+
+            // Demo / phone verification off → frontend can verify with a dummy token
+            if (env('DEMO') || Settings::group('site')->get('site_phone_verification') == Activity::DISABLE) {
+                return new JsonResponse([
+                    'status'   => true,
+                    'skip_otp' => true,
+                    'message'  => trans('all.message.login_success'),
+                ], 200);
+            }
+
+            $payload = [
+                'status'   => true,
+                'skip_otp' => false,
+                'message'  => trans('all.message.check_your_phone_for_code'),
+            ];
+
+            $otp = $this->otpManagerService->phoneOTP($request);
+            if (filter_var(env('SHOW_OTP', true), FILTER_VALIDATE_BOOLEAN)) {
+                $payload['otp'] = $otp;
+            }
+
+            return new JsonResponse($payload, 200);
+        } catch (Exception $exception) {
             return new JsonResponse([
-                'errors' => $validator->errors()
+                'status'  => false,
+                'message' => $exception->getMessage(),
             ], 422);
         }
+    }
 
-        $request->merge(['status' => Status::ACTIVE]);
+    /**
+     * Verify OTP and log in with phone (no password).
+     *
+     * @throws \Exception
+     */
+    public function phoneLogin(VerifyPhoneRequest $request): JsonResponse
+    {
+        try {
+            $skipOtp = env('DEMO')
+                || Settings::group('site')->get('site_phone_verification') == Activity::DISABLE;
 
-        if (!Auth::guard('web')->attempt($request->only('country_code', 'phone', 'password', 'status'))) {
+            if (!$skipOtp) {
+                $this->otpManagerService->phoneVerify($request);
+            }
+
+            $user = User::where([
+                'country_code' => $request->post('code'),
+                'phone'        => $request->post('phone'),
+                'status'       => Status::ACTIVE,
+            ])->first();
+
+            if (!$user) {
+                return new JsonResponse([
+                    'errors' => ['validation' => trans('all.message.phone_not_registered')],
+                ], 400);
+            }
+
+            if (!Auth::guard('web')->loginUsingId($user->id)) {
+                return new JsonResponse([
+                    'errors' => ['validation' => trans('all.message.credentials_invalid')],
+                ], 400);
+            }
+
+            return $this->permissionManager($user);
+        } catch (Exception $exception) {
             return new JsonResponse([
-                'errors' => ['validation' => trans('all.message.credentials_invalid')]
-            ], 400);
+                'status'  => false,
+                'message' => $exception->getMessage(),
+            ], 422);
         }
-
-        $user = User::where(['country_code' => $request['country_code'], 'phone' => $request['phone']])->first();
-        return $this->permissionManager($user);
     }
 
 

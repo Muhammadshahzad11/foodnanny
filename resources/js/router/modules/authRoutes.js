@@ -1,4 +1,5 @@
 const LoginComponent                       = () => import("../../components/frontend/auth/LoginComponent.vue");
+const LoginVerifyComponent                 = () => import("../../components/frontend/auth/LoginVerifyComponent.vue");
 const ForgotPasswordComponent              = () => import("../../components/frontend/auth/ForgotPasswordComponent.vue");
 const SignupPhoneComponent                 = () => import("../../components/frontend/auth/SignupPhoneComponent.vue");
 const GuestLoginComponent                  = () => import("../../components/frontend/auth/GuestLoginComponent.vue");
@@ -20,6 +21,16 @@ export default [
         path: '/login',
         component: LoginComponent,
         name: 'auth.login',
+        meta: {
+            template: "frontend",
+            auth: false,
+            mode: "main"
+        },
+    },
+    {
+        path: '/login/verify',
+        component: LoginVerifyComponent,
+        name: 'auth.loginVerify',
         meta: {
             template: "frontend",
             auth: false,
