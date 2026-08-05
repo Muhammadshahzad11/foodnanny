@@ -19,6 +19,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderSetup;
 use App\Models\RestaurantTable;
+use App\Services\RealtimePublisher;
 use App\Traits\DefaultAccessModelTrait;
 use Carbon\Carbon;
 use Exception;
@@ -102,6 +103,9 @@ class WaiterOrderService
                 OrderStatus::PREPARING,
                 OrderStatus::PREPARED,
             ];
+
+            // Heal stuck OCCUPIED tables that no longer have an open dine-in order.
+            $this->syncIdleOccupiedTables();
 
             return RestaurantTable::query()
                 ->with(['restaurant:id,name'])
@@ -444,7 +448,27 @@ class WaiterOrderService
 
         $table = RestaurantTable::query()->find($tableId);
         if ($table && (int) $table->status === TableStatus::OCCUPIED) {
+            $previous = (int) $table->status;
             $table->update(['status' => TableStatus::AVAILABLE]);
+            try {
+                app(RealtimePublisher::class)->table($table->fresh(), 'status', $previous);
+            } catch (\Throwable $e) {
+                Log::info('releaseTableIfIdle realtime: ' . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * OCCUPIED tables with no open order → AVAILABLE (e.g. after kitchen Complete).
+     */
+    protected function syncIdleOccupiedTables(): void
+    {
+        $ids = RestaurantTable::query()
+            ->where('status', TableStatus::OCCUPIED)
+            ->pluck('id');
+
+        foreach ($ids as $id) {
+            $this->releaseTableIfIdle((int) $id);
         }
     }
 

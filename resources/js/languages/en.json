@@ -1060,7 +1060,8 @@
         "add_token": "Add Token",
         "mark_done": "Mark Done",
         "start_preparing": "Start Preparing",
-        "approve": "Approve"
+        "approve": "Approve",
+        "add_and_send_to_kitchen": "Add & Send To Kitchen"
     },
     "number": {
         "0": "0",

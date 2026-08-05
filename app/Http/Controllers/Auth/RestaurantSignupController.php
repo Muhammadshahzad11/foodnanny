@@ -103,6 +103,11 @@ class RestaurantSignupController extends Controller
                     'country_code'         => $request->post('restaurant_country_code'),
                     'phone'                => $request->post('restaurant_phone'),
                     'address'              => $request->post('restaurant_address'),
+                    'city'                 => $request->post('restaurant_city'),
+                    'state'                => $request->post('restaurant_state'),
+                    'zip_code'             => $request->post('restaurant_zip_code'),
+                    'latitude'             => $request->post('restaurant_latitude') ?: null,
+                    'longitude'            => $request->post('restaurant_longitude') ?: null,
                     'status'               => Status::INACTIVE,
                     'current_status'       => Status::INACTIVE,
                     'apply'                => Apply::RESTAURANT_OWNER,
@@ -120,7 +125,7 @@ class RestaurantSignupController extends Controller
                     'food_preparation_time'        => 30,
                     'schedule_order_slot_duration' => 15,
                     'takeaway'                     => Activity::ENABLE,
-                    'delivery'                     => Activity::DISABLE,
+                    'delivery'                     => Activity::ENABLE,
                     'minimum_order_limit'          => 1
                 ]);
             });

@@ -603,6 +603,23 @@ class KitchenOrderService
         } catch (\Throwable $e) {
             Log::info('afterKitchenTransition: ' . $e->getMessage());
         }
+
+        // Free the dine-in table when the ticket is completed / canceled / rejected.
+        if (
+            (int) $order->order_type === OrderType::DINING_TABLE
+            && $order->table_id
+            && in_array((int) $order->status, [
+                OrderStatus::DELIVERED,
+                OrderStatus::CANCELED,
+                OrderStatus::REJECTED,
+            ], true)
+        ) {
+            try {
+                app(WaiterOrderService::class)->releaseTableIfIdle((int) $order->table_id);
+            } catch (\Throwable $e) {
+                Log::info('afterKitchenTransition releaseTable: ' . $e->getMessage());
+            }
+        }
     }
 
     protected function bumpItemKitchenStatus(Order $order, int $kitchenStatus): void

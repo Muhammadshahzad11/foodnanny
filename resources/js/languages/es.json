@@ -952,7 +952,8 @@
         "add_token": "Añadir token",
         "mark_done": "Marcar como hecho",
         "start_preparing": "Empezar preparación",
-        "approve": "Aprobar"
+        "approve": "Aprobar",
+        "add_and_send_to_kitchen": "Agregar y enviar a cocina"
     },
     "number": {
         "0": "0",

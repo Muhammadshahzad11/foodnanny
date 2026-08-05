@@ -952,7 +952,8 @@
         "add_token": "Ajouter un jeton",
         "mark_done": "Marquer comme terminé",
         "start_preparing": "Commencer la préparation",
-        "approve": "Approuver"
+        "approve": "Approuver",
+        "add_and_send_to_kitchen": "Ajouter et envoyer en cuisine"
     },
     "number": {
         "0": "0",

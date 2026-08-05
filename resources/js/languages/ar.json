@@ -952,7 +952,8 @@
         "add_token": "إضافة رمز",
         "mark_done": "وضع علامة تم",
         "start_preparing": "بدء التحضير",
-        "approve": "موافقة"
+        "approve": "موافقة",
+        "add_and_send_to_kitchen": "إضافة وإرسال للمطبخ"
     },
     "number": {
         "0": "٠",

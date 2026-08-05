@@ -214,6 +214,9 @@ export default {
                 order_type: "asc",
                 latitude: null,
                 longitude: null,
+                city: null,
+                district: null,
+                state: null,
                 delivery_order_type: null,
                 name: null,
                 cuisine_id: null
@@ -241,6 +244,15 @@ export default {
         },
         longitude: function () {
             return this.commonStore.longitude;
+        },
+        city: function () {
+            return this.commonStore.city;
+        },
+        district: function () {
+            return this.commonStore.district;
+        },
+        state: function () {
+            return this.commonStore.state;
         },
         orderType: function () {
             return this.commonStore.order_type;
@@ -284,6 +296,9 @@ export default {
             this.closeRestaurants         = [];
             this.form.latitude            = this.latitude;
             this.form.longitude           = this.longitude;
+            this.form.city                = this.city;
+            this.form.district            = this.district;
+            this.form.state               = this.state;
             this.form.delivery_order_type = this.orderType;
             this.form.name                = this.search;
             this.form.cuisine_id          = this.cuisine;
@@ -407,6 +422,9 @@ export default {
         list: function () {
             this.form.latitude            = this.latitude;
             this.form.longitude           = this.longitude;
+            this.form.city                = this.city;
+            this.form.district            = this.district;
+            this.form.state               = this.state;
             this.form.delivery_order_type = this.orderType;
             this.form.name                = this.search;
             this.form.cuisine_id          = this.cuisine;

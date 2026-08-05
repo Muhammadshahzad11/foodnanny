@@ -209,12 +209,31 @@ class RestaurantService
             }
 
             DB::transaction(function () use ($restaurant) {
-                $restaurant->status = Status::ACTIVE;
+                $restaurant->status         = Status::ACTIVE;
+                $restaurant->current_status = Status::ACTIVE;
                 $restaurant->save();
 
                 if ($restaurant->user_id) {
                     User::where('id', $restaurant->user_id)->update([
                         'status' => Status::ACTIVE,
+                    ]);
+                }
+
+                // Ensure the restaurant can appear in customer Delivery / Takeaway search.
+                $setup = OrderSetup::query()->firstOrCreate(
+                    ['restaurant_id' => $restaurant->id],
+                    [
+                        'food_preparation_time'        => 30,
+                        'schedule_order_slot_duration' => 15,
+                        'takeaway'                     => Activity::ENABLE,
+                        'delivery'                     => Activity::ENABLE,
+                        'minimum_order_limit'          => 1,
+                    ]
+                );
+                if ($setup->wasRecentlyCreated === false) {
+                    $setup->update([
+                        'delivery' => Activity::ENABLE,
+                        'takeaway' => Activity::ENABLE,
                     ]);
                 }
             });
@@ -307,28 +326,138 @@ class RestaurantService
             $orderColumn = $request->get('order_column') ?? 'id';
             $orderType   = $request->get('order_type') ?? 'desc';
 
-            return Restaurant::where(['current_status' => Status::ACTIVE])->with('orderSetup', 'timeSlots')->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))->withDistance($request)->withReviewRating()->with(['favorite' => fn($query) => $query->where('user_id', Auth::check() ? Auth::user()->id : 0)])->whereHas('orderSetup', function ($query) use ($requests) {
-                if (isset($requests['delivery_order_type'])) {
-                    if ($requests['delivery_order_type'] == OrderType::DELIVERY) {
-                        $query->where(['delivery' => Activity::ENABLE]);
-                    } elseif ($requests['delivery_order_type'] == OrderType::TAKEAWAY) {
-                        $query->where(['takeaway' => Activity::ENABLE]);
+            $city     = trim((string) ($requests['city'] ?? ''));
+            $district = trim((string) ($requests['district'] ?? ''));
+            $state    = trim((string) ($requests['state'] ?? ''));
+            $hasArea  = $city !== '' || $district !== '' || $state !== '';
+            $lat      = (float) $request->latitude;
+            $lng      = (float) $request->longitude;
+            $radius   = (float) (Settings::group('site')->get('site_restaurant_search_radius') ?: 50);
+
+            $query = Restaurant::query()
+                ->where(['current_status' => Status::ACTIVE])
+                ->with('orderSetup', 'timeSlots')
+                ->withReviewRating()
+                ->with(['favorite' => fn($q) => $q->where('user_id', Auth::check() ? Auth::user()->id : 0)])
+                ->whereHas('orderSetup', function ($query) use ($requests) {
+                    if (isset($requests['delivery_order_type'])) {
+                        if ((int) $requests['delivery_order_type'] === OrderType::DELIVERY) {
+                            $query->where(['delivery' => Activity::ENABLE]);
+                        } elseif ((int) $requests['delivery_order_type'] === OrderType::TAKEAWAY) {
+                            $query->where(['takeaway' => Activity::ENABLE]);
+                        }
                     }
-                }
-            })->whereHas('items', function ($q) use ($requests) {
-                if (isset($requests['name']) && !blank($requests['name'])) {
-                    $q->where('name', 'like', '%' . $requests['name'] . '%');
-                }
-            })->when(isset($requests['cuisine_id']) && $requests['cuisine_id'] > 0, function ($q) use ($requests) {
-                $q->whereHas('cuisines', fn($sub) => $sub->where(['cuisine_id' => $requests['cuisine_id']]));
-            })->orWhere(function ($query) use ($requests) {
-                if (isset($requests['name']) && !blank($requests['name'])) {
-                    $query->where('name', 'like', '%' . $requests['name'] . '%')->where(['current_status' => Status::ACTIVE])->withinDistanceOf($requests['latitude'], $requests['longitude'], Settings::group('site')->get('site_restaurant_search_radius'));
-                }
-            })->orderBy($orderColumn, $orderType)->$method($methodValue);
+                });
+
+            $this->applyDistanceSelect($query, $lat, $lng);
+
+            if ($hasArea) {
+                $query->where(function ($area) use ($city, $district, $state, $lat, $lng, $radius) {
+                    if ($city !== '') {
+                        $area->orWhere('city', 'like', '%' . $city . '%')
+                            ->orWhere('address', 'like', '%' . $city . '%');
+                    }
+                    if ($district !== '' && strcasecmp($district, $city) !== 0) {
+                        $area->orWhere('city', 'like', '%' . $district . '%')
+                            ->orWhere('state', 'like', '%' . $district . '%')
+                            ->orWhere('address', 'like', '%' . $district . '%');
+                    }
+                    if ($state !== '') {
+                        $area->orWhere('state', 'like', '%' . $state . '%')
+                            ->orWhere('address', 'like', '%' . $state . '%');
+                    }
+                    // Also include restaurants near the pin (same metro), even if city text differs.
+                    $this->applyNearbyConstraint($area, $lat, $lng, $radius, true);
+                });
+            } else {
+                $this->applyNearbyConstraint($query, $lat, $lng, $radius, false);
+            }
+
+            if ($orderColumn === 'distance') {
+                $query->orderByRaw('distance IS NULL ASC')->orderBy('distance', $orderType);
+            } else {
+                $query->orderBy($orderColumn, $orderType);
+            }
+
+            return $query
+                ->when(isset($requests['name']) && !blank($requests['name']), function ($q) use ($requests) {
+                    $q->where(function ($inner) use ($requests) {
+                        $inner->where('name', 'like', '%' . $requests['name'] . '%')
+                            ->orWhereHas('items', function ($itemQuery) use ($requests) {
+                                $itemQuery->where('name', 'like', '%' . $requests['name'] . '%');
+                            });
+                    });
+                })
+                ->when(isset($requests['cuisine_id']) && $requests['cuisine_id'] > 0, function ($q) use ($requests) {
+                    $q->whereHas('cuisines', fn($sub) => $sub->where(['cuisine_id' => $requests['cuisine_id']]));
+                })
+                ->$method($methodValue);
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);
+        }
+    }
+
+    /**
+     * True when the Netsells GeoScope package supports this DB driver.
+     */
+    protected function supportsGeoScope(): bool
+    {
+        return in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb', 'pgsql'], true);
+    }
+
+    /**
+     * Add a selectable distance column (miles) for sorting.
+     */
+    protected function applyDistanceSelect($query, float $lat, float $lng): void
+    {
+        if ($this->supportsGeoScope()) {
+            $query->withDistance((object) ['latitude' => $lat, 'longitude' => $lng]);
+
+            return;
+        }
+
+        // Haversine in miles — works on SQLite / drivers without GeoScope.
+        $query->select('restaurants.*')
+            ->selectRaw(
+                '(3959 * acos(MIN(1, MAX(-1,
+                    cos(radians(?)) * cos(radians(CAST(restaurants.latitude AS FLOAT)))
+                    * cos(radians(CAST(restaurants.longitude AS FLOAT)) - radians(?))
+                    + sin(radians(?)) * sin(radians(CAST(restaurants.latitude AS FLOAT)))
+                )))) AS distance',
+                [$lat, $lng, $lat]
+            );
+    }
+
+    /**
+     * Limit results to a radius around lat/lng.
+     */
+    protected function applyNearbyConstraint($query, float $lat, float $lng, float $radius, bool $asOrWhere): void
+    {
+        $callback = function ($near) use ($lat, $lng, $radius) {
+            $near->whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->where('latitude', '!=', '')
+                ->where('longitude', '!=', '');
+
+            if ($this->supportsGeoScope()) {
+                $near->withinDistanceOf($lat, $lng, $radius);
+            } else {
+                $near->whereRaw(
+                    '(3959 * acos(MIN(1, MAX(-1,
+                        cos(radians(?)) * cos(radians(CAST(restaurants.latitude AS FLOAT)))
+                        * cos(radians(CAST(restaurants.longitude AS FLOAT)) - radians(?))
+                        + sin(radians(?)) * sin(radians(CAST(restaurants.latitude AS FLOAT)))
+                    )))) <= ?',
+                    [$lat, $lng, $lat, $radius]
+                );
+            }
+        };
+
+        if ($asOrWhere) {
+            $query->orWhere($callback);
+        } else {
+            $query->where($callback);
         }
     }
 

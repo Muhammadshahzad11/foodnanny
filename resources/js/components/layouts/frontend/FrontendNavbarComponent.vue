@@ -11,12 +11,22 @@
                             alt="Cost to Cost Foods"
                         >
                     </router-link>
-                    <button v-if="mode === 'option'" @click="openModal('delivery-address')" class="flex-auto flex items-center gap-2 w-full max-w-[150px] h-10 rounded-full px-3 bg-mate">
-                        <i class="lab-fill-location flex-shrink-0 text-lg text-primary"></i>
-                        <span class="text-sm w-full mt-[1px] whitespace-nowrap overflow-hidden text-ellipsis">
-                            {{ location }}
-                        </span>
-                    </button>
+                    <div v-if="mode === 'option'" class="flex-auto flex items-center gap-1 w-full max-w-[190px]">
+                        <button @click="openModal('delivery-address')" class="flex-auto flex items-center gap-2 min-w-0 h-10 rounded-full px-3 bg-mate">
+                            <i class="lab-fill-location flex-shrink-0 text-lg text-primary"></i>
+                            <span class="text-sm w-full mt-[1px] whitespace-nowrap overflow-hidden text-ellipsis text-left">
+                                {{ location }}
+                            </span>
+                        </button>
+                        <button
+                            type="button"
+                            title="Clear location"
+                            @click.prevent="clearLocation"
+                            class="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-mate text-danger hover:bg-rose-50"
+                        >
+                            <i class="lab-fill-close-circle text-lg"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div v-if="mode === 'option'" :class="isScrollingUp ? 'max-lg:!flex' : 'max-lg:!hidden'" class="w-full max-lg:flex flex items-center gap-3 max-lg:origin-top max-lg:py-3 max-lg:border-t max-lg:border-slate-100">
@@ -381,6 +391,11 @@ export default {
             this.commonStore.update({
                 search_restaurant: this.localRestaurant
             })
+        },
+        clearLocation: async function () {
+            await this.commonStore.clearLocation();
+            this.localRestaurant = null;
+            this.$router.push({ name: 'frontend.home' });
         },
         saveImage: function () {
             if (this.$refs.imageProperty.files[0]) {

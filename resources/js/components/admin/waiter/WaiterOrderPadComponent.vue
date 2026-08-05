@@ -161,7 +161,7 @@
                     :class="canEditOrder ? 'bg-[#1AB759] text-white' : 'bg-[#D9DBE9] text-[#6E7191] cursor-not-allowed'"
                     class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2"
                 >
-                    {{ $t('button.send_to_kitchen') }}
+                    {{ sendKitchenButtonLabel }}
                 </button>
                 <div
                     v-if="!canEditOrder"
@@ -337,6 +337,7 @@ export default {
             loading: {isActive: false},
             printPayload: null,
             showOrderPlaced: false,
+            placedOrderSnapshot: null,
             printingKot: false,
             posOpen: false,
             offer: {},
@@ -439,6 +440,10 @@ export default {
             return this.$t('message.waiter_send_disabled_reason');
         },
         placedOrderLabel() {
+            const snap = this.placedOrderSnapshot;
+            if (snap?.label) {
+                return snap.label;
+            }
             const show = this.waiterOrderStore.show || {};
             const serial = show.order_serial_no ? `#${show.order_serial_no}` : '';
             const table = this.table
@@ -447,6 +452,9 @@ export default {
             return [serial, table].filter(Boolean).join(' · ');
         },
         placedOrderItems() {
+            if (this.placedOrderSnapshot?.items?.length) {
+                return this.placedOrderSnapshot.items;
+            }
             const items = this.waiterOrderStore.show?.order_items || [];
             if (items.length) {
                 return items.map((item) => ({
@@ -464,6 +472,9 @@ export default {
             }));
         },
         placedOrderTotals() {
+            if (this.placedOrderSnapshot?.totals) {
+                return this.placedOrderSnapshot.totals;
+            }
             const show = this.waiterOrderStore.show || {};
             return {
                 subtotal: show.subtotal != null ? show.subtotal : this.subtotal,
@@ -472,7 +483,16 @@ export default {
             };
         },
         placedOrderNote() {
+            if (this.placedOrderSnapshot && Object.prototype.hasOwnProperty.call(this.placedOrderSnapshot, 'note')) {
+                return this.placedOrderSnapshot.note || '';
+            }
             return this.waiterOrderStore.show?.order_note || this.orderNote || '';
+        },
+        sendKitchenButtonLabel() {
+            if (this.waiterOrderStore.context.orderId && !this.waiterOrderStore.context.isDraft) {
+                return this.$t('button.add_and_send_to_kitchen');
+            }
+            return this.$t('button.send_to_kitchen');
         },
     },
     async mounted() {
@@ -514,9 +534,14 @@ export default {
                 const openOrder = this.table.open_order;
                 if (openOrder?.id) {
                     await this.waiterOrderStore.view(openOrder.id);
-                    this.hydrateCartFromOrder(this.waiterOrderStore.show);
                     this.orderNote = this.waiterOrderStore.context.orderNote || '';
                     this.token = this.waiterOrderStore.context.token || '';
+                    // Only restore cart for drafts. Sent orders start empty so waiter can add more.
+                    if (this.waiterOrderStore.context.isDraft) {
+                        this.hydrateCartFromOrder(this.waiterOrderStore.show);
+                    } else {
+                        this.waiterCartStore.resetCart();
+                    }
                 } else {
                     this.waiterOrderStore.setContext({tableId: Number(tableId)});
                 }
@@ -712,6 +737,111 @@ export default {
                 updated_at: this.waiterOrderStore.context.updatedAt,
             };
         },
+        buildAddMorePayload() {
+            const existing = this.existingOrderItemsPayload();
+            const neu = this.buildItemsPayload();
+            const merged = existing.concat(neu);
+
+            const subtotal = merged.reduce((sum, item) => sum + parseFloat(item.total_price || 0), 0);
+            const tax = merged.reduce((sum, item) => sum + parseFloat(item.tax_amount || 0), 0);
+            const discount = parseFloat(this.waiterOrderStore.show?.discount || 0)
+                + parseFloat(this.waiterCartStore.discount || 0);
+            const total = subtotal - discount + tax;
+
+            return {
+                table_id: Number(this.$route.params.id),
+                subtotal: +subtotal.toFixed(2),
+                discount: +discount.toFixed(2),
+                tax: +tax.toFixed(2),
+                total: +total.toFixed(2),
+                token: this.token || null,
+                order_note: this.orderNote || this.waiterOrderStore.context.orderNote || null,
+                items: JSON.stringify(merged),
+                send_to_kitchen: false,
+                updated_at: this.waiterOrderStore.context.updatedAt,
+            };
+        },
+        existingOrderItemsPayload() {
+            const items = this.waiterOrderStore.show?.order_items || [];
+            return items.map((item) => {
+                let variations = item.item_variations || {};
+                let extras = item.item_extras || {};
+                try {
+                    if (typeof item.item_variations === 'string') {
+                        variations = JSON.parse(item.item_variations || '{}');
+                    }
+                } catch (e) {
+                    variations = {};
+                }
+                try {
+                    if (typeof item.item_extras === 'string') {
+                        extras = JSON.parse(item.item_extras || '{}');
+                    }
+                } catch (e) {
+                    extras = {};
+                }
+
+                return {
+                    item_id: item.item_id,
+                    item_price: parseFloat(item.price || item.item_price || 0),
+                    instruction: item.instruction || null,
+                    quantity: item.quantity,
+                    discount: item.discount || 0,
+                    total_price: item.total_price,
+                    item_variation_total: item.item_variation_total || 0,
+                    item_extra_total: item.item_extra_total || 0,
+                    tax_name: item.tax_name || null,
+                    tax_rate: item.tax_rate || 0,
+                    tax_type: item.tax_type || null,
+                    tax_amount: item.tax_amount || 0,
+                    item_variations: Array.isArray(variations) || variations?.variations
+                        ? variations
+                        : {variations: {}, names: {}},
+                    item_extras: Array.isArray(extras) || extras?.extras
+                        ? extras
+                        : {extras: [], names: []},
+                };
+            });
+        },
+        capturePlacedOrderSnapshot(newItemsOnly = null) {
+            const show = this.waiterOrderStore.show || {};
+            const serial = show.order_serial_no ? `#${show.order_serial_no}` : '';
+            const table = this.table
+                ? `${this.table.table_number} · ${this.table.name}`
+                : '';
+
+            const items = newItemsOnly?.length
+                ? newItemsOnly
+                : (this.carts || []).map((cart) => ({
+                    name: cart.name,
+                    quantity: cart.quantity,
+                    instruction: cart.instruction || '',
+                    total: cart.total || 0,
+                }));
+
+            const itemsTotal = items.reduce((s, i) => s + parseFloat(i.total || 0), 0);
+
+            this.placedOrderSnapshot = {
+                label: [serial, table].filter(Boolean).join(' · '),
+                items,
+                totals: {
+                    subtotal: newItemsOnly?.length
+                        ? itemsTotal
+                        : (show.subtotal != null ? show.subtotal : this.subtotal),
+                    tax: newItemsOnly?.length
+                        ? 0
+                        : (show.total_tax != null ? show.total_tax : this.tax),
+                    total: newItemsOnly?.length
+                        ? itemsTotal
+                        : (show.total != null ? show.total : this.total),
+                },
+                note: this.orderNote || show.order_note || '',
+            };
+        },
+        prepareCartForNextRound() {
+            this.waiterCartStore.resetCart();
+            this.orderNote = '';
+        },
         async saveDraft() {
             try {
                 this.loading.isActive = true;
@@ -741,8 +871,17 @@ export default {
                     return;
                 }
 
+                const newRoundItems = (this.carts || []).map((cart) => ({
+                    name: cart.name,
+                    quantity: cart.quantity,
+                    instruction: cart.instruction || '',
+                    total: cart.total || 0,
+                }));
+
                 const wasDraft = !this.waiterOrderStore.context.orderId
                     || this.waiterOrderStore.context.isDraft;
+                const isFollowUp = !!this.waiterOrderStore.context.orderId
+                    && !this.waiterOrderStore.context.isDraft;
 
                 if (!this.waiterOrderStore.context.orderId) {
                     await this.waiterOrderStore.create(this.buildPayload(true));
@@ -756,16 +895,22 @@ export default {
                         this.waiterOrderStore.context.updatedAt
                     );
                 } else {
-                    // Already sent to kitchen but still editable — sync items only
                     await this.waiterOrderStore.update(
                         this.waiterOrderStore.context.orderId,
-                        this.buildPayload(false)
+                        this.buildAddMorePayload()
+                    );
+                    await this.waiterOrderStore.sendKitchen(
+                        this.waiterOrderStore.context.orderId,
+                        this.waiterOrderStore.context.updatedAt
                     );
                 }
 
                 if (this.waiterOrderStore.context.orderId) {
                     await this.waiterOrderStore.view(this.waiterOrderStore.context.orderId);
                 }
+
+                this.capturePlacedOrderSnapshot(isFollowUp ? newRoundItems : null);
+                this.prepareCartForNextRound();
 
                 this.loading.isActive = false;
                 this.showOrderPlaced = true;
@@ -776,9 +921,13 @@ export default {
         },
         closeOrderPlaced() {
             this.showOrderPlaced = false;
+            this.placedOrderSnapshot = null;
+            this.prepareCartForNextRound();
         },
         goToTables() {
             this.showOrderPlaced = false;
+            this.placedOrderSnapshot = null;
+            this.prepareCartForNextRound();
             this.$router.push({name: 'admin.waiter.tables'});
         },
         async printKotFromModal() {
