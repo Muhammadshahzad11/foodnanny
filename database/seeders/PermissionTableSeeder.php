@@ -5,7 +5,10 @@ namespace Database\Seeders;
 use App\Enums\PermissionType;
 use App\Libraries\AppLibrary;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 class PermissionTableSeeder extends Seeder
 {
@@ -16,6 +19,20 @@ class PermissionTableSeeder extends Seeder
      */
     public function run(): void
     {
+        // Migrations may have inserted tables/waiter/kitchen permissions already.
+        // Clear so this seeder can insert a clean base set; ModulePermissionSeeder
+        // re-adds kitchen/waiter afterward.
+        $tableNames = config('permission.table_names');
+        Schema::disableForeignKeyConstraints();
+        DB::table($tableNames['role_has_permissions'])->delete();
+        DB::table($tableNames['model_has_permissions'])->delete();
+        if (isset($tableNames['model_has_roles'])) {
+            // keep roles; only clear permission pivots
+        }
+        DB::table($tableNames['permissions'])->delete();
+        Schema::enableForeignKeyConstraints();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+
         $permissions = [
             [
                 'title'      => 'Dashboard',
