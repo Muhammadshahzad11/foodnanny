@@ -31,6 +31,11 @@ class KitchenOrderResource extends JsonResource
             'updated_at'                => optional($this->updated_at)?->toIso8601String(),
             'kitchen_accepted_at'       => optional($this->kitchen_accepted_at)?->toIso8601String(),
             'elapsed_from'              => optional($this->kitchen_accepted_at ?? $this->order_datetime)?->toIso8601String(),
+            // Freeze timer end for finished tickets (completed / canceled / rejected)
+            'elapsed_to'                => $this->timerIsFrozen()
+                ? optional($this->updated_at)?->toIso8601String()
+                : null,
+            'timer_frozen'              => $this->timerIsFrozen(),
             'table'                     => $this->whenLoaded('diningTable', function () {
                 return $this->diningTable ? [
                     'id'           => $this->diningTable->id,
@@ -103,6 +108,16 @@ class KitchenOrderResource extends JsonResource
                 });
             }),
         ];
+    }
+
+    protected function timerIsFrozen(): bool
+    {
+        return in_array((int) $this->status, [
+            \App\Enums\OrderStatus::DELIVERED,
+            \App\Enums\OrderStatus::CANCELED,
+            \App\Enums\OrderStatus::REJECTED,
+            \App\Enums\OrderStatus::RETURNED,
+        ], true);
     }
 
     protected function formatVariationLines($variations): array

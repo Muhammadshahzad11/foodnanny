@@ -84,6 +84,14 @@ export const useKitchenOrderStore = defineStore('kitchenOrder', {
                 }).catch(reject);
             });
         },
+        complete(id, updatedAt = null) {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/kitchen/orders/${id}/complete`, {updated_at: updatedAt}).then((res) => {
+                    this.upsertLocal(res.data.data);
+                    resolve(res);
+                }).catch(reject);
+            });
+        },
         reject(id, reason = null, updatedAt = null) {
             return new Promise((resolve, reject) => {
                 axios.post(`admin/kitchen/orders/${id}/reject`, {

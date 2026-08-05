@@ -311,6 +311,29 @@ class KitchenOrderService
     }
 
     /**
+     * Mark prepared ticket as completed (served / delivered).
+     *
+     * @throws Exception
+     */
+    public function complete(Order $order, ?string $updatedAt = null): Order
+    {
+        return $this->transition($order, OrderStatus::DELIVERED, 'complete', $updatedAt, function (Order $order) {
+            $this->assertMutable($order);
+
+            if ((int) $order->status !== OrderStatus::PREPARED) {
+                throw new Exception(trans('all.message.kitchen_invalid_transition'), 422);
+            }
+
+            $order->status = OrderStatus::DELIVERED;
+            $order->save();
+
+            $this->bumpItemKitchenStatus($order, KitchenItemStatus::SERVED);
+
+            return [];
+        });
+    }
+
+    /**
      * @throws Exception
      */
     public function reject(Order $order, ?string $reason = null, ?string $updatedAt = null): Order

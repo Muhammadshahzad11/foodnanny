@@ -1,5 +1,6 @@
 <template>
     <LoadingComponent :props="loading"/>
+    <KitchenTicketPrintSheet :payload="printPayload"/>
     <div class="col-12">
         <div class="db-card" v-if="order.id">
             <div class="db-card-header border-none">
@@ -11,7 +12,15 @@
                         <span v-else> · {{ order.status_name }}</span>
                     </p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-wrap">
+                    <button
+                        v-if="!order.is_draft"
+                        type="button"
+                        @click.prevent="printKot"
+                        class="db-btn py-2 text-white bg-amber-600"
+                    >
+                        {{ $t('button.print_kot') }}
+                    </button>
                     <router-link
                         v-if="order.table_id"
                         :to="{name: 'admin.waiter.table.order', params: {id: order.table_id}}"
@@ -71,32 +80,57 @@
 
 <script>
 import LoadingComponent from "../../common/LoadingComponent.vue";
+import KitchenTicketPrintSheet from "../kitchen/KitchenTicketPrintSheet.vue";
 import {useWaiterOrderStore} from "../../../stores/waiterOrder.js";
 import alertService from "../../../services/alertService.js";
 import {apiErrorMessage} from "../../../services/apiError.js";
 
 export default {
     name: "WaiterOrderShowComponent",
-    components: {LoadingComponent},
+    components: {LoadingComponent, KitchenTicketPrintSheet},
     setup() {
-        return {waiterOrderStore: useWaiterOrderStore()};
+        return {
+            waiterOrderStore: useWaiterOrderStore(),
+        };
     },
     data() {
-        return {loading: {isActive: false}};
+        return {
+            loading: {isActive: false},
+            printPayload: null,
+        };
     },
     computed: {
         order() {
             return this.waiterOrderStore.show || {};
         }
     },
-    mounted() {
-        this.loading.isActive = true;
-        this.waiterOrderStore.view(this.$route.params.id).then(() => {
+    async mounted() {
+        try {
+            this.loading.isActive = true;
+            await this.waiterOrderStore.view(this.$route.params.id);
             this.loading.isActive = false;
-        }).catch((err) => {
+        } catch (err) {
             this.loading.isActive = false;
-            alertService.error(apiErrorMessage(err, this.$t('message.failed_to_load_order')));
-        });
+            alertService.error(apiErrorMessage(err, this.$t('message.something_wrong')));
+        }
+    },
+    methods: {
+        async printKot() {
+            if (!this.order.id || this.order.is_draft) {
+                return;
+            }
+            try {
+                this.loading.isActive = true;
+                const res = await this.waiterOrderStore.printData(this.order.id);
+                this.printPayload = res.data.data.payload;
+                this.loading.isActive = false;
+                await this.$nextTick();
+                window.print();
+            } catch (err) {
+                this.loading.isActive = false;
+                alertService.error(apiErrorMessage(err, this.$t('message.something_wrong')));
+            }
+        }
     }
 }
 </script>

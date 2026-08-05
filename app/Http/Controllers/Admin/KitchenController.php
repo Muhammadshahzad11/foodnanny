@@ -27,7 +27,7 @@ class KitchenController extends AdminController implements HasMiddleware
             new Middleware('permission:kitchen|kitchen_view', only: ['orders', 'orderShow']),
             new Middleware('permission:kitchen_accept', only: ['accept']),
             new Middleware('permission:kitchen_prepare', only: ['preparing']),
-            new Middleware('permission:kitchen_ready', only: ['ready']),
+            new Middleware('permission:kitchen_ready', only: ['ready', 'complete']),
             new Middleware('permission:kitchen_reject', only: ['reject']),
             new Middleware('permission:kitchen_cancel', only: ['cancel']),
             new Middleware('permission:kitchen_print', only: ['printData']),
@@ -89,6 +89,17 @@ class KitchenController extends AdminController implements HasMiddleware
         try {
             return new KitchenOrderResource(
                 $this->kitchenOrderService->ready($order, $request->input('updated_at'))
+            );
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    public function complete(Request $request, Order $order): \Illuminate\Http\Response|KitchenOrderResource|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            return new KitchenOrderResource(
+                $this->kitchenOrderService->complete($order, $request->input('updated_at'))
             );
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);

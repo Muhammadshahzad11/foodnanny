@@ -124,7 +124,7 @@
                     </div>
                 </td>
                 <td class="px-3 py-3 align-top border-b border-[#EFF0F6] text-sm">
-                    {{ currencyFormat(cart.total || 0, setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position) }}
+                    {{ formatMoney(cart.total || 0) }}
                 </td>
             </tr>
             </tbody>
@@ -134,25 +134,46 @@
             <ul class="mb-4 space-y-2">
                 <li class="flex items-center justify-between">
                     <span class="text-sm text-[#6E7191]">{{ $t('label.subtotal') }}</span>
-                    <span class="text-sm">{{ currencyFormat(subtotal, setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position) }}</span>
+                    <span class="text-sm">{{ formatMoney(subtotal) }}</span>
                 </li>
                 <li class="flex items-center justify-between">
                     <span class="text-sm text-[#6E7191]">{{ $t('label.tax') }}</span>
-                    <span class="text-sm">{{ currencyFormat(tax, setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position) }}</span>
+                    <span class="text-sm">{{ formatMoney(tax) }}</span>
                 </li>
                 <li class="flex items-center justify-between">
                     <span class="text-sm font-bold text-heading">{{ $t('label.total') }}</span>
-                    <span class="text-sm font-medium">{{ currencyFormat(total, setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position) }}</span>
+                    <span class="text-sm font-medium">{{ formatMoney(total) }}</span>
                 </li>
             </ul>
 
             <div v-if="carts.length > 0" class="flex flex-col gap-2">
-                <button @click.prevent="saveDraft" class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2 text-white bg-[#6E7191]">
+                <button
+                    v-if="canEditOrder"
+                    @click.prevent="saveDraft"
+                    class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2 text-white bg-[#6E7191]"
+                >
                     {{ $t('button.save_draft') }}
                 </button>
-                <button @click.prevent="sendKitchen" class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2 text-white bg-[#1AB759]">
+                <button
+                    @click.prevent="sendKitchen"
+                    :disabled="!canEditOrder"
+                    :title="!canEditOrder ? $t('message.waiter_send_disabled_reason') : ''"
+                    :class="canEditOrder ? 'bg-[#1AB759] text-white' : 'bg-[#D9DBE9] text-[#6E7191] cursor-not-allowed'"
+                    class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2"
+                >
                     {{ $t('button.send_to_kitchen') }}
                 </button>
+                <div
+                    v-if="!canEditOrder"
+                    class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-left"
+                >
+                    <p class="text-xs font-semibold text-amber-800 mb-0.5">
+                        {{ $t('label.send_to_kitchen_disabled') }}
+                    </p>
+                    <p class="text-xs text-amber-700 leading-relaxed">
+                        {{ disabledSendReason }}
+                    </p>
+                </div>
                 <button
                     v-if="canPrintKot"
                     @click.prevent="printKot"
@@ -176,9 +197,99 @@
         <i class="lab lab-bag-2 lab-font-size-13 text-white"></i>
         <span class="text-base font-medium font-client text-white">
             {{ carts.length }} {{ $t('label.items') }} -
-            {{ currencyFormat(total, setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position) }}
+            {{ formatMoney(total) }}
         </span>
     </button>
+
+    <!-- Order placed confirmation → thank you, details, Print KOT -->
+    <teleport to="body">
+        <div
+            v-if="showOrderPlaced"
+            class="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/45"
+            @click.self="closeOrderPlaced"
+        >
+            <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" @click.stop>
+                <div class="p-6 text-center border-b border-[#EFF0F6]">
+                    <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#1AB759]/10">
+                        <span class="text-2xl text-[#1AB759]">✓</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-heading mb-1">
+                        {{ $t('label.thank_you') }}
+                    </h3>
+                    <p class="text-base font-medium text-heading mb-1">
+                        {{ $t('label.order_placed') }}
+                    </p>
+                    <p class="text-sm text-[#6E7191]" v-if="placedOrderLabel">
+                        {{ placedOrderLabel }}
+                    </p>
+                </div>
+
+                <div class="px-6 py-4 overflow-y-auto text-left flex-1">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-[#6E7191] mb-2">
+                        {{ $t('label.order_details') }}
+                    </p>
+                    <ul class="space-y-2 mb-4">
+                        <li
+                            v-for="(item, idx) in placedOrderItems"
+                            :key="idx"
+                            class="flex items-start justify-between gap-3 text-sm"
+                        >
+                            <div class="min-w-0">
+                                <p class="font-medium text-heading">{{ item.quantity }} × {{ item.name }}</p>
+                                <p v-if="item.instruction" class="text-xs text-[#6E7191]">{{ item.instruction }}</p>
+                            </div>
+                            <span class="shrink-0 text-heading">
+                                {{ formatMoney(item.total) }}
+                            </span>
+                        </li>
+                    </ul>
+                    <div class="space-y-1 border-t border-[#EFF0F6] pt-3 text-sm">
+                        <div class="flex justify-between text-[#6E7191]">
+                            <span>{{ $t('label.subtotal') }}</span>
+                            <span>{{ formatMoney(placedOrderTotals.subtotal) }}</span>
+                        </div>
+                        <div class="flex justify-between text-[#6E7191]">
+                            <span>{{ $t('label.tax') }}</span>
+                            <span>{{ formatMoney(placedOrderTotals.tax) }}</span>
+                        </div>
+                        <div class="flex justify-between font-semibold text-heading">
+                            <span>{{ $t('label.total') }}</span>
+                            <span>{{ formatMoney(placedOrderTotals.total) }}</span>
+                        </div>
+                    </div>
+                    <p v-if="placedOrderNote" class="mt-3 text-xs text-[#6E7191]">
+                        <span class="font-medium text-heading">{{ $t('label.order_note') }}:</span>
+                        {{ placedOrderNote }}
+                    </p>
+                </div>
+
+                <div class="p-6 pt-2 flex flex-col gap-2 border-t border-[#EFF0F6]">
+                    <button
+                        type="button"
+                        class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2.5 text-white bg-amber-600"
+                        :disabled="printingKot"
+                        @click.prevent="printKotFromModal"
+                    >
+                        {{ printingKot ? 'Printing…' : $t('button.print_kot') }}
+                    </button>
+                    <button
+                        type="button"
+                        class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2.5 text-white bg-primary"
+                        @click.prevent="goToTables"
+                    >
+                        {{ $t('button.back_to_tables') }}
+                    </button>
+                    <button
+                        type="button"
+                        class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2.5 border border-[#EFF0F6] text-heading"
+                        @click.prevent="closeOrderPlaced"
+                    >
+                        {{ $t('button.done') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </teleport>
 </template>
 
 <script>
@@ -186,6 +297,7 @@ import {provide} from "vue";
 import LoadingComponent from "../../common/LoadingComponent.vue";
 import KitchenTicketPrintSheet from "../kitchen/KitchenTicketPrintSheet.vue";
 import statusEnum from "../../../enums/modules/statusEnum.js";
+import orderStatusEnum from "../../../enums/modules/orderStatusEnum.js";
 import {useItemStore} from "../../../stores/item.js";
 import {usePosCategoryStore} from "../../../stores/posCategory.js";
 import {Swiper, SwiperSlide} from 'swiper/vue';
@@ -224,6 +336,8 @@ export default {
         return {
             loading: {isActive: false},
             printPayload: null,
+            showOrderPlaced: false,
+            printingKot: false,
             posOpen: false,
             offer: {},
             table: null,
@@ -283,10 +397,82 @@ export default {
             if (ctx.isDraft) {
                 return `${serial} · ${this.$t('label.draft')}`;
             }
-            return `${serial} · ${this.$t('message.waiter_order_sent_kitchen')}`;
+            return `${serial} · ${this.$t('label.sent_to_kitchen')}`;
         },
         canPrintKot() {
             return !!this.waiterOrderStore.context.orderId && !this.waiterOrderStore.context.isDraft;
+        },
+        canEditOrder() {
+            const status = Number(this.waiterOrderStore.show?.status || orderStatusEnum.PENDING);
+            const locked = [
+                orderStatusEnum.PREPARED,
+                orderStatusEnum.DELIVERED,
+                orderStatusEnum.CANCELED,
+                orderStatusEnum.REJECTED,
+                orderStatusEnum.RETURNED,
+            ];
+            if (locked.includes(status)) {
+                return false;
+            }
+            // New order or draft / still editable kitchen statuses
+            return true;
+        },
+        disabledSendReason() {
+            const status = Number(this.waiterOrderStore.show?.status || 0);
+            const statusName = this.waiterOrderStore.show?.status_name || '';
+            const serial = this.waiterOrderStore.show?.order_serial_no
+                ? `#${this.waiterOrderStore.show.order_serial_no}`
+                : '';
+
+            if (status === orderStatusEnum.PREPARED) {
+                return this.$t('message.waiter_send_disabled_prepared', {order: serial || this.$t('label.order')});
+            }
+            if (status === orderStatusEnum.DELIVERED) {
+                return this.$t('message.waiter_send_disabled_delivered', {order: serial || this.$t('label.order')});
+            }
+            if ([orderStatusEnum.CANCELED, orderStatusEnum.REJECTED, orderStatusEnum.RETURNED].includes(status)) {
+                return this.$t('message.waiter_send_disabled_closed', {
+                    order: serial || this.$t('label.order'),
+                    status: statusName || this.$t('label.closed'),
+                });
+            }
+            return this.$t('message.waiter_send_disabled_reason');
+        },
+        placedOrderLabel() {
+            const show = this.waiterOrderStore.show || {};
+            const serial = show.order_serial_no ? `#${show.order_serial_no}` : '';
+            const table = this.table
+                ? `${this.table.table_number} · ${this.table.name}`
+                : '';
+            return [serial, table].filter(Boolean).join(' · ');
+        },
+        placedOrderItems() {
+            const items = this.waiterOrderStore.show?.order_items || [];
+            if (items.length) {
+                return items.map((item) => ({
+                    name: item.item_name || item.name || `#${item.item_id}`,
+                    quantity: item.quantity,
+                    instruction: item.instruction || '',
+                    total: item.total_price ?? 0,
+                }));
+            }
+            return (this.carts || []).map((cart) => ({
+                name: cart.name,
+                quantity: cart.quantity,
+                instruction: cart.instruction || '',
+                total: cart.total || 0,
+            }));
+        },
+        placedOrderTotals() {
+            const show = this.waiterOrderStore.show || {};
+            return {
+                subtotal: show.subtotal != null ? show.subtotal : this.subtotal,
+                tax: show.total_tax != null ? show.total_tax : this.tax,
+                total: show.total != null ? show.total : this.total,
+            };
+        },
+        placedOrderNote() {
+            return this.waiterOrderStore.show?.order_note || this.orderNote || '';
         },
     },
     async mounted() {
@@ -305,9 +491,22 @@ export default {
         currencyFormat(amount, decimal, currency, position) {
             return appService.currencyFormat(amount, decimal, currency, position);
         },
+        formatMoney(amount) {
+            return this.currencyFormat(
+                amount,
+                this.setting?.site_digit_after_decimal_point ?? 2,
+                this.setting?.site_default_currency_symbol || '$',
+                this.setting?.site_currency_position
+            );
+        },
         async bootstrap() {
             try {
                 this.loading.isActive = true;
+                try {
+                    await this.frontendSettingStore.fetch();
+                } catch (e) {
+                    // Currency falls back to $ via formatMoney
+                }
                 const tableId = this.$route.params.id;
                 const tableRes = await this.waiterTableStore.view(tableId);
                 this.table = tableRes.data.data;
@@ -531,15 +730,23 @@ export default {
         },
         async sendKitchen() {
             try {
+                if (!this.canEditOrder) {
+                    alertService.warning(this.disabledSendReason);
+                    return;
+                }
                 this.loading.isActive = true;
                 if (this.carts.length === 0) {
                     this.loading.isActive = false;
                     alertService.warning(this.$t('message.waiter_order_requires_items'));
                     return;
                 }
+
+                const wasDraft = !this.waiterOrderStore.context.orderId
+                    || this.waiterOrderStore.context.isDraft;
+
                 if (!this.waiterOrderStore.context.orderId) {
                     await this.waiterOrderStore.create(this.buildPayload(true));
-                } else {
+                } else if (wasDraft) {
                     await this.waiterOrderStore.update(
                         this.waiterOrderStore.context.orderId,
                         this.buildPayload(false)
@@ -548,12 +755,58 @@ export default {
                         this.waiterOrderStore.context.orderId,
                         this.waiterOrderStore.context.updatedAt
                     );
+                } else {
+                    // Already sent to kitchen but still editable — sync items only
+                    await this.waiterOrderStore.update(
+                        this.waiterOrderStore.context.orderId,
+                        this.buildPayload(false)
+                    );
                 }
+
+                if (this.waiterOrderStore.context.orderId) {
+                    await this.waiterOrderStore.view(this.waiterOrderStore.context.orderId);
+                }
+
                 this.loading.isActive = false;
-                alertService.success(this.$t('message.waiter_order_sent_kitchen'));
+                this.showOrderPlaced = true;
             } catch (err) {
                 this.loading.isActive = false;
                 alertService.error(apiErrorMessage(err, this.$t('message.failed_to_send_kitchen')));
+            }
+        },
+        closeOrderPlaced() {
+            this.showOrderPlaced = false;
+        },
+        goToTables() {
+            this.showOrderPlaced = false;
+            this.$router.push({name: 'admin.waiter.tables'});
+        },
+        async printKotFromModal() {
+            await this.printKot();
+        },
+        async printKot({silent = false} = {}) {
+            const orderId = this.waiterOrderStore.context.orderId;
+            if (!orderId || this.waiterOrderStore.context.isDraft) {
+                if (!silent) {
+                    alertService.warning(this.$t('message.waiter_send_before_kot'));
+                }
+                return;
+            }
+            try {
+                this.printingKot = true;
+                this.loading.isActive = true;
+                const res = await this.waiterOrderStore.printData(orderId);
+                this.printPayload = res.data.data.payload;
+                this.loading.isActive = false;
+                this.printingKot = false;
+                await this.$nextTick();
+                window.print();
+            } catch (err) {
+                this.loading.isActive = false;
+                this.printingKot = false;
+                if (!silent) {
+                    alertService.error(apiErrorMessage(err, this.$t('message.something_wrong')));
+                }
             }
         },
         async cancelDraft() {

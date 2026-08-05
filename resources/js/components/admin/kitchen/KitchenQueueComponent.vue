@@ -70,6 +70,9 @@
                             <p class="text-base text-[#6E7191] mt-1">{{ order.order_time }}</p>
                             <p class="text-lg font-semibold mt-1" :class="elapsedClass(order)">
                                 ⏱ {{ elapsedLabel(order) }}
+                                <span v-if="isTimerFrozen(order)" class="text-xs font-normal text-[#6E7191] ml-1">
+                                    ({{ $t('label.final') }})
+                                </span>
                             </p>
                         </div>
                         <div class="flex flex-col items-end gap-2">
@@ -152,6 +155,14 @@
                             @click="ready(order)"
                         >
                             {{ $t('button.ready') }}
+                        </button>
+                        <button
+                            v-if="canComplete(order)"
+                            type="button"
+                            class="min-h-14 rounded-xl text-base font-bold text-white bg-emerald-700 active:scale-[0.98]"
+                            @click="complete(order)"
+                        >
+                            {{ $t('button.mark_completed') }}
                         </button>
                         <button
                             v-if="permissionChecker('kitchen_print')"
@@ -322,6 +333,7 @@ export default {
         statusChipClass(status) {
             if (status === orderStatusEnum.PREPARING) return 'bg-amber-100 text-amber-800';
             if (status === orderStatusEnum.PREPARED) return 'bg-emerald-100 text-emerald-800';
+            if (status === orderStatusEnum.DELIVERED) return 'bg-slate-200 text-slate-700';
             if ([orderStatusEnum.CANCELED, orderStatusEnum.REJECTED].includes(status)) return 'bg-rose-100 text-rose-800';
             return 'bg-sky-100 text-sky-800';
         },
@@ -346,7 +358,25 @@ export default {
             if (!from) return 0;
             const start = new Date(from).getTime();
             if (Number.isNaN(start)) return 0;
-            return Math.max(0, Math.floor((Date.now() - start) / 1000));
+
+            // Completed / canceled / rejected: freeze at finish time (do not keep counting)
+            let end = Date.now();
+            if (this.isTimerFrozen(order)) {
+                const to = order.elapsed_to || order.updated_at;
+                const parsed = to ? new Date(to).getTime() : NaN;
+                end = Number.isNaN(parsed) ? start : parsed;
+            }
+
+            return Math.max(0, Math.floor((end - start) / 1000));
+        },
+        isTimerFrozen(order) {
+            if (order.timer_frozen) return true;
+            return [
+                orderStatusEnum.DELIVERED,
+                orderStatusEnum.CANCELED,
+                orderStatusEnum.REJECTED,
+                orderStatusEnum.RETURNED,
+            ].includes(Number(order.status));
         },
         elapsedLabel(order) {
             const s = this.elapsedSeconds(order);
@@ -355,6 +385,9 @@ export default {
             return `${m}:${String(r).padStart(2, '0')}`;
         },
         elapsedClass(order) {
+            if (this.isTimerFrozen(order)) {
+                return 'text-[#6E7191]';
+            }
             const m = Math.floor(this.elapsedSeconds(order) / 60);
             const eta = Number(order.preparation_time || 0);
             if (eta && m >= eta) return 'text-rose-600';
@@ -373,6 +406,10 @@ export default {
         canReady(order) {
             return this.permissionChecker('kitchen_ready')
                 && order.status === orderStatusEnum.PREPARING;
+        },
+        canComplete(order) {
+            return this.permissionChecker('kitchen_ready')
+                && order.status === orderStatusEnum.PREPARED;
         },
         canReject(order) {
             return this.permissionChecker('kitchen_reject')
@@ -407,6 +444,17 @@ export default {
                 this.loading.isActive = true;
                 await this.kitchenOrderStore.ready(order.id, order.updated_at);
                 await this.refresh();
+            } catch (err) {
+                this.loading.isActive = false;
+                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+            }
+        },
+        async complete(order) {
+            try {
+                this.loading.isActive = true;
+                await this.kitchenOrderStore.complete(order.id, order.updated_at);
+                await this.refresh();
+                alertService.success(this.$t('message.kitchen_order_completed'));
             } catch (err) {
                 this.loading.isActive = false;
                 alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));

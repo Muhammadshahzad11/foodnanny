@@ -28,6 +28,7 @@ export function apiErrorMessage(err, fallback = 'Request failed. Please try agai
     if (status === 403) return 'You do not have permission for this action.';
     if (status === 404) return 'The requested item was not found.';
     if (status === 419) return 'Page expired. Refresh and try again.';
+    if (status === 429) return 'Too many requests. Please wait a few seconds and try again.';
     if (status === 422) return 'Please check the form and try again.';
     if (status >= 500) return 'Server error. Please try again in a moment.';
     if (err?.message && !String(err.message).startsWith('Request failed with status')) {

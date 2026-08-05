@@ -367,6 +367,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::post('/orders/{order}/accept', [KitchenController::class, 'accept']);
         Route::post('/orders/{order}/preparing', [KitchenController::class, 'preparing']);
         Route::post('/orders/{order}/ready', [KitchenController::class, 'ready']);
+        Route::post('/orders/{order}/complete', [KitchenController::class, 'complete']);
         Route::post('/orders/{order}/reject', [KitchenController::class, 'reject']);
         Route::post('/orders/{order}/cancel', [KitchenController::class, 'cancel']);
         Route::post('/orders/{order}/priority', [KitchenController::class, 'priority']);

@@ -11,7 +11,12 @@
                     </router-link>
                     <h3 class="db-card-title mt-1 text-3xl">#{{ order.order_serial_no }}</h3>
                     <p class="text-base text-[#6E7191]">{{ order.status_name }} · {{ order.order_datetime }}</p>
-                    <p class="text-xl font-semibold mt-1">⏱ {{ elapsedLabel }}</p>
+                    <p class="text-xl font-semibold mt-1 text-heading">
+                        ⏱ {{ elapsedLabel }}
+                        <span v-if="isTimerFrozen" class="text-sm font-normal text-[#6E7191] ml-1">
+                            ({{ $t('label.final') }})
+                        </span>
+                    </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <button v-if="canAccept" type="button" class="db-btn py-3 px-4 text-base text-white bg-sky-500"
@@ -20,6 +25,8 @@
                             @click="preparing">{{ $t('button.preparing') }}</button>
                     <button v-if="canReady" type="button" class="db-btn py-3 px-4 text-base text-white bg-emerald-600"
                             @click="ready">{{ $t('button.ready') }}</button>
+                    <button v-if="canComplete" type="button" class="db-btn py-3 px-4 text-base text-white bg-emerald-700"
+                            @click="complete">{{ $t('button.mark_completed') }}</button>
                     <button v-if="canReject" type="button" class="db-btn py-3 px-4 text-base text-white bg-rose-500"
                             @click="reject">{{ $t('button.reject') }}</button>
                     <button v-if="canCancel" type="button" class="db-btn py-3 px-4 text-base border border-rose-300 text-rose-700 bg-white"
@@ -122,10 +129,27 @@ export default {
             if (!from) return '0:00';
             const start = new Date(from).getTime();
             if (Number.isNaN(start)) return '0:00';
-            const s = Math.max(0, Math.floor((Date.now() - start) / 1000));
+
+            let end = Date.now();
+            if (this.isTimerFrozen) {
+                const to = this.order.elapsed_to || this.order.updated_at;
+                const parsed = to ? new Date(to).getTime() : NaN;
+                end = Number.isNaN(parsed) ? start : parsed;
+            }
+
+            const s = Math.max(0, Math.floor((end - start) / 1000));
             const m = Math.floor(s / 60);
             const r = s % 60;
             return `${m}:${String(r).padStart(2, '0')}`;
+        },
+        isTimerFrozen() {
+            if (this.order.timer_frozen) return true;
+            return [
+                orderStatusEnum.DELIVERED,
+                orderStatusEnum.CANCELED,
+                orderStatusEnum.REJECTED,
+                orderStatusEnum.RETURNED,
+            ].includes(Number(this.order.status));
         },
         canAccept() {
             return this.permissionChecker('kitchen_accept')
@@ -139,6 +163,10 @@ export default {
         canReady() {
             return this.permissionChecker('kitchen_ready')
                 && this.order.status === orderStatusEnum.PREPARING;
+        },
+        canComplete() {
+            return this.permissionChecker('kitchen_ready')
+                && this.order.status === orderStatusEnum.PREPARED;
         },
         canReject() {
             return this.permissionChecker('kitchen_reject')
@@ -197,6 +225,17 @@ export default {
                 this.loading.isActive = true;
                 await this.kitchenOrderStore.ready(this.order.id, this.order.updated_at);
                 this.loading.isActive = false;
+            } catch (err) {
+                this.loading.isActive = false;
+                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+            }
+        },
+        async complete() {
+            try {
+                this.loading.isActive = true;
+                await this.kitchenOrderStore.complete(this.order.id, this.order.updated_at);
+                this.loading.isActive = false;
+                alertService.success(this.$t('message.kitchen_order_completed'));
             } catch (err) {
                 this.loading.isActive = false;
                 alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));

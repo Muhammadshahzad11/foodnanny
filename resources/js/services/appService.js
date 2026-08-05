@@ -190,11 +190,14 @@ export default {
         }
     },
     currencyFormat(amount, decimal, currency, position) {
+        const safeAmount = Number(amount);
+        const safeDecimal = Number.isFinite(Number(decimal)) ? Number(decimal) : 2;
+        const safeCurrency = currency == null || currency === '' ? '' : String(currency);
+        const formatted = (Number.isFinite(safeAmount) ? safeAmount : 0).toFixed(safeDecimal);
         if (position === currencyPositionEnum.LEFT) {
-            return currency + parseFloat(amount).toFixed(decimal);
-        } else {
-            return parseFloat(amount).toFixed(decimal) + currency;
+            return safeCurrency + formatted;
         }
+        return formatted + safeCurrency;
     },
     distance: function (lat1, lng1, lat2, lng2) {
         let radiationLat1  = Math.PI * lat1 / 180
