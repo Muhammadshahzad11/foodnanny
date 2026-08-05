@@ -134,5 +134,14 @@ export const useWaiterOrderStore = defineStore('waiterOrder', {
                 });
             });
         },
+        printData(id) {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/waiter/orders/${id}/print-data`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
     }
 });

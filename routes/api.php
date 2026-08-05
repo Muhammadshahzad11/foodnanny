@@ -348,6 +348,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::match(['put', 'patch'], '/orders/{order}', [WaiterController::class, 'update']);
         Route::post('/orders/{order}/send-kitchen', [WaiterController::class, 'sendToKitchen']);
         Route::post('/orders/{order}/cancel-draft', [WaiterController::class, 'cancelDraft']);
+        Route::post('/orders/{order}/print-data', [WaiterController::class, 'printData']);
     });
 
     Route::prefix('inbox-notifications')->name('inbox-notifications.')->group(function () {

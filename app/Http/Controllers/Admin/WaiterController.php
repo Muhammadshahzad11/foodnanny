@@ -9,6 +9,7 @@ use App\Http\Resources\WaiterOrderResource;
 use App\Http\Resources\WaiterTableResource;
 use App\Models\Order;
 use App\Models\RestaurantTable;
+use App\Services\KitchenOrderService;
 use App\Services\WaiterOrderService;
 use Exception;
 use Illuminate\Http\Request;
@@ -17,8 +18,10 @@ use Illuminate\Routing\Controllers\Middleware;
 
 class WaiterController extends AdminController implements HasMiddleware
 {
-    public function __construct(protected WaiterOrderService $waiterOrderService)
-    {
+    public function __construct(
+        protected WaiterOrderService $waiterOrderService,
+        protected KitchenOrderService $kitchenOrderService
+    ) {
         parent::__construct();
     }
 
@@ -30,7 +33,7 @@ class WaiterController extends AdminController implements HasMiddleware
             new Middleware('permission:waiter|waiter_orders', only: ['orders', 'orderShow']),
             new Middleware('permission:waiter_orders_create', only: ['store']),
             new Middleware('permission:waiter_orders_edit', only: ['update']),
-            new Middleware('permission:waiter_orders_send', only: ['sendToKitchen']),
+            new Middleware('permission:waiter_orders_send', only: ['sendToKitchen', 'printData']),
             new Middleware('permission:waiter_orders_cancel_draft', only: ['cancelDraft']),
         ];
     }
@@ -115,6 +118,24 @@ class WaiterController extends AdminController implements HasMiddleware
             $this->waiterOrderService->cancelDraft($order);
 
             return response(['status' => true, 'message' => trans('all.message.waiter_draft_canceled')]);
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    public function printData(Order $order): \Illuminate\Http\Response|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\JsonResponse
+    {
+        try {
+            $result = $this->kitchenOrderService->printData($order);
+
+            return response([
+                'data' => [
+                    'ticket_no'   => $result['ticket']->ticket_no,
+                    'print_count' => $result['ticket']->print_count,
+                    'printed_at'  => $result['ticket']->printed_at,
+                    'payload'     => $result['payload'],
+                ],
+            ]);
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
         }

@@ -1,5 +1,6 @@
 <template>
     <LoadingComponent :props="loading"/>
+    <KitchenTicketPrintSheet :payload="printPayload"/>
     <div class="col-12 mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
             <router-link :to="{name: 'admin.waiter.tables'}" class="text-sm text-primary mb-1 inline-block">
@@ -12,13 +13,23 @@
                 {{ orderMeta }}
             </p>
         </div>
-        <router-link
-            v-if="waiterOrderStore.context.orderId"
-            :to="{name: 'admin.waiter.orders.show', params: {id: waiterOrderStore.context.orderId}}"
-            class="db-btn py-2 text-white bg-slate-700"
-        >
-            {{ $t('button.view') }}
-        </router-link>
+        <div class="flex flex-wrap gap-2">
+            <button
+                v-if="canPrintKot"
+                type="button"
+                @click.prevent="printKot"
+                class="db-btn py-2 text-white bg-amber-600"
+            >
+                {{ $t('button.print_kot') }}
+            </button>
+            <router-link
+                v-if="waiterOrderStore.context.orderId"
+                :to="{name: 'admin.waiter.orders.show', params: {id: waiterOrderStore.context.orderId}}"
+                class="db-btn py-2 text-white bg-slate-700"
+            >
+                {{ $t('button.view') }}
+            </router-link>
+        </div>
     </div>
 
     <div class="w-full md:w-[calc(100%-366px)]">
@@ -143,6 +154,13 @@
                     {{ $t('button.send_to_kitchen') }}
                 </button>
                 <button
+                    v-if="canPrintKot"
+                    @click.prevent="printKot"
+                    class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2 text-white bg-amber-600"
+                >
+                    {{ $t('button.print_kot') }}
+                </button>
+                <button
                     v-if="waiterOrderStore.context.orderId && waiterOrderStore.context.isDraft"
                     @click.prevent="cancelDraft"
                     class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2 text-white bg-[#FB4E4E]"
@@ -166,6 +184,7 @@
 <script>
 import {provide} from "vue";
 import LoadingComponent from "../../common/LoadingComponent.vue";
+import KitchenTicketPrintSheet from "../kitchen/KitchenTicketPrintSheet.vue";
 import statusEnum from "../../../enums/modules/statusEnum.js";
 import {useItemStore} from "../../../stores/item.js";
 import {usePosCategoryStore} from "../../../stores/posCategory.js";
@@ -185,7 +204,7 @@ import _ from "lodash";
 
 export default {
     name: "WaiterOrderPadComponent",
-    components: {LoadingComponent, ItemComponent, Swiper, SwiperSlide},
+    components: {LoadingComponent, KitchenTicketPrintSheet, ItemComponent, Swiper, SwiperSlide},
     setup() {
         const waiterCartStore = useWaiterCartStore();
         provide('cartStore', waiterCartStore);
@@ -204,6 +223,7 @@ export default {
     data() {
         return {
             loading: {isActive: false},
+            printPayload: null,
             posOpen: false,
             offer: {},
             table: null,
@@ -257,9 +277,17 @@ export default {
             if (!ctx.orderId) {
                 return this.$t('label.new_table_order');
             }
-            const draft = ctx.isDraft ? this.$t('label.draft') : this.$t('label.sent_to_kitchen');
-            return `#${this.waiterOrderStore.show?.order_serial_no || ctx.orderId} · ${draft}`;
-        }
+            const serial = this.waiterOrderStore.show?.order_serial_no
+                ? `#${this.waiterOrderStore.show.order_serial_no}`
+                : `#${ctx.orderId}`;
+            if (ctx.isDraft) {
+                return `${serial} · ${this.$t('label.draft')}`;
+            }
+            return `${serial} · ${this.$t('message.waiter_order_sent_kitchen')}`;
+        },
+        canPrintKot() {
+            return !!this.waiterOrderStore.context.orderId && !this.waiterOrderStore.context.isDraft;
+        },
     },
     async mounted() {
         this.commonStore.update({top_sidebar: false});
