@@ -16,6 +16,7 @@ use App\Enums\Status;
 use App\Enums\TableStatus;
 use App\Models\DefaultAccess;
 use App\Models\Item;
+use App\Models\ItemCategory;
 use App\Models\KitchenStation;
 use App\Models\KitchenStatusLog;
 use App\Models\KitchenTicket;
@@ -116,9 +117,7 @@ class ModuleTestDataSeeder extends Seeder
             ->values();
 
         if ($items->isEmpty()) {
-            $categoryId = DB::table('item_categories')->where('restaurant_id', $restaurant->id)->value('id')
-                ?? DB::table('item_categories')->value('id')
-                ?? 1;
+            $categoryId = $this->ensureItemCategory($restaurant);
 
             $seed = [
                 ['Classic Beef Burger', 12.99],
@@ -157,6 +156,32 @@ class ModuleTestDataSeeder extends Seeder
         }
 
         return $items;
+    }
+
+    protected function ensureItemCategory(Restaurant $restaurant): int
+    {
+        $categoryId = DB::table('item_categories')
+            ->where('restaurant_id', $restaurant->id)
+            ->value('id');
+
+        if ($categoryId) {
+            return (int) $categoryId;
+        }
+
+        $category = ItemCategory::query()->create([
+            'name'          => 'General',
+            'slug'          => 'general-' . $restaurant->id . '-' . Str::lower(Str::random(6)),
+            'description'   => 'Auto-created for module test items',
+            'restaurant_id' => $restaurant->id,
+            'status'        => Status::ACTIVE,
+            'sort'          => 1,
+            'creator_type'  => User::class,
+            'creator_id'    => 1,
+            'editor_type'   => User::class,
+            'editor_id'     => 1,
+        ]);
+
+        return (int) $category->id;
     }
 
     protected function ensureStaff(Restaurant $restaurant): array
