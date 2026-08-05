@@ -870,14 +870,14 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
             Route::post('update/', [PaymentGatewayController::class, 'update']);
         });
 
-        Route::prefix('pwa')->name('pwa')->group(function () {
-            Route::get('/', [PwaController::class, 'index']);
-            Route::post('/', [PwaController::class, 'update']);
-            Route::post('/force-update', [PwaController::class, 'forceUpdate']);
+        Route::prefix('pwa')->name('pwa.')->group(function () {
+            Route::get('/', [PwaController::class, 'index'])->name('index');
+            Route::post('/', [PwaController::class, 'update'])->name('update');
+            Route::post('/force-update', [PwaController::class, 'forceUpdate'])->name('force-update');
         });
 
-        Route::prefix('menu')->name('menu')->group(function () {
-            Route::get('/', [SettingMenuController::class, 'systemMenu']);;
+        Route::prefix('menu')->name('menu.')->group(function () {
+            Route::get('/', [SettingMenuController::class, 'systemMenu'])->name('index');
         });
     });
 
