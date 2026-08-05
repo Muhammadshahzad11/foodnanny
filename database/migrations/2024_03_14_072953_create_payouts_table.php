@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('model_type');
             $table->unsignedBigInteger('model_id');
             $table->decimal('amount', 19, 6)->default(0);
-            $table->dateTime('date');
+            $table->timestamp('date');
             $table->string('creator_type')->nullable();
             $table->bigInteger('creator_id')->nullable();
             $table->string('editor_type')->nullable();

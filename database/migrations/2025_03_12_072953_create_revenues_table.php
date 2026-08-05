@@ -18,7 +18,7 @@ return new class extends Migration {
             $table->string('sign')->default('+');
             $table->decimal('order_amount', 19, 6)->default(0);
             $table->decimal('revenue_amount', 19, 6)->default(0);
-            $table->dateTime('date');
+            $table->timestamp('date');
             $table->text('info')->nullable();
             $table->timestamps();
         });

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\PermissionType;
+use App\Libraries\AppLibrary;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 
@@ -1131,38 +1132,7 @@ class PermissionTableSeeder extends Seeder
             ]
         ];
 
-        // Migrations may already have created tables/QR/waiter/kitchen permissions.
-        // Upsert by name so migrate:fresh --seed does not hit unique constraint errors,
-        // and parent ids point at real rows instead of assumed auto-increment indexes.
-        foreach ($permissions as $permission) {
-            $children = $permission['children'] ?? [];
-            unset($permission['children']);
-
-            $parent = Permission::query()->firstOrCreate(
-                [
-                    'name'       => $permission['name'],
-                    'guard_name' => $permission['guard_name'] ?? 'sanctum',
-                ],
-                array_merge($permission, ['parent' => 0])
-            );
-
-            if ((int) $parent->parent !== 0) {
-                $parent->update(['parent' => 0]);
-            }
-
-            foreach ($children as $child) {
-                $childModel = Permission::query()->firstOrCreate(
-                    [
-                        'name'       => $child['name'],
-                        'guard_name' => $child['guard_name'] ?? 'sanctum',
-                    ],
-                    array_merge($child, ['parent' => $parent->id])
-                );
-
-                if ((int) $childModel->parent !== (int) $parent->id) {
-                    $childModel->update(['parent' => $parent->id]);
-                }
-            }
-        }
+        $permissions = AppLibrary::associativeToNumericArrayBuilder($permissions);
+        Permission::insert($permissions);
     }
 }

@@ -16,7 +16,6 @@ use App\Enums\Status;
 use App\Enums\TableStatus;
 use App\Models\DefaultAccess;
 use App\Models\Item;
-use App\Models\ItemCategory;
 use App\Models\KitchenStation;
 use App\Models\KitchenStatusLog;
 use App\Models\KitchenTicket;
@@ -58,6 +57,7 @@ class ModuleTestDataSeeder extends Seeder
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $restaurant = $this->ensureRestaurant();
+        $this->ensureAdmin();
         $items      = $this->ensureItems($restaurant);
         $staff      = $this->ensureStaff($restaurant);
         $stations   = $this->ensureStations($restaurant);
@@ -108,6 +108,46 @@ class ModuleTestDataSeeder extends Seeder
         return $restaurant->fresh();
     }
 
+    protected function ensureAdmin(): void
+    {
+        $user = User::withTrashed()->where('email', 'admin@example.com')->first();
+        if ($user && $user->trashed()) {
+            $user->restore();
+        }
+
+        if (!$user) {
+            $user = User::create([
+                'name'                 => 'John Doe',
+                'email'                => 'admin@example.com',
+                'phone'                => '1728660901',
+                'username'             => 'admin',
+                'email_verified_at'    => now(),
+                'password'             => Hash::make(self::PASSWORD),
+                'restaurant_id'        => 0,
+                'balance'              => 0,
+                'collection'           => 0,
+                'status'               => Status::ACTIVE,
+                'country_code'         => '+1',
+                'is_guest'             => Ask::NO,
+                'terms_and_conditions' => Ask::YES,
+                'creator_type'         => User::class,
+                'creator_id'           => 1,
+                'editor_type'          => User::class,
+                'editor_id'            => 1,
+            ]);
+        } else {
+            $user->forceFill([
+                'password' => Hash::make(self::PASSWORD),
+                'status'   => Status::ACTIVE,
+            ])->save();
+        }
+
+        $role = Role::query()->find(EnumRole::ADMIN);
+        if ($role) {
+            $user->syncRoles([$role]);
+        }
+    }
+
     protected function ensureItems(Restaurant $restaurant)
     {
         $items = Item::withoutGlobalScopes()
@@ -117,7 +157,9 @@ class ModuleTestDataSeeder extends Seeder
             ->values();
 
         if ($items->isEmpty()) {
-            $categoryId = $this->ensureItemCategory($restaurant);
+            $categoryId = DB::table('item_categories')->where('restaurant_id', $restaurant->id)->value('id')
+                ?? DB::table('item_categories')->value('id')
+                ?? 1;
 
             $seed = [
                 ['Classic Beef Burger', 12.99],
@@ -156,32 +198,6 @@ class ModuleTestDataSeeder extends Seeder
         }
 
         return $items;
-    }
-
-    protected function ensureItemCategory(Restaurant $restaurant): int
-    {
-        $categoryId = DB::table('item_categories')
-            ->where('restaurant_id', $restaurant->id)
-            ->value('id');
-
-        if ($categoryId) {
-            return (int) $categoryId;
-        }
-
-        $category = ItemCategory::query()->create([
-            'name'          => 'General',
-            'slug'          => 'general-' . $restaurant->id . '-' . Str::lower(Str::random(6)),
-            'description'   => 'Auto-created for module test items',
-            'restaurant_id' => $restaurant->id,
-            'status'        => Status::ACTIVE,
-            'sort'          => 1,
-            'creator_type'  => User::class,
-            'creator_id'    => 1,
-            'editor_type'   => User::class,
-            'editor_id'     => 1,
-        ]);
-
-        return (int) $category->id;
     }
 
     protected function ensureStaff(Restaurant $restaurant): array

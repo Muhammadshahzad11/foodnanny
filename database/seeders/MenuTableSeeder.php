@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Libraries\AppLibrary;
 use App\Models\Menu;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 
 class MenuTableSeeder extends Seeder
@@ -17,10 +16,6 @@ class MenuTableSeeder extends Seeder
      */
     public function run(): void
     {
-        // Feature migrations may insert tables/waiter/kitchen menus before seeding.
-        // Clear them so the index-based parent links from this seeder stay consistent.
-        DB::table('menus')->delete();
-
         $menus = [
             [
                 'name'       => 'Dashboard',
@@ -524,41 +519,5 @@ class MenuTableSeeder extends Seeder
         ];
 
         Menu::insert(AppLibrary::associativeToNumericArrayBuilder($menus));
-
-        $now = now();
-        foreach ([
-            [
-                'name'     => 'Waiter',
-                'language' => 'waiter',
-                'url'      => 'waiter',
-                'icon'     => 'lab lab-line-users',
-                'priority' => 35,
-            ],
-            [
-                'name'     => 'Kitchen',
-                'language' => 'kitchen',
-                'url'      => 'kitchen',
-                'icon'     => 'lab lab-line-flame',
-                'priority' => 34,
-            ],
-        ] as $extra) {
-            if (DB::table('menus')->where('url', $extra['url'])->exists()) {
-                continue;
-            }
-
-            DB::table('menus')->insert([
-                'name'       => $extra['name'],
-                'language'   => $extra['language'],
-                'url'        => $extra['url'],
-                'icon'       => $extra['icon'],
-                'priority'   => $extra['priority'],
-                'status'     => 1,
-                'parent'     => 0,
-                'type'       => 1,
-                'addon'      => 10,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
-        }
     }
 }

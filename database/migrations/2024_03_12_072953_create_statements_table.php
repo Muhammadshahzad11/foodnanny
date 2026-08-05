@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->id();
             $table->string('model_type');
             $table->unsignedBigInteger('model_id');
-            $table->dateTime('date');
+            $table->timestamp('date');
             $table->unsignedBigInteger('order_id')->nullable();
             $table->tinyInteger('type')->nullable();
             $table->tinyInteger('detail')->nullable();
