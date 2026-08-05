@@ -74,6 +74,53 @@ class PermissionTableSeeder extends Seeder
                 ]
             ],
             [
+                'title'      => 'Cuisines',
+                'name'       => 'cuisines',
+                'type'       => PermissionType::ADMIN,
+                'guard_name' => 'sanctum',
+                'url'        => 'cuisines',
+                'created_at' => now(),
+                'updated_at' => now(),
+                'children'   => [
+                    [
+                        'title'      => 'Cuisines Create',
+                        'name'       => 'cuisines_create',
+                        'type'       => PermissionType::ADMIN,
+                        'guard_name' => 'sanctum',
+                        'url'        => 'cuisines/create',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                    [
+                        'title'      => 'Cuisines Edit',
+                        'name'       => 'cuisines_edit',
+                        'type'       => PermissionType::ADMIN,
+                        'guard_name' => 'sanctum',
+                        'url'        => 'cuisines/edit',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                    [
+                        'title'      => 'Cuisines Delete',
+                        'name'       => 'cuisines_delete',
+                        'type'       => PermissionType::ADMIN,
+                        'guard_name' => 'sanctum',
+                        'url'        => 'cuisines/delete',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                    [
+                        'title'      => 'Cuisines Show',
+                        'name'       => 'cuisines_show',
+                        'type'       => PermissionType::ADMIN,
+                        'guard_name' => 'sanctum',
+                        'url'        => 'cuisines/show',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                ]
+            ],
+            [
                 'title'      => 'Order Tracker',
                 'name'       => 'order-tracker',
                 'type'       => PermissionType::ADMIN,

@@ -1,8 +1,5 @@
 const SystemSettingsComponent     = () => import("../../components/admin/systemSetting/SystemSettingsComponent.vue");
 const CompanyComponent            = () => import("../../components/admin/systemSetting/Company/CompanyComponent.vue");
-const CuisineComponent            = () => import("../../components/admin/systemSetting/Cuisine/CuisineComponent.vue");
-const CuisineListComponent        = () => import("../../components/admin/systemSetting/Cuisine/CuisineListComponent.vue");
-const CuisineShowComponent        = () => import("../../components/admin/systemSetting/Cuisine/CuisineShowComponent.vue");
 const LanguageComponent           = () => import("../../components/admin/systemSetting/Language/LanguageComponent.vue");
 const LanguageListComponent       = () => import("../../components/admin/systemSetting/Language/LanguageListComponent.vue");
 const LanguageShowComponent       = () => import("../../components/admin/systemSetting/Language/LanguageShowComponent.vue");
@@ -257,39 +254,21 @@ export default [
             },
             {
                 path: "cuisines",
-                component: CuisineComponent,
-                name: "admin.systemSettings.cuisine",
-                redirect: { name: "admin.systemSettings.cuisine.list" },
+                redirect: {name: "admin.cuisines.list"},
                 meta: {
                     template: "admin",
                     auth: true,
-                    permissionUrl: "system-settings",
+                    permissionUrl: "cuisines",
                     breadcrumb: "cuisines"
-                },
-                children: [
-                    {
-                        path: "list",
-                        component: CuisineListComponent,
-                        name: "admin.systemSettings.cuisine.list",
-                        meta: {
-                            template: "admin",
-                            auth: true,
-                            permissionUrl: "system-settings",
-                            breadcrumb: ""
-                        },
-                    },
-                    {
-                        path: "show/:id",
-                        component: CuisineShowComponent,
-                        name: "admin.systemSettings.cuisine.show",
-                        meta: {
-                            template: "admin",
-                            auth: true,
-                            permissionUrl: "system-settings",
-                            breadcrumb: "view"
-                        },
-                    },
-                ],
+                }
+            },
+            {
+                path: "cuisines/list",
+                redirect: {name: "admin.cuisines.list"}
+            },
+            {
+                path: "cuisines/show/:id",
+                redirect: (to) => ({name: "admin.cuisines.show", params: {id: to.params.id}})
             },
             {
                 path: "about-steps",

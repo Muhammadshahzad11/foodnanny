@@ -2,6 +2,7 @@
     <LoadingComponent :props="loading"/>
     <section class="pb-16">
         <div class="w-full max-w-[550px] mx-auto mt-8 mb-12 p-5 rounded-2xl bg-white shadow-xs">
+            <RestaurantSignupStepsComponent current="owner"/>
             <h2 class="capitalize mb-6 text-center text-[22px] font-semibold leading-[34px] text-heading">
                 {{ $t('label.owner_information') }}
             </h2>
@@ -55,6 +56,7 @@
 
 <script>
 import LoadingComponent from "../../common/LoadingComponent.vue";
+import RestaurantSignupStepsComponent from "./RestaurantSignupStepsComponent.vue";
 import {useFrontendRestaurantSignupStore} from "../../../stores/frontendRestaurantSignup.js";
 import {useAuthStore} from "../../../stores/auth.js";
 import {useCommonStore} from "../../../stores/common.js";
@@ -65,7 +67,7 @@ import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
 
 export default {
     name: "RestaurantOwnerComponent",
-    components: {LoadingComponent},
+    components: {LoadingComponent, RestaurantSignupStepsComponent},
     setup() {
         const authStore                     = useAuthStore();
         const commonStore                   = useCommonStore();
@@ -142,7 +144,7 @@ export default {
             try {
                 this.loading.isActive = true;
                 this.frontendRestaurantSignupStore.callOwner(this.props.form).then((res) => {
-                    alertService.success(res.data.message);
+                    alertService.successQuick(res.data.message);
                     this.errors = {};
                     this.$router.push({name: "auth.signupRestaurantInfo"});
                 }).catch((err) => {

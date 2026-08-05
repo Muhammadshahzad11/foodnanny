@@ -10,6 +10,7 @@ const RestaurantPhoneComponent             = () => import("../../components/fron
 const RestaurantVerifyComponent            = () => import("../../components/frontend/auth/RestaurantVerifyComponent.vue");
 const RestaurantOwnerComponent             = () => import("../../components/frontend/auth/RestaurantOwnerComponent.vue");
 const RestaurantInfoComponent              = () => import("../../components/frontend/auth/RestaurantInfoComponent.vue");
+const RestaurantThankYouComponent          = () => import("../../components/frontend/auth/RestaurantThankYouComponent.vue");
 const SignupVerifyComponent                = () => import("../../components/frontend/auth/SignupVerifyComponent.vue");
 const SignupRegisterComponent              = () => import("../../components/frontend/auth/SignupRegisterComponent.vue");
 const GuestVerifyComponent                 = () => import("../../components/frontend/auth/GuestVerifyComponent.vue");
@@ -151,6 +152,16 @@ export default [
         path: '/signup-restaurant/info',
         component: RestaurantInfoComponent,
         name: 'auth.signupRestaurantInfo',
+        meta: {
+            template: "frontend",
+            auth: false,
+            mode: "main"
+        }
+    },
+    {
+        path: '/signup-restaurant/thank-you',
+        component: RestaurantThankYouComponent,
+        name: 'auth.signupRestaurantThankYou',
         meta: {
             template: "frontend",
             auth: false,

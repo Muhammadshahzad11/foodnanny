@@ -39,7 +39,7 @@
                         </td>
                         <td class="db-table-body-td">
                             <div class="flex justify-start items-center sm:items-start sm:justify-start gap-1.5">
-                                <SmViewComponent :link="'admin.systemSettings.cuisine.show'" :id="cuisine.id"/>
+                                <SmViewComponent :link="'admin.cuisines.show'" :id="cuisine.id"/>
                                 <SmModalEditComponent @click="edit(cuisine)"/>
                                 <SmDeleteComponent @click="destroy(cuisine.id)"/>
                             </div>

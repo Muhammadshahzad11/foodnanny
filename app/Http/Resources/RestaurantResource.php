@@ -17,6 +17,7 @@ class RestaurantResource extends JsonResource
     {
         return [
             "id"                     => $this->id,
+            "user_id"                => $this->user_id,
             "name"                   => $this->name,
             "email"                  => $this->email === null ? '' : $this->email,
             "country_code"           => $this->country_code ?? '',

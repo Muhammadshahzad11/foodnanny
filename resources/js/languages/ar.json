@@ -814,7 +814,11 @@
         "translated_languages": "اللغات المترجمة",
         "no_language_found": "لم يتم العثور على لغة",
         "add_translation": "إضافة ترجمة",
-        "edit_translation": "تعديل الترجمة"
+        "edit_translation": "تعديل الترجمة",
+        "restaurant_registration_received": "تم استلام التسجيل",
+        "go_to_login": "الذهاب لتسجيل الدخول",
+        "registration_complete": "اكتمل التسجيل",
+        "step_of": "الخطوة {current} من {total}"
     },
     "button": {
         "action": "إجراء",
@@ -947,7 +951,8 @@
         "view_all": "عرض الكل",
         "add_token": "إضافة رمز",
         "mark_done": "وضع علامة تم",
-        "start_preparing": "بدء التحضير"
+        "start_preparing": "بدء التحضير",
+        "approve": "موافقة"
     },
     "number": {
         "0": "٠",
@@ -1120,6 +1125,13 @@
         "item_name_is_required_to_generate_name": "اسم العنصر مطلوب لإنشاء اسم الذكاء الاصطناعي",
         "something_wrong": "هل هناك خطب ما",
         "say_anything_about_food": "اسألني أي شيء عن الطعام",
-        "your_language_has_been_set_automatically": "تم ضبط لغتك تلقائيًا"
+        "your_language_has_been_set_automatically": "تم ضبط لغتك تلقائيًا",
+        "restaurant_thank_you_intro": "شكرًا لتسجيل مطعمك مع Cost to Cost Foods. لقد استلمنا بيانات التسجيل.",
+        "restaurant_thank_you_approval_title": "مطلوب موافقة المسؤول",
+        "restaurant_thank_you_approval_body": "سيراجع فريقنا ملف مطعمك. بمجرد موافقة المسؤول سيتم تفعيل حسابك.",
+        "restaurant_thank_you_login_note": "لن تتمكن من تسجيل الدخول حتى تتم الموافقة على مطعمك. بعد الموافقة استخدم نفس البريد أو الهاتف لتسجيل الدخول.",
+        "restaurant_approve_confirm": "الموافقة على تسجيل هذا المطعم والسماح للمالك بتسجيل الدخول؟",
+        "restaurant_approved_successfully": "تمت الموافقة على المطعم بنجاح. يمكن للمالك تسجيل الدخول الآن.",
+        "restaurant_pending_approval": "تسجيل مطعمك قيد موافقة المسؤول. يمكنك تسجيل الدخول بعد الموافقة."
     }
 }

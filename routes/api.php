@@ -186,6 +186,7 @@ Route::prefix('auth')->middleware(['installed', 'apiKey', 'localization'])->name
         Route::middleware('verify.api')->group(function () {
             Route::post('/logout', [LoginController::class, 'logout']);
             Route::post('/delete-account', [DeactivateController::class, 'deleteAccount']);
+            Route::get('/menus', [LoginController::class, 'menus']);
         });
     });
 });
@@ -527,6 +528,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::post('/change-image/{restaurant}', [RestaurantController::class, 'changeImage']);
         Route::post('/change-logo/{restaurant}', [RestaurantController::class, 'changeLogo']);
         Route::post('/user/{restaurant}', [RestaurantController::class, 'userStore']);
+        Route::post('/approve/{restaurant}', [RestaurantController::class, 'approve']);
     });
 
     Route::prefix('payout')->name('payout.')->group(function () {

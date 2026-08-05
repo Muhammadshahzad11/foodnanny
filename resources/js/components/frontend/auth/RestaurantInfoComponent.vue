@@ -2,6 +2,7 @@
     <LoadingComponent :props="loading"/>
     <section class="pb-16">
         <div class="w-full max-w-[550px] mx-auto mt-8 mb-12 p-5 rounded-2xl bg-white shadow-xs">
+            <RestaurantSignupStepsComponent current="restaurant"/>
             <h2 class="capitalize mb-6 text-center text-[22px] font-semibold leading-[34px] text-heading">
                 {{ $t('label.restaurant_information') }}
             </h2>
@@ -92,6 +93,7 @@
 
 <script>
 import LoadingComponent from "../../common/LoadingComponent.vue";
+import RestaurantSignupStepsComponent from "./RestaurantSignupStepsComponent.vue";
 import {useAuthStore} from "../../../stores/auth.js";
 import {useCommonStore} from "../../../stores/common.js";
 import {useFrontendRestaurantSignupStore} from "../../../stores/frontendRestaurantSignup.js";
@@ -101,20 +103,15 @@ import {useFrontendPageStore} from "../../../stores/frontendPage.js";
 import appService from "../../../services/appService.js";
 import {useFrontendCountryCodeStore} from "../../../stores/frontendCountryCode.js";
 import alertService from "../../../services/alertService.js";
-import {useFrontendCartStore} from "../../../stores/frontendCart.js";
-import router from "../../../router/index.js";
-import {useDefaultAccessStore} from "../../../stores/defaultAccess.js";
 
 export default {
     name: "RestaurantInfoComponent",
-    components: {LoadingComponent},
+    components: {LoadingComponent, RestaurantSignupStepsComponent},
     setup() {
 
         const authStore                     = useAuthStore();
         const commonStore                   = useCommonStore();
         const frontendPageStore             = useFrontendPageStore();
-        const frontendCartStore             = useFrontendCartStore();
-        const defaultAccessStore            = useDefaultAccessStore();
         const frontendSettingStore          = useFrontendSettingStore();
         const frontendCountryCodeStore      = useFrontendCountryCodeStore();
         const frontendRestaurantSignupStore = useFrontendRestaurantSignupStore();
@@ -124,8 +121,6 @@ export default {
             authStore,
             commonStore,
             frontendPageStore,
-            frontendCartStore,
-            defaultAccessStore,
             frontendSettingStore,
             frontendCountryCodeStore,
             frontendRestaurantSignupStore
@@ -161,12 +156,6 @@ export default {
     computed: {
         countryCodes: function () {
             return this.frontendCountryCodeStore.lists;
-        },
-        carts: function () {
-            return this.frontendCartStore.lists;
-        },
-        location: function () {
-            return this.commonStore.location;
         }
     },
     async mounted() {
@@ -259,39 +248,18 @@ export default {
             try {
                 this.loading.isActive = true;
                 await this.frontendRestaurantSignupStore.callRegister(formData).then(async (res) => {
-                    this.errors       = {};
-                    const credentials = {
-                        email: formData.owner_email,
-                        password: formData.owner_password
+                    this.loading.isActive = false;
+                    this.errors           = {};
+                    this.props.form       = {
+                        restaurant_name: "",
+                        restaurant_email: "",
+                        restaurant_address: "",
+                        restaurant_country_code: "",
+                        restaurant_phone: "",
+                        terms_and_conditions: "",
+                        page_id: null
                     };
-                    await this.authStore.login(credentials).then(async (loginRes) => {
-                        await this.defaultAccessStore.fetch();
-                        alertService.success(loginRes.data.message);
-                        setTimeout(() => {
-                            appService.recursiveRouter(router.options.routes, this.authStore.permission);
-                        }, 1000);
-                        this.loading.isActive = false;
-                        this.props.form       = {
-                            restaurant_name: "",
-                            restaurant_email: "",
-                            restaurant_address: "",
-                            restaurant_country_code: "",
-                            restaurant_phone: "",
-                            terms_and_conditions: "",
-                            page_id: null
-                        };
-
-                        if (this.carts.length > 0 && this.location) {
-                            await this.$router.push({name: "frontend.checkout"});
-                        } else if (this.location) {
-                            await this.$router.push({name: "frontend.restaurant"});
-                        } else {
-                            await this.$router.push({name: "frontend.home"});
-                        }
-                    }).catch(async (err) => {
-                        this.loading.isActive = false;
-                        await this.$router.push({name: "auth.login"});
-                    })
+                    await this.$router.push({name: "auth.signupRestaurantThankYou"});
                 }).catch((err) => {
                     this.loading.isActive = false;
                     if (err?.response?.data?.errors) {
@@ -300,11 +268,11 @@ export default {
                         alertService.error(err.response.data.message);
                     }
 
-                    if (err.response.data.errors?.terms_and_conditions) {
+                    if (err.response?.data?.errors?.terms_and_conditions) {
                         alertService.error(err.response.data.errors.terms_and_conditions[0]);
                     }
 
-                    if (err.response.data.errors?.token) {
+                    if (err.response?.data?.errors?.token) {
                         alertService.error(err.response.data.errors.token[0]);
                     }
                 });

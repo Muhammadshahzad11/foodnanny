@@ -81,11 +81,20 @@ export default {
         });
     },
 
-    success: function (message = "Success", position = "top-right") {
+    success: function (message = "Success", position = "top-right", timeout = null) {
         const toast = useToast();
-        toast.success(message, {
-            position: position,
-        });
+        const options = {position: position};
+        if (timeout != null) {
+            options.timeout = timeout;
+        }
+        toast.success(message, options);
+    },
+
+    /**
+     * Short-lived success toast for quick multi-step flows (e.g. restaurant signup).
+     */
+    successQuick: function (message = "Success", position = "top-right") {
+        return this.success(message, position, 1400);
     },
 
     info: function (message = "Info", position = "top-right") {

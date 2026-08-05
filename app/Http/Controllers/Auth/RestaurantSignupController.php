@@ -90,7 +90,8 @@ class RestaurantSignupController extends Controller
                     'email_verified_at'    => Carbon::now()->getTimestamp(),
                     'is_guest'             => Ask::NO,
                     'password'             => Hash::make($request->post('owner_password')),
-                    'status'               => Status::ACTIVE,
+                    // Pending admin approval — owner cannot login until restaurant is approved
+                    'status'               => Status::INACTIVE,
                     'terms_and_conditions' => $request->post('page_id') > 0 ? $request->post('terms_and_conditions') : Ask::NO
                 ]);
                 $user->assignRole(EnumRole::RESTAURANT_OWNER);
@@ -123,7 +124,11 @@ class RestaurantSignupController extends Controller
                     'minimum_order_limit'          => 1
                 ]);
             });
-            return response(['status' => true, 'message' => trans('all.message.restaurant_register_successfully')], 200);
+            return response([
+                'status'  => true,
+                'message' => trans('all.message.restaurant_register_pending_approval'),
+                'pending' => true,
+            ], 200);
         } catch (Exception $exception) {
             DB::rollBack();
             Log::info($exception->getMessage());

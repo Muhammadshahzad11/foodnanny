@@ -814,7 +814,11 @@
         "translated_languages": "Idiomas traduzidos",
         "no_language_found": "Nenhum idioma encontrado",
         "add_translation": "Adicionar tradução",
-        "edit_translation": "Editar tradução"
+        "edit_translation": "Editar tradução",
+        "restaurant_registration_received": "Cadastro recebido",
+        "go_to_login": "Ir para o login",
+        "registration_complete": "Cadastro concluído",
+        "step_of": "Etapa {current} de {total}"
     },
     "button": {
         "action": "Ação",
@@ -947,7 +951,8 @@
         "view_all": "Ver Tudo",
         "add_token": "Adicionar Token",
         "mark_done": "Marcar como Concluído",
-        "start_preparing": "Iniciar Preparo"
+        "start_preparing": "Iniciar Preparo",
+        "approve": "Aprovar"
     },
     "number": {
         "0": "0",
@@ -1120,6 +1125,13 @@
         "item_name_is_required_to_generate_name": "O nome do item é obrigatório para gerar o nome por IA",
         "something_wrong": "Algo deu errado",
         "say_anything_about_food": "Pergunte-me qualquer coisa sobre comida",
-        "your_language_has_been_set_automatically": "Seu idioma foi definido automaticamente"
+        "your_language_has_been_set_automatically": "Seu idioma foi definido automaticamente",
+        "restaurant_thank_you_intro": "Obrigado por cadastrar seu restaurante na Cost to Cost Foods. Recebemos seus dados.",
+        "restaurant_thank_you_approval_title": "Aprovação do administrador necessária",
+        "restaurant_thank_you_approval_body": "Nossa equipe revisará o perfil do seu restaurante. Quando um administrador aprovar, sua conta será ativada.",
+        "restaurant_thank_you_login_note": "Você não poderá entrar até que seu restaurante seja aprovado. Após a aprovação, use o mesmo e-mail ou telefone para entrar.",
+        "restaurant_approve_confirm": "Aprovar este cadastro de restaurante e permitir que o proprietário faça login?",
+        "restaurant_approved_successfully": "Restaurante aprovado com sucesso. O proprietário já pode fazer login.",
+        "restaurant_pending_approval": "O cadastro do seu restaurante está pendente de aprovação do administrador. Você poderá entrar quando for aprovado."
     }
 }

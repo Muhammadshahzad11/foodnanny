@@ -213,6 +213,32 @@ export const useAuthStore = defineStore("auth", {
                     reject(err);
                 });
             });
+        },
+        refreshMenus: function () {
+            return new Promise((resolve, reject) => {
+                axios.get('auth/menus').then((res) => {
+                    this.adminMenu = res.data.admin_menu;
+                    this.restaurantMenu = res.data.restaurant_menu;
+                    if (res.data.permission) {
+                        this.permission = res.data.permission;
+                    }
+                    if (res.data.admin_permission) {
+                        this.adminPermission = res.data.admin_permission;
+                    }
+                    if (res.data.restaurant_permission) {
+                        this.restaurantPermission = res.data.restaurant_permission;
+                    }
+                    if (res.data.admin_default_permission) {
+                        this.adminDefaultPermission = res.data.admin_default_permission;
+                    }
+                    if (res.data.restaurant_default_permission) {
+                        this.restaurantDefaultPermission = res.data.restaurant_default_permission;
+                    }
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
         }
     }
 })

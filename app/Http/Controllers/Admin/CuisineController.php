@@ -25,9 +25,9 @@ class CuisineController extends AdminController implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:system_settings', only: ['store', 'update', 'destroy']),
-            new Middleware('permission:system_settings|restaurants', only: ['index']),
-            new Middleware('permission:restaurant-settings', only: ['allCuisine']),
+            new Middleware('permission:cuisines|system_settings', only: ['store', 'update', 'destroy']),
+            new Middleware('permission:cuisines|system_settings|restaurants', only: ['index', 'show']),
+            new Middleware('permission:cuisines|restaurant-settings|system_settings', only: ['allCuisine']),
         ];
     }
 

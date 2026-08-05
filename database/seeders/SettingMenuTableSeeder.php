@@ -205,17 +205,6 @@ class SettingMenuTableSeeder extends Seeder
                 'updated_at' => now()
             ],
             [
-                'name'       => 'Cuisines',
-                'language'   => 'cuisines',
-                'url'        => 'cuisines',
-                'icon'       => 'lab-line-cuisine',
-                'type'       => SettingMenuType::SYSTEM,
-                'priority'   => 915,
-                'status'     => 1,
-                'created_at' => now(),
-                'updated_at' => now()
-            ],
-            [
                 'name'       => 'About Steps',
                 'language'   => 'about_steps',
                 'url'        => 'about-steps',

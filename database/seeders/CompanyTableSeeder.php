@@ -19,13 +19,13 @@ class CompanyTableSeeder extends Seeder
         Settings::group('company')->set([
             'company_name'         => 'Cost to Cost Foods',
             'company_email'        => 'info@foodnanny.net',
-            'company_phone'        => '+13333846282',
+            'company_phone'        => '+919876543210',
             'company_website'      => 'https://demo.foodnanny.xyz',
-            'company_city'         => 'Juneau',
-            'company_state'        => 'Alaska',
-            'company_country_code' => 'USA',
-            'company_zip_code'     => '99801',
-            'company_address'      => '345 Egan Dr, Juneau, Alaska, United States'
+            'company_city'         => 'Mumbai',
+            'company_state'        => 'Maharashtra',
+            'company_country_code' => 'IND',
+            'company_zip_code'     => '400001',
+            'company_address'      => 'Mumbai, Maharashtra, India'
         ]);
 
         $envService = new EnvEditor();

@@ -157,7 +157,8 @@
                             <div class="db-list-item p-0">
                                 <span class="db-list-item-title w-full sm:w-1/2">{{ $t('label.status') }}</span>
                                 <span class="db-list-item-text w-full sm:w-1/2">
-                                    <span>{{ enums.statusEnumArray[restaurant.status] }}</span>
+                                    <span v-if="isPendingRestaurant">{{ $t('label.pending') }}</span>
+                                    <span v-else>{{ enums.statusEnumArray[restaurant.status] }}</span>
                                 </span>
                             </div>
                         </div>
@@ -178,6 +179,13 @@
                                     {{ enums.applyByEnumArray[restaurant.apply] }}
                                 </span>
                             </div>
+                        </div>
+
+                        <div class="col-12 !py-1.5" v-if="isPendingRestaurant && permissionChecker('restaurants_edit')">
+                            <button type="button" class="db-btn py-2 text-white bg-primary" @click="approve">
+                                <i class="lab lab-line-shield lab-font-size-16"></i>
+                                <span>{{ $t('button.approve') }}</span>
+                            </button>
                         </div>
 
                         <div class="col-12 !py-1.5">
@@ -394,6 +402,7 @@ import {useCuisineStore} from "../../../stores/cuisine";
 import {useFrontendSettingStore} from "../../../stores/frontendSetting";
 import {useCountryCodeStore} from "../../../stores/countryCode";
 import {useCompanyStore} from "../../../stores/company.js";
+import VueSimpleAlert from "vue3-simple-alert";
 
 export default {
     name: "RestaurantShowComponent",
@@ -464,6 +473,11 @@ export default {
         },
         countryCodes: function () {
             return this.countryCodeStore.lists;
+        },
+        isPendingRestaurant: function () {
+            return this.restaurant
+                && this.restaurant.status == statusEnum.INACTIVE
+                && this.restaurant.apply == applyByEnum.RESTAURANT_OWNER;
         }
     },
     async mounted() {
@@ -495,6 +509,36 @@ export default {
     methods: {
         phoneNumber(e) {
             return appService.phoneNumber(e);
+        },
+        permissionChecker(e) {
+            return appService.permissionChecker(e);
+        },
+        approve: function () {
+            return new VueSimpleAlert.confirm(
+                this.$t("message.restaurant_approve_confirm"),
+                this.$t("message.are_you_sure"),
+                "warning",
+                {
+                    confirmButtonText: this.$t("button.approve"),
+                    cancelButtonText: this.$t("button.no_cancel"),
+                    confirmButtonColor: "#1AB759",
+                    cancelButtonColor: "#E93C3C"
+                }
+            ).then(() => {
+                this.loading.isActive = true;
+                this.restaurantStore.approve({
+                    id: this.$route.params.id,
+                    search: {paginate: 1, page: 1, per_page: 10}
+                }).then((res) => {
+                    this.restaurantStore.view(this.$route.params.id);
+                    this.loading.isActive = false;
+                    alertService.success(res.data?.message || this.$t("message.restaurant_approved_successfully"));
+                }).catch((err) => {
+                    this.loading.isActive = false;
+                    alertService.error(err.response?.data?.message || err.message);
+                });
+            }).catch(() => {
+            });
         },
         changePreviewLogo: function (e) {
             if (e.target.files[0]) {

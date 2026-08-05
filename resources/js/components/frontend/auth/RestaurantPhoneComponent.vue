@@ -2,6 +2,7 @@
     <LoadingComponent :props="loading"/>
     <section class="pb-16">
         <div class="w-full max-w-[360px] mx-auto mt-8 mb-12 p-5 rounded-2xl bg-white shadow-xs">
+            <RestaurantSignupStepsComponent current="phone"/>
             <h3 class="capitalize text-xl mb-2 font-semibold text-center">
                 {{ $t('label.lets_get_started') }}
             </h3>
@@ -49,6 +50,7 @@
 
 <script>
 import LoadingComponent from "../../common/LoadingComponent.vue";
+import RestaurantSignupStepsComponent from "./RestaurantSignupStepsComponent.vue";
 import appService from "../../../services/appService.js";
 import {useFrontendCountryCodeStore} from "../../../stores/frontendCountryCode.js";
 import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
@@ -61,7 +63,7 @@ import ENV from "../../../config/env.js";
 
 export default {
     name: "RestaurantPhoneComponent",
-    components: {LoadingComponent},
+    components: {LoadingComponent, RestaurantSignupStepsComponent},
     setup() {
         const authStore                     = useAuthStore();
         const commonStore                   = useCommonStore();
@@ -158,7 +160,7 @@ export default {
         save: function () {
             try {
                 this.loading.isActive = true;
-                this.frontendRestaurantSignupStore.callPhone(this.props.form).then((res) => {
+                this.frontendRestaurantSignupStore.callPhone(this.props.form).then(async (res) => {
                     this.loading.isActive = false;
                     this.props.form = {
                         phone: "",
@@ -172,7 +174,10 @@ export default {
                         if (this.setting.site_phone_verification === this.enums.askEnum.NO) {
                             this.$router.push({name: "auth.signupRestaurantOwner"});
                         } else {
-                            alertService.success(res.data.message);
+                            alertService.successQuick(res.data.message);
+                            if (res.data?.otp) {
+                                await alertService.showOtp(res.data.otp);
+                            }
                             this.$router.push({name: "auth.signupRestaurantVerify"});
                         }
                     }

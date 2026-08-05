@@ -19,6 +19,7 @@ import kitchenRoutes from "./modules/kitchenRoutes.js";
 import customerRoutes from "./modules/customerRoutes.js";
 import restaurantOwnerRoutes from "./modules/restaurantOwnerRoutes.js";
 import restaurantRoutes from "./modules/restaurantRoutes.js";
+import cuisineRoutes from "./modules/cuisineRoutes.js";
 import offerRoutes from "./modules/offerRoutes.js";
 import campaignAndOfferRoutes from "./modules/campaignAndOfferRoutes.js";
 import payoutRoutes from "./modules/payoutRoutes.js";
@@ -105,6 +106,7 @@ const routes = baseRoutes.concat(
     customerRoutes,
     restaurantOwnerRoutes,
     restaurantRoutes,
+    cuisineRoutes,
     offerRoutes,
     campaignAndOfferRoutes,
     payoutRoutes,

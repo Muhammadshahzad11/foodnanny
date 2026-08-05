@@ -79,6 +79,7 @@ import appService from "../../../services/appService.js";
 import RestaurantStatusComponent from "../../admin/components/RestaurantStatusComponent.vue";
 import PwaInstallButtonComponent from "../../common/PwaInstallButtonComponent.vue";
 import {useCommonStore} from "../../../stores/common.js";
+import router from "../../../router/index.js";
 
 export default {
     name: "BackendMenuComponent",
@@ -115,6 +116,13 @@ export default {
         location: function () {
             return this.commonStore.location;
         },
+    },
+    mounted() {
+        if (this.authStore.status) {
+            this.authStore.refreshMenus().then(() => {
+                appService.recursiveRouter(router.options.routes, this.authStore.permission);
+            }).catch(() => {});
+        }
     },
     methods: {
         closeSidebar: function () {

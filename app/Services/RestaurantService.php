@@ -180,12 +180,50 @@ class RestaurantService
                 if (!$request->cuisine_id) {
                     $restaurant->cuisines()->delete();
                 }
+
+                // Keep owner login access in sync with restaurant platform status
+                if ($this->restaurant->user_id) {
+                    User::where('id', $this->restaurant->user_id)->update([
+                        'status' => (int)$request->status === Status::ACTIVE ? Status::ACTIVE : Status::INACTIVE,
+                    ]);
+                }
             });
             return $this->restaurant;
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             DB::rollBack();
             throw new Exception(QueryExceptionLibrary::message($exception), 422);
+        }
+    }
+
+    /**
+     * Approve a self-registered restaurant and unlock the owner account for login.
+     *
+     * @throws Exception
+     */
+    public function approve(Restaurant $restaurant): Restaurant
+    {
+        try {
+            if ((int)$restaurant->status === Status::ACTIVE) {
+                throw new Exception(trans('all.message.restaurant_already_approved'), 422);
+            }
+
+            DB::transaction(function () use ($restaurant) {
+                $restaurant->status = Status::ACTIVE;
+                $restaurant->save();
+
+                if ($restaurant->user_id) {
+                    User::where('id', $restaurant->user_id)->update([
+                        'status' => Status::ACTIVE,
+                    ]);
+                }
+            });
+
+            return $restaurant->fresh()->load('user', 'cuisines');
+        } catch (Exception $exception) {
+            Log::info($exception->getMessage());
+            DB::rollBack();
+            throw new Exception($exception->getMessage(), 422);
         }
     }
 
