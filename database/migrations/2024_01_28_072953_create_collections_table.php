@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('source_user_id')->constrained('users');
             $table->foreignId('destination_user_id')->constrained('users');
             $table->decimal('amount', 19, 6)->default(0);
-            $table->timestamp('date');
+            $table->dateTime('date');
             $table->string('creator_type')->nullable();
             $table->bigInteger('creator_id')->nullable();
             $table->string('editor_type')->nullable();

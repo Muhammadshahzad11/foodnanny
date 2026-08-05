@@ -26,7 +26,7 @@ return new class extends Migration {
             $table->decimal('total_tax', 19, 6)->nullable()->default(0);
             $table->decimal('total', 19, 6);
             $table->tinyInteger('order_type')->default(OrderType::DELIVERY);
-            $table->timestamp('order_datetime')->default(date('y-m-d h:m:s'));
+            $table->dateTime('order_datetime')->useCurrent();
             $table->string('delivery_time')->nullable();
             $table->integer('preparation_time')->default(0);
             $table->tinyInteger('is_advance_order')->default(Ask::YES);

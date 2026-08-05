@@ -24,8 +24,8 @@ return new class extends Migration
             $table->string('longitude')->nullable();
             $table->decimal('amount', 19, 6)->comment('discount percentage');
             $table->tinyInteger('status')->default(Status::ACTIVE)->comment(Status::ACTIVE . '=' . trans('statuse.' . Status::ACTIVE) . ', ' . Status::INACTIVE . '=' . trans('statuse.' . Status::INACTIVE));
-            $table->timestamp('start_date');
-            $table->timestamp('end_date');
+            $table->dateTime('start_date');
+            $table->dateTime('end_date');
             $table->time('start_time');
             $table->time('end_time');
             $table->tinyInteger('type')->default(OfferType::REGULAR);
