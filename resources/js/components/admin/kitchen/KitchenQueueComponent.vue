@@ -238,6 +238,7 @@ export default {
             printPayload: null,
             nowTick: Date.now(),
             tickTimer: null,
+            pollTimer: null,
             unsubscribeRealtime: null,
             filters: {
                 period: 'today',
@@ -273,11 +274,16 @@ export default {
         this.tickTimer = setInterval(() => {
             this.nowTick = Date.now();
         }, 1000);
+        // Safety net if realtime is missed (every 30s)
+        this.pollTimer = setInterval(() => this.refreshQuiet(), 30 * 1000);
         this.bindRealtime();
     },
     beforeUnmount() {
         if (this.tickTimer) {
             clearInterval(this.tickTimer);
+        }
+        if (this.pollTimer) {
+            clearInterval(this.pollTimer);
         }
         if (typeof this.unsubscribeRealtime === 'function') {
             this.unsubscribeRealtime();

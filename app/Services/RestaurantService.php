@@ -99,6 +99,8 @@ class RestaurantService
                     'minimum_order_limit'          => 1
                 ]);
 
+                app(TimeSlotService::class)->ensureDefaults($this->restaurant->id);
+
                 if ($request->cuisine_id) {
                     foreach ($request->cuisine_id as $cuisine) {
                         RestaurantCuisine::create([

@@ -81,6 +81,15 @@ class Cashondelivery extends PaymentAbstract
             });
 
             if ($this->response) {
+                try {
+                    $fresh = $frontendOrder->fresh();
+                    if ($fresh) {
+                        app(\App\Services\KitchenOrderService::class)->publishIfEligible($fresh);
+                    }
+                } catch (\Throwable $e) {
+                    Log::info('COD kitchen notify: ' . $e->getMessage());
+                }
+
                 return redirect()->route('payment.successful', ['frontendOrder' => $frontendOrder])->with('success', trans('all.message.payment_successful'));
             }
             return redirect()->route('payment.fail', ['frontendOrder' => $frontendOrder, 'paymentGateway' => 'cashondelivery'])->with('error', trans('all.message.something_wrong'));

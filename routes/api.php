@@ -899,6 +899,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::prefix('time-slot')->name('time-slot.')->group(function () {
             Route::get('/', [TimeSlotController::class, 'index']);
             Route::post('/', [TimeSlotController::class, 'store']);
+            Route::post('/generate-defaults', [TimeSlotController::class, 'generateDefaults']);
             Route::delete('/{timeSlot}', [TimeSlotController::class, 'destroy']);
         });
         Route::prefix('item-category')->name('item-category.')->group(function () {

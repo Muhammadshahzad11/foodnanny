@@ -25,15 +25,39 @@ class KitchenOrderService
 {
     use DefaultAccessModelTrait;
 
-    /** Kitchen-eligible order types (not pure delivery routing). */
+    /** All order types that require kitchen preparation. */
     public const ELIGIBLE_TYPES = [
         OrderType::DINING_TABLE,
         OrderType::POS,
         OrderType::TAKEAWAY,
+        OrderType::DELIVERY,
     ];
 
     public function __construct(protected OrderService $orderService)
     {
+    }
+
+    /**
+     * Reusable eligibility: active + kitchen-prep order type.
+     * Use for queries, asserts, and notify gates (POS / online / QR / waiter / app).
+     */
+    public static function requiresKitchen(Order $order): bool
+    {
+        return (int) $order->active === Ask::YES
+            && in_array((int) $order->order_type, self::ELIGIBLE_TYPES, true)
+            && (int) $order->restaurant_id > 0;
+    }
+
+    /**
+     * Notify kitchen when an order becomes eligible (idempotent broadcast hook).
+     */
+    public function publishIfEligible(Order $order): void
+    {
+        $order = $order->fresh() ?: $order;
+        if (!self::requiresKitchen($order)) {
+            return;
+        }
+        $this->notifyNewKitchenOrder($order);
     }
 
     /**
@@ -219,6 +243,16 @@ class KitchenOrderService
     public function notifyNewKitchenOrder(Order $order): void
     {
         try {
+            if (!self::requiresKitchen($order) && (int) $order->active === Ask::YES) {
+                // Still allow notify when active but restaurant_id not yet set — load and re-check
+                $order = $order->fresh() ?: $order;
+            }
+            if ((int) $order->active !== Ask::YES) {
+                return;
+            }
+            if (!in_array((int) $order->order_type, self::ELIGIBLE_TYPES, true)) {
+                return;
+            }
             $order = $order->loadMissing(['diningTable', 'waiter', 'user', 'restaurant']);
             $this->afterKitchenTransition($order, 'created', (int) $order->status);
         } catch (Exception $exception) {
@@ -479,6 +513,7 @@ class KitchenOrderService
     {
         return Order::query()
             ->where('active', Ask::YES)
+            ->where('restaurant_id', '>', 0)
             ->whereIn('order_type', self::ELIGIBLE_TYPES);
     }
 
@@ -487,11 +522,10 @@ class KitchenOrderService
      */
     protected function assertKitchenOrder(Order $order): void
     {
-        if ((int) $order->active !== Ask::YES) {
-            throw new Exception(trans('all.message.kitchen_order_not_active'), 422);
-        }
-
-        if (!in_array((int) $order->order_type, self::ELIGIBLE_TYPES, true)) {
+        if (!self::requiresKitchen($order)) {
+            if ((int) $order->active !== Ask::YES) {
+                throw new Exception(trans('all.message.kitchen_order_not_active'), 422);
+            }
             throw new Exception(trans('all.message.kitchen_order_not_eligible'), 422);
         }
 

@@ -128,6 +128,8 @@ class RestaurantSignupController extends Controller
                     'delivery'                     => Activity::ENABLE,
                     'minimum_order_limit'          => 1
                 ]);
+
+                app(\App\Services\TimeSlotService::class)->ensureDefaults($restaurant->id);
             });
             return response([
                 'status'  => true,

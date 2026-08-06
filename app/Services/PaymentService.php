@@ -43,6 +43,16 @@ class PaymentService
                 $order->save();
                 OrderItem::where(['order_id' => $order->id, 'status' => Status::INACTIVE])?->update(['status' => Status::ACTIVE]);
             });
+
+            try {
+                $fresh = is_object($order) ? $order->fresh() : null;
+                if ($fresh) {
+                    app(KitchenOrderService::class)->publishIfEligible($fresh);
+                }
+            } catch (\Throwable $e) {
+                Log::info('Payment kitchen notify: ' . $e->getMessage());
+            }
+
             return $this->transaction;
         } catch (Exception $exception) {
             Log::info($exception->getMessage());

@@ -63,6 +63,16 @@ export const useTimeSlotStore = defineStore('timeSlot', {
                 });
             });
         },
+        generateDefaults: function (search = {}) {
+            return new Promise((resolve, reject) => {
+                axios.post('admin/restaurant-setting/time-slot/generate-defaults').then((res) => {
+                    this.fetch(search).then().catch();
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
         reset: function () {
             this.temp.temp_id   = null;
             this.temp.isEditing = false;

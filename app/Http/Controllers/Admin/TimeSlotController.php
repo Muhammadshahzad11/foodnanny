@@ -24,7 +24,7 @@ class TimeSlotController extends AdminController implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:restaurant-settings', only: ['index', 'store', 'destroy'])
+            new Middleware('permission:restaurant-settings', only: ['index', 'store', 'destroy', 'generateDefaults'])
         ];
     }
 
@@ -41,6 +41,23 @@ class TimeSlotController extends AdminController implements HasMiddleware
     {
         try {
             return new TimeSlotResource($this->timeSlotService->store($request));
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    public function generateDefaults(): \Illuminate\Foundation\Application|\Illuminate\Http\Response|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            $created = $this->timeSlotService->ensureDefaults();
+
+            return response([
+                'status'  => true,
+                'created' => $created,
+                'message' => $created > 0
+                    ? trans('all.message.default_time_slots_generated')
+                    : trans('all.message.time_slots_already_exist'),
+            ]);
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
         }

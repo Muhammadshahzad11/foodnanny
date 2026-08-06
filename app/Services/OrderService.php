@@ -31,9 +31,12 @@ use App\Libraries\QueryExceptionLibrary;
 use App\Http\Requests\OrderStatusRequest;
 use App\Http\Requests\OrderTrackerRequest;
 use App\Events\OrderPlacedPushNotification;
+use App\Traits\DefaultAccessModelTrait;
 
 class OrderService
 {
+    use DefaultAccessModelTrait;
+
     public object $order;
     protected array $orderFilter = [
         'order_serial_no',
@@ -167,8 +170,20 @@ class OrderService
     public function posOrderStore(PosOrderRequest $request): object
     {
         try {
-            DB::transaction(function () use ($request) {
-                $orderSetup  = OrderSetup::select('food_preparation_time', 'schedule_order_slot_duration')->first();
+            $restaurantId = (int) $this->restaurant();
+            if ($restaurantId <= 0 && Auth::check()) {
+                $restaurantId = (int) (Auth::user()->restaurant_id ?? 0);
+            }
+            if ($restaurantId <= 0) {
+                throw new Exception(trans('all.message.restaurant_required_for_pos'), 422);
+            }
+
+            DB::transaction(function () use ($request, $restaurantId) {
+                $orderSetup  = OrderSetup::query()
+                    ->where('restaurant_id', $restaurantId)
+                    ->select('food_preparation_time', 'schedule_order_slot_duration')
+                    ->first()
+                    ?: OrderSetup::query()->select('food_preparation_time', 'schedule_order_slot_duration')->first();
                 $currentTime = Carbon::now();
                 $endTime     = $currentTime->copy()->addMinutes($orderSetup?->schedule_order_slot_duration ?? 30);
                 $start       = $currentTime->format('H:i');
@@ -177,6 +192,7 @@ class OrderService
                 $this->order = Order::create(
                     $request->validated() + [
                         'user_id'          => 2,
+                        'restaurant_id'    => $restaurantId,
                         'status'           => OrderStatus::ACCEPT,
                         'token'            => $request->token,
                         'payment_status'   => PaymentStatus::PAID,
@@ -243,7 +259,7 @@ class OrderService
             });
             $order = $this->order->fresh();
             if ($order) {
-                app(KitchenOrderService::class)->notifyNewKitchenOrder($order);
+                app(KitchenOrderService::class)->publishIfEligible($order);
             }
 
             return $order;
