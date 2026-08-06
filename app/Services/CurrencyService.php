@@ -66,7 +66,24 @@ class CurrencyService
     public function update(CurrencyRequest $request, Currency $currency)
     {
         try {
-            return tap($currency)->update($request->validated());
+            $updated = tap($currency)->update($request->validated());
+
+            // Keep site default currency symbol/code in sync when the active currency is edited
+            $defaultId = (int) Settings::group('site')->get('site_default_currency');
+            if ($defaultId === (int) $currency->id) {
+                Settings::group('site')->set([
+                    'site_default_currency_symbol' => $currency->symbol,
+                ]);
+
+                app(SiteService::class)->syncRuntimeCurrencyEnv(
+                    (string) $currency->code,
+                    (string) $currency->symbol,
+                    (string) Settings::group('site')->get('site_currency_position'),
+                    (string) Settings::group('site')->get('site_digit_after_decimal_point')
+                );
+            }
+
+            return $updated;
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);

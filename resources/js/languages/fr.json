@@ -110,7 +110,8 @@
         "php_logs": "Logs PHP",
         "k_d_s": "K.D.S",
         "o_s_s": "O.S.S",
-        "ai_agent": "Agent IA"
+        "ai_agent": "Agent IA",
+        "restaurant_operations": "Opérations restaurant"
     },
     "label": {
         "welcome_back": "Bon retour",

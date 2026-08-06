@@ -181,8 +181,8 @@ class DashboardService
 
             if (!blank($revenues)) {
                 foreach ($revenues as $revenue) {
-                    $totalSale[$revenue->month]       = round((float)$revenue->total_sale, env('CURRENCY_DECIMAL_POINT'));
-                    $adminCommission[$revenue->month] = round((float)$revenue->admin_commission, env('CURRENCY_DECIMAL_POINT'));
+                    $totalSale[$revenue->month]       = round((float)$revenue->total_sale, AppLibrary::currencySettings()['decimals']);
+                    $adminCommission[$revenue->month] = round((float)$revenue->admin_commission, AppLibrary::currencySettings()['decimals']);
                 }
             }
 

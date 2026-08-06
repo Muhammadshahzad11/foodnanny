@@ -271,22 +271,95 @@ class AppLibrary
         return (object)$response;
     }
 
+    /** @var array{symbol: string, position: int, decimals: int, code: string}|null */
+    protected static ?array $currencySettingsCache = null;
+
+    /**
+     * Runtime currency settings from DB (single source of truth for formatting).
+     * Falls back to .env only when Settings are unavailable (e.g. early bootstrap).
+     */
+    public static function currencySettings(): array
+    {
+        if (self::$currencySettingsCache !== null) {
+            return self::$currencySettingsCache;
+        }
+
+        $symbol   = null;
+        $position = null;
+        $decimals = null;
+
+        try {
+            // Use all() — after a partial set(), individual get() can return null for untouched keys.
+            $site = Settings::group('site')->all();
+            if (is_array($site) && $site !== []) {
+                $symbol   = $site['site_default_currency_symbol'] ?? null;
+                $position = $site['site_currency_position'] ?? null;
+                $decimals = $site['site_digit_after_decimal_point'] ?? null;
+            }
+        } catch (\Throwable $e) {
+            // fall through to env defaults below
+        }
+
+        self::$currencySettingsCache = [
+            'symbol'   => (string) ($symbol !== null && $symbol !== '' ? $symbol : (env('CURRENCY_SYMBOL') ?: '')),
+            'position' => (int) ($position !== null && $position !== '' ? $position : (env('CURRENCY_POSITION') ?: CurrencyPosition::LEFT)),
+            'decimals' => max(0, (int) ($decimals !== null && $decimals !== '' ? $decimals : (env('CURRENCY_DECIMAL_POINT') ?: 2))),
+            'code'     => self::currencyCodeFromSettings(),
+        ];
+
+        return self::$currencySettingsCache;
+    }
+
+    /**
+     * Clear in-request currency cache after Site settings change.
+     */
+    public static function forgetCurrencySettingsCache(): void
+    {
+        self::$currencySettingsCache = null;
+    }
+
     public static function currencyAmountFormat($amount): string
     {
-        if (env('CURRENCY_POSITION') == CurrencyPosition::LEFT) {
-            return env('CURRENCY_SYMBOL') . number_format($amount, env('CURRENCY_DECIMAL_POINT'), '.', '');
+        $settings  = self::currencySettings();
+        $formatted = number_format((float) $amount, $settings['decimals'], '.', '');
+
+        if ((int) $settings['position'] === CurrencyPosition::LEFT) {
+            return $settings['symbol'] . $formatted;
         }
-        return number_format($amount, env('CURRENCY_DECIMAL_POINT'), '.', '') . env('CURRENCY_SYMBOL');
+
+        return $formatted . $settings['symbol'];
     }
 
     public static function flatAmountFormat($amount): string
     {
-        return number_format($amount, env('CURRENCY_DECIMAL_POINT'), '.', '');
+        return number_format((float) $amount, self::currencySettings()['decimals'], '.', '');
     }
 
     public static function convertAmountFormat($amount): float
     {
-        return (float)number_format($amount, env('CURRENCY_DECIMAL_POINT'), '.', '');
+        return (float) number_format((float) $amount, self::currencySettings()['decimals'], '.', '');
+    }
+
+    public static function currencyCode(): string
+    {
+        return self::currencySettings()['code'] ?: self::currencyCodeFromSettings();
+    }
+
+    protected static function currencyCodeFromSettings(): string
+    {
+        try {
+            $currencyId = Settings::group('site')->get('site_default_currency');
+            if ($currencyId) {
+                $code = \App\Models\Currency::query()->where('id', $currencyId)->value('code');
+                if ($code) {
+                    return (string) $code;
+                }
+            }
+        } catch (\Throwable $e) {
+            // fall through
+        }
+
+        return (string) (env('CURRENCY') ?: '');
     }
 
     public static function hexToRgb($hex, string $fallback = '0 0 0'): string

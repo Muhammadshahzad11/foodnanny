@@ -110,7 +110,8 @@
         "php_logs": "Registros de PHP",
         "k_d_s": "K.D.S (Sistema de pantalla de cocina)",
         "o_s_s": "O.S.S",
-        "ai_agent": "Agente de IA"
+        "ai_agent": "Agente de IA",
+        "restaurant_operations": "Operaciones del restaurante"
     },
     "label": {
         "auto_localization": "Localisation automatique",

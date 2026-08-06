@@ -110,7 +110,8 @@
         "php_logs": "PHP-Protokolle",
         "k_d_s": "K.D.S",
         "o_s_s": "O.S.S",
-        "ai_agent": "KI-Agent"
+        "ai_agent": "KI-Agent",
+        "restaurant_operations": "Restaurantbetrieb"
     },
     "label": {
         "welcome_back": "Willkommen zurück",

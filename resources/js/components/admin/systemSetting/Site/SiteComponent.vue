@@ -655,6 +655,7 @@ import {useLanguageStore} from "../../../../stores/language.js";
 import {useSmsGatewayStore} from "../../../../stores/smsGateway.js";
 import {useAiAgentStore} from "../../../../stores/aiAgent.js";
 import {useStorageStore} from "../../../../stores/storage.js";
+import {useFrontendSettingStore} from "../../../../stores/frontendSetting.js";
 import currencyPositionEnum from "../../../../enums/modules/currencyPositionEnum.js";
 import TooltipComponent from "../../../common/TooltipComponent.vue";
 
@@ -670,6 +671,7 @@ export default {
         const smsGatewayStore = useSmsGatewayStore();
         const storageStore    = useStorageStore();
         const aiAgentStore    = useAiAgentStore();
+        const frontendSettingStore = useFrontendSettingStore();
 
         return {
             siteStore,
@@ -678,7 +680,8 @@ export default {
             languageStore,
             smsGatewayStore,
             storageStore,
-            aiAgentStore
+            aiAgentStore,
+            frontendSettingStore
         };
     },
     data() {
@@ -757,6 +760,14 @@ export default {
         },
         aiAgents: function () {
             return this.aiAgentStore.lists;
+        }
+    },
+    watch: {
+        'form.site_default_currency'(id) {
+            const selected = (this.currencies || []).find((c) => Number(c.id) === Number(id));
+            if (selected?.symbol) {
+                this.form.site_default_currency_symbol = selected.symbol;
+            }
         }
     },
     mounted() {
@@ -852,13 +863,42 @@ export default {
         save: function () {
             try {
                 this.loading.isActive = true;
-                this.siteStore.save(this.form).then((res) => {
+                // Keep form symbol in sync with selected currency before save
+                const selected = (this.currencies || []).find(
+                    (c) => Number(c.id) === Number(this.form.site_default_currency)
+                );
+                if (selected?.symbol) {
+                    this.form.site_default_currency_symbol = selected.symbol;
+                }
+
+                this.siteStore.save(this.form).then(async (res) => {
+                    const data = res.data?.data || {};
+                    if (data.site_default_currency_symbol) {
+                        this.form.site_default_currency_symbol = data.site_default_currency_symbol;
+                    }
+                    if (data.site_currency_position != null) {
+                        this.form.site_currency_position = data.site_currency_position;
+                    }
+                    if (data.site_digit_after_decimal_point != null) {
+                        this.form.site_digit_after_decimal_point = data.site_digit_after_decimal_point;
+                    }
+
+                    // Refresh global settings so POS / Waiter / Kitchen / Frontend update immediately
+                    try {
+                        await this.frontendSettingStore.fetch();
+                    } catch (e) {
+                        // best-effort; page still works after navigation remount
+                    }
+
                     this.loading.isActive = false;
                     alertService.successFlip(res.config.method === "put" ?? 0, this.$t("menu.site"));
                     this.errors = {};
                 }).catch((err) => {
                     this.loading.isActive = false;
-                    this.errors           = err.response.data.errors;
+                    this.errors = err.response?.data?.errors || {};
+                    if (!this.errors || Object.keys(this.errors).length === 0) {
+                        alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+                    }
                 });
             } catch (err) {
                 this.loading.isActive = false;

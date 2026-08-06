@@ -110,7 +110,8 @@
         "php_logs": "PHP লগ",
         "k_d_s": "K.D.S",
         "o_s_s": "O.S.S",
-        "ai_agent": "এআই এজেন্ট"
+        "ai_agent": "এআই এজেন্ট",
+        "restaurant_operations": "রেস্টুরেন্ট অপারেশন"
     },
     "label": {
         "welcome_back": "পুনরায় স্বাগতম",

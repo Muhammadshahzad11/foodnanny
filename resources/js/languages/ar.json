@@ -110,7 +110,8 @@
         "php_logs": "PHP Logs",
         "k_d_s": "K.D.S",
         "o_s_s": "O.S.S",
-        "ai_agent": "وكيل الذكاء الاصطناعي"
+        "ai_agent": "وكيل الذكاء الاصطناعي",
+        "restaurant_operations": "عمليات المطعم"
     },
     "label": {
         "welcome_back": "مرحبا بعودتك",

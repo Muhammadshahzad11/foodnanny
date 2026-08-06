@@ -486,16 +486,6 @@ class MenuTableSeeder extends Seeder
                         'updated_at' => now()
                     ],
                     [
-                        'name'       => 'Tables',
-                        'language'   => 'tables',
-                        'url'        => 'tables',
-                        'icon'       => 'lab lab-line-restaurants',
-                        'priority'   => 95,
-                        'status'     => 1,
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ],
-                    [
                         'name'       => 'System Settings',
                         'language'   => 'system_settings',
                         'url'        => 'system-settings',
@@ -515,6 +505,48 @@ class MenuTableSeeder extends Seeder
                         'created_at' => now(),
                         'updated_at' => now()
                     ]
+                ]
+            ],
+            [
+                'name'       => 'Restaurant Operations',
+                'language'   => 'restaurant_operations',
+                'url'        => '#',
+                'icon'       => 'lab lab-line-restaurants',
+                'priority'   => 33,
+                'status'     => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'children'   => [
+                    [
+                        'name'       => 'Tables',
+                        'language'   => 'tables',
+                        'url'        => 'tables',
+                        'icon'       => 'lab lab-line-restaurants',
+                        'priority'   => 34,
+                        'status'     => 1,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ],
+                    [
+                        'name'       => 'Waiter',
+                        'language'   => 'waiter',
+                        'url'        => 'waiter',
+                        'icon'       => 'lab lab-line-users',
+                        'priority'   => 35,
+                        'status'     => 1,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ],
+                    [
+                        'name'       => 'Kitchen',
+                        'language'   => 'kitchen',
+                        'url'        => 'kitchen',
+                        'icon'       => 'lab lab-line-flame',
+                        'priority'   => 36,
+                        'status'     => 1,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ],
                 ]
             ]
         ];
@@ -544,43 +576,92 @@ class MenuTableSeeder extends Seeder
     }
 
     /**
-     * Kitchen / Waiter are top-level module menus (also inserted by migrations
-     * when menus already exist). Keep them here so fresh seed is complete.
+     * Ensure Restaurant Operations parent + Tables / Waiter / Kitchen children
+     * exist when menus were created by older migrations/seeds.
      */
     private function ensureModuleMenus(): void
     {
         $now = now();
 
-        if (!Menu::query()->where('url', 'kitchen')->exists()) {
-            Menu::query()->insert([
-                'name'       => 'Kitchen',
-                'language'   => 'kitchen',
-                'url'        => 'kitchen',
-                'icon'       => 'lab lab-line-flame',
-                'priority'   => 34,
+        $parentId = Menu::query()
+            ->where('url', '#')
+            ->whereIn('language', ['restaurant_operations', 'operations'])
+            ->value('id');
+
+        if (!$parentId) {
+            $parentId = Menu::query()->insertGetId([
+                'name'       => 'Restaurant Operations',
+                'language'   => 'restaurant_operations',
+                'url'        => '#',
+                'icon'       => 'lab lab-line-restaurants',
+                'priority'   => 33,
                 'status'     => 1,
                 'parent'     => 0,
                 'type'       => 1,
                 'addon'      => 10,
                 'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        } else {
+            Menu::query()->where('id', $parentId)->update([
+                'name'       => 'Restaurant Operations',
+                'language'   => 'restaurant_operations',
+                'icon'       => 'lab lab-line-restaurants',
+                'priority'   => 33,
                 'updated_at' => $now,
             ]);
         }
 
-        if (!Menu::query()->where('url', 'waiter')->exists()) {
-            Menu::query()->insert([
-                'name'       => 'Waiter',
-                'language'   => 'waiter',
-                'url'        => 'waiter',
-                'icon'       => 'lab lab-line-users',
-                'priority'   => 35,
-                'status'     => 1,
-                'parent'     => 0,
-                'type'       => 1,
-                'addon'      => 10,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
+        $children = [
+            [
+                'name'     => 'Tables',
+                'language' => 'tables',
+                'url'      => 'tables',
+                'icon'     => 'lab lab-line-restaurants',
+                'priority' => 34,
+            ],
+            [
+                'name'     => 'Waiter',
+                'language' => 'waiter',
+                'url'      => 'waiter',
+                'icon'     => 'lab lab-line-users',
+                'priority' => 35,
+            ],
+            [
+                'name'     => 'Kitchen',
+                'language' => 'kitchen',
+                'url'      => 'kitchen',
+                'icon'     => 'lab lab-line-flame',
+                'priority' => 36,
+            ],
+        ];
+
+        foreach ($children as $child) {
+            $existing = Menu::query()->where('url', $child['url'])->first();
+            if ($existing) {
+                $existing->update([
+                    'parent'     => $parentId,
+                    'priority'   => $child['priority'],
+                    'icon'       => $child['icon'],
+                    'language'   => $child['language'],
+                    'name'       => $child['name'],
+                    'updated_at' => $now,
+                ]);
+            } else {
+                Menu::query()->insert([
+                    'name'       => $child['name'],
+                    'language'   => $child['language'],
+                    'url'        => $child['url'],
+                    'icon'       => $child['icon'],
+                    'priority'   => $child['priority'],
+                    'status'     => 1,
+                    'parent'     => $parentId,
+                    'type'       => 1,
+                    'addon'      => 10,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
         }
     }
 }
