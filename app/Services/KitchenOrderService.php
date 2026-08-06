@@ -114,27 +114,48 @@ class KitchenOrderService
             $requests    = $request->all();
             $method      = $request->get('paginate', 0) == 1 ? 'paginate' : 'get';
             $methodValue = $request->get('paginate', 0) == 1 ? $request->get('per_page', 50) : '*';
-            $sort        = $request->get('sort', 'order_time');
+            $sort        = $request->get('sort', 'priority');
             $search      = trim((string) $request->get('search', ''));
+            $search      = ltrim($search, '#');
             $period      = $request->get('period', 'today');
+            $source      = $request->get('source', '');
 
             $query = $this->kitchenBaseQuery()
                 ->with([
                     'diningTable:id,name,table_number,zone',
                     'waiter:id,name',
-                    'user:id,name',
+                    'user:id,name,phone,email',
                     'restaurant:id,name',
                     'kitchenStation:id,name,code',
                     'kitchenAcceptedBy:id,name',
                     'kitchenPreparingBy:id,name',
                     'kitchenReadyBy:id,name',
                     'orderItems.orderItem:id,name',
+                    'posDetail:id,order_id,payment_method',
                 ]);
 
-            if (!empty($requests['from_date']) || !empty($requests['to_date'])) {
-                // explicit date range — skip default today filter
-            } elseif ($period === 'today' || empty($period)) {
-                $query->whereDate('order_datetime', Carbon::today()->toDateString());
+            $hasExplicitDates = !empty($requests['from_date']) || !empty($requests['to_date']);
+
+            // Searching should not be trapped by "today only" — broaden to 30 days unless dates set
+            if ($search !== '' && !$hasExplicitDates && ($period === 'today' || $period === '' || $period === null)) {
+                $period = 'month';
+            }
+
+            if ($hasExplicitDates) {
+                if (!empty($requests['from_date'])) {
+                    $query->whereDate('order_datetime', '>=', $requests['from_date']);
+                }
+                if (!empty($requests['to_date'])) {
+                    $query->whereDate('order_datetime', '<=', $requests['to_date']);
+                }
+            } else {
+                match ($period) {
+                    'yesterday' => $query->whereDate('order_datetime', Carbon::yesterday()->toDateString()),
+                    'week' => $query->whereDate('order_datetime', '>=', Carbon::today()->subDays(6)->toDateString()),
+                    'month' => $query->whereDate('order_datetime', '>=', Carbon::today()->subDays(29)->toDateString()),
+                    'all' => null,
+                    default => $query->whereDate('order_datetime', Carbon::today()->toDateString()),
+                };
             }
 
             if (!empty($requests['status'])) {
@@ -145,13 +166,15 @@ class KitchenOrderService
                     $query->where('status', $status);
                 }
             } else {
-                // Default active kitchen board
-                $query->whereIn('status', [
-                    OrderStatus::PENDING,
-                    OrderStatus::ACCEPT,
-                    OrderStatus::PREPARING,
-                    OrderStatus::PREPARED,
-                ]);
+                // Default active kitchen board (unless searching historical completed tickets)
+                if ($search === '') {
+                    $query->whereIn('status', [
+                        OrderStatus::PENDING,
+                        OrderStatus::ACCEPT,
+                        OrderStatus::PREPARING,
+                        OrderStatus::PREPARED,
+                    ]);
+                }
             }
 
             if (!empty($requests['table_id'])) {
@@ -166,37 +189,94 @@ class KitchenOrderService
             if (isset($requests['kitchen_priority']) && $requests['kitchen_priority'] !== '') {
                 $query->where('kitchen_priority', (int) $requests['kitchen_priority']);
             }
-            if (!empty($requests['from_date'])) {
-                $query->whereDate('order_datetime', '>=', $requests['from_date']);
-            }
-            if (!empty($requests['to_date'])) {
-                $query->whereDate('order_datetime', '<=', $requests['to_date']);
+
+            // Source / channel filter
+            if ($source !== '' && $source !== null) {
+                if ($source === 'qr') {
+                    $query->where('order_type', OrderType::DINING_TABLE)
+                        ->whereIn('source', [\App\Enums\Source::WEB, \App\Enums\Source::APP]);
+                } elseif ($source === 'online') {
+                    $query->whereIn('order_type', [OrderType::DELIVERY, OrderType::TAKEAWAY])
+                        ->whereIn('source', [\App\Enums\Source::WEB, \App\Enums\Source::APP]);
+                } else {
+                    $query->where('source', (int) $source);
+                }
             }
 
             if ($search !== '') {
-                $query->where(function ($inner) use ($search) {
-                    $inner->where('order_serial_no', 'like', '%' . $search . '%')
-                        ->orWhereHas('diningTable', function ($table) use ($search) {
-                            $table->where('table_number', 'like', '%' . $search . '%')
-                                ->orWhere('name', 'like', '%' . $search . '%');
+                $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $search) . '%';
+                $isAdminScope = (int) $this->restaurant() === 0;
+
+                $query->where(function ($inner) use ($search, $like, $isAdminScope) {
+                    $inner->where('order_serial_no', 'like', $like)
+                        ->orWhere('token', 'like', $like)
+                        ->orWhereHas('diningTable', function ($table) use ($like) {
+                            $table->where('table_number', 'like', $like)
+                                ->orWhere('name', 'like', $like)
+                                ->orWhere('zone', 'like', $like);
                         })
-                        ->orWhereHas('waiter', function ($waiter) use ($search) {
-                            $waiter->where('name', 'like', '%' . $search . '%');
+                        ->orWhereHas('waiter', function ($waiter) use ($like) {
+                            $waiter->where('name', 'like', $like);
                         })
-                        ->orWhereHas('user', function ($user) use ($search) {
-                            $user->where('name', 'like', '%' . $search . '%');
+                        ->orWhereHas('user', function ($user) use ($like) {
+                            $user->where('name', 'like', $like)
+                                ->orWhere('phone', 'like', $like)
+                                ->orWhere('email', 'like', $like);
+                        })
+                        ->orWhereHas('posDetail', function ($pos) use ($like) {
+                            $pos->where('payment_note', 'like', $like);
                         });
+
+                    if (ctype_digit($search)) {
+                        $inner->orWhere('id', (int) $search);
+                    }
+
+                    if ($isAdminScope) {
+                        $inner->orWhereHas('restaurant', function ($restaurant) use ($like) {
+                            $restaurant->where('name', 'like', $like);
+                        });
+                    }
+
+                    // Priority keyword shortcuts
+                    $priorityMap = [
+                        'normal' => KitchenPriority::NORMAL,
+                        'high'   => KitchenPriority::HIGH,
+                        'urgent' => KitchenPriority::URGENT,
+                        'vip'    => KitchenPriority::VIP,
+                    ];
+                    $key = strtolower($search);
+                    if (isset($priorityMap[$key])) {
+                        $inner->orWhere('kitchen_priority', $priorityMap[$key]);
+                    }
+
+                    // Status keyword shortcuts
+                    $statusMap = [
+                        'pending'   => OrderStatus::PENDING,
+                        'accepted'  => OrderStatus::ACCEPT,
+                        'accept'    => OrderStatus::ACCEPT,
+                        'preparing' => OrderStatus::PREPARING,
+                        'ready'     => OrderStatus::PREPARED,
+                        'prepared'  => OrderStatus::PREPARED,
+                        'completed' => OrderStatus::DELIVERED,
+                        'delivered' => OrderStatus::DELIVERED,
+                        'cancelled' => OrderStatus::CANCELED,
+                        'canceled'  => OrderStatus::CANCELED,
+                        'rejected'  => OrderStatus::REJECTED,
+                    ];
+                    if (isset($statusMap[$key])) {
+                        $inner->orWhere('status', $statusMap[$key]);
+                    }
                 });
             }
 
             match ($sort) {
+                'newest', 'latest' => $query->orderByDesc('order_datetime')->orderByDesc('id'),
+                'oldest', 'longest_waiting' => $query->orderBy('order_datetime')->orderBy('id'),
                 'priority' => $query->orderByDesc('kitchen_priority')->orderBy('order_datetime')->orderBy('id'),
-                'oldest' => $query->orderBy('order_datetime')->orderBy('id'),
                 'preparation_time' => $query->orderBy('preparation_time')->orderBy('order_datetime'),
                 'table' => $query->orderBy('table_id')->orderBy('order_datetime'),
                 'waiter' => $query->orderBy('waiter_id')->orderBy('order_datetime'),
                 'order_number' => $query->orderBy('order_serial_no'),
-                // Highest priority, then oldest waiting
                 default => $query->orderByDesc('kitchen_priority')->orderBy('order_datetime')->orderBy('id'),
             };
 

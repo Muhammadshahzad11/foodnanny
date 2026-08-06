@@ -33,28 +33,56 @@
             </div>
 
             <form class="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3" @submit.prevent="refresh">
-                <input v-model="filters.search" type="text" class="db-field-control xl:col-span-2"
-                       :placeholder="$t('label.search_order_table_waiter')"/>
-                <select v-model="filters.sort" class="db-field-control">
+                <div class="relative xl:col-span-2 mb-1">
+                    <input
+                        v-model="filters.search"
+                        type="search"
+                        class="db-field-control w-full pr-10"
+                        :placeholder="$t('label.search_order_table_waiter')"
+                        autocomplete="off"
+                    />
+                    <button
+                        v-if="filters.search"
+                        type="button"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6E7191] hover:text-heading text-lg leading-none"
+                        @click="clearSearch"
+                        :aria-label="$t('button.clear')"
+                    >×</button>
+                    <p v-if="searching" class="absolute left-0 -bottom-5 text-xs text-primary">
+                        {{ $t('label.searching') }}
+                    </p>
+                </div>
+                <select v-model="filters.period" class="db-field-control" @change="refresh">
+                    <option value="today">{{ $t('label.today') }}</option>
+                    <option value="yesterday">{{ $t('label.yesterday') }}</option>
+                    <option value="week">{{ $t('label.this_week') }}</option>
+                    <option value="month">{{ $t('label.last_30_days') }}</option>
+                    <option value="all">{{ $t('label.all_time') }}</option>
+                </select>
+                <select v-model="filters.source" class="db-field-control" @change="refresh">
+                    <option value="">{{ $t('label.all_sources') }}</option>
+                    <option value="online">{{ $t('label.online') }}</option>
+                    <option value="qr">{{ $t('label.qr_order') }}</option>
+                    <option :value="sourceEnum.POS">{{ $t('label.pos') }}</option>
+                    <option :value="sourceEnum.WAITER">{{ $t('label.waiter') }}</option>
+                </select>
+                <select v-model="filters.sort" class="db-field-control" @change="refresh">
                     <option value="priority">{{ $t('label.sort_priority') }}</option>
+                    <option value="newest">{{ $t('label.sort_newest') }}</option>
                     <option value="oldest">{{ $t('label.sort_oldest') }}</option>
-                    <option value="preparation_time">{{ $t('label.sort_preparation_time') }}</option>
+                    <option value="longest_waiting">{{ $t('label.sort_longest_waiting') }}</option>
                     <option value="table">{{ $t('label.sort_table') }}</option>
-                    <option value="waiter">{{ $t('label.sort_waiter') }}</option>
                     <option value="order_number">{{ $t('label.sort_order_number') }}</option>
                 </select>
-                <select v-model="filters.kitchen_priority" class="db-field-control">
+                <select v-model="filters.kitchen_priority" class="db-field-control" @change="refresh">
                     <option value="">{{ $t('label.all_priorities') }}</option>
                     <option :value="kitchenPriorityEnum.NORMAL">{{ $t('label.priority_normal') }}</option>
                     <option :value="kitchenPriorityEnum.HIGH">{{ $t('label.priority_high') }}</option>
                     <option :value="kitchenPriorityEnum.URGENT">{{ $t('label.priority_urgent') }}</option>
                     <option :value="kitchenPriorityEnum.VIP">{{ $t('label.priority_vip') }}</option>
                 </select>
-                <input v-model="filters.from_date" type="date" class="db-field-control"/>
-                <input v-model="filters.to_date" type="date" class="db-field-control"/>
-                <button type="submit" class="db-btn py-3 text-base text-white bg-primary md:col-span-2 xl:col-span-1">
-                    {{ $t('button.search') }}
-                </button>
+                <input v-model="filters.from_date" type="date" class="db-field-control" @change="refresh"/>
+                <input v-model="filters.to_date" type="date" class="db-field-control" @change="refresh"/>
             </form>
 
             <div class="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -198,8 +226,8 @@
                 </article>
             </div>
 
-            <div v-if="!orders.length" class="p-10 text-center text-lg text-[#6E7191]">
-                {{ $t('message.no_data_found') }}
+            <div v-if="!orders.length && !loading.isActive && !searching" class="p-10 text-center text-lg text-[#6E7191]">
+                {{ filters.search ? $t('label.no_search_results') : $t('message.no_data_found') }}
             </div>
         </div>
     </div>
@@ -218,6 +246,7 @@ import alertService from "../../../services/alertService.js";
 import appService from "../../../services/appService.js";
 import {getAuthRestaurantId, subscribeRestaurantRealtime} from "../../../composables/useRealtime.js";
 import roleEnum from "../../../enums/modules/roleEnum.js";
+import sourceEnum from "../../../enums/modules/sourceEnum.js";
 
 export default {
     name: "KitchenQueueComponent",
@@ -230,15 +259,18 @@ export default {
             defaultAccessStore: useDefaultAccessStore(),
             orderStatusEnum,
             kitchenPriorityEnum,
+            sourceEnum,
         };
     },
     data() {
         return {
             loading: {isActive: false},
+            searching: false,
             printPayload: null,
             nowTick: Date.now(),
             tickTimer: null,
             pollTimer: null,
+            searchTimer: null,
             unsubscribeRealtime: null,
             filters: {
                 period: 'today',
@@ -246,6 +278,7 @@ export default {
                 search: '',
                 sort: 'priority',
                 kitchen_priority: '',
+                source: '',
                 from_date: '',
                 to_date: '',
                 paginate: 0,
@@ -268,13 +301,25 @@ export default {
             ];
         }
     },
+    watch: {
+        'filters.search'() {
+            if (this.searchTimer) {
+                clearTimeout(this.searchTimer);
+            }
+            this.searching = true;
+            this.searchTimer = setTimeout(() => {
+                this.refreshQuiet().finally(() => {
+                    this.searching = false;
+                });
+            }, 300);
+        },
+    },
     mounted() {
         this.commonStore.update({top_sidebar: false});
         this.refresh();
         this.tickTimer = setInterval(() => {
             this.nowTick = Date.now();
         }, 1000);
-        // Safety net if realtime is missed (every 30s)
         this.pollTimer = setInterval(() => this.refreshQuiet(), 30 * 1000);
         this.bindRealtime();
     },
@@ -284,6 +329,9 @@ export default {
         }
         if (this.pollTimer) {
             clearInterval(this.pollTimer);
+        }
+        if (this.searchTimer) {
+            clearTimeout(this.searchTimer);
         }
         if (typeof this.unsubscribeRealtime === 'function') {
             this.unsubscribeRealtime();
@@ -301,12 +349,25 @@ export default {
                 },
             });
         },
-        refreshQuiet() {
+        buildPayload() {
             const payload = {...this.filters};
             if (payload.from_date || payload.to_date) {
                 payload.period = 'custom';
             }
-            this.kitchenOrderStore.fetch(payload).catch(() => {});
+            // Drop empty filter keys so API stays clean
+            Object.keys(payload).forEach((key) => {
+                if (payload[key] === '' || payload[key] === null || payload[key] === undefined) {
+                    delete payload[key];
+                }
+            });
+            return payload;
+        },
+        refreshQuiet() {
+            return this.kitchenOrderStore.fetch(this.buildPayload()).catch(() => {});
+        },
+        clearSearch() {
+            this.filters.search = '';
+            this.refreshQuiet();
         },
         permissionChecker(permission) {
             return appService.permissionChecker(permission);
@@ -317,11 +378,7 @@ export default {
         },
         refresh() {
             this.loading.isActive = true;
-            const payload = {...this.filters};
-            if (payload.from_date || payload.to_date) {
-                payload.period = 'custom';
-            }
-            this.kitchenOrderStore.fetch(payload).then(() => {
+            this.kitchenOrderStore.fetch(this.buildPayload()).then(() => {
                 this.loading.isActive = false;
             }).catch((err) => {
                 this.loading.isActive = false;
