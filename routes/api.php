@@ -494,6 +494,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
 
     Route::prefix('pos')->name('pos.')->group(function () {
         Route::post('/', [PosController::class, 'store']);
+        Route::get('/tables', [PosController::class, 'tables']);
     });
 
     Route::prefix('pos-order')->name('posOrder.')->group(function () {
@@ -502,6 +503,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::delete('/{order}', [PosOrderController::class, 'destroy']);
         Route::get('/export', [PosOrderController::class, 'export']);
         Route::post('/change-status/{order}', [PosOrderController::class, 'changeStatus']);
+        Route::post('/{order}/print-kot', [PosOrderController::class, 'printKot']);
     });
 
     Route::prefix('items-report')->name('items-report.')->group(function () {

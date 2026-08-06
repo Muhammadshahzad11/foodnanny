@@ -154,7 +154,7 @@ class WaiterOrderService
             $this->restaurantTableService->assertCanManage($restaurantTable);
 
             return $restaurantTable->load([
-                'restaurant:id,name',
+                'restaurant:id,name,address,phone,country_code',
                 'orders' => function ($query) {
                     $query->where('order_type', OrderType::DINING_TABLE)
                         ->whereIn('status', [
@@ -229,7 +229,7 @@ class WaiterOrderService
                 'diningTable',
                 'waiter:id,name',
                 'orderItems.orderItem',
-                'restaurant:id,name',
+                'restaurant:id,name,address,phone,country_code',
                 'user:id,name,email,phone',
             ]);
         } catch (Exception $exception) {

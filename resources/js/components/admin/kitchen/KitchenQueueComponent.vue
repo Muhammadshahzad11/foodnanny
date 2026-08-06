@@ -1,6 +1,5 @@
 <template>
     <LoadingComponent :props="loading"/>
-    <KitchenTicketPrintSheet :payload="printPayload"/>
 
     <div class="col-12">
         <div class="db-card overflow-hidden">
@@ -193,14 +192,6 @@
                             {{ $t('button.mark_completed') }}
                         </button>
                         <button
-                            v-if="permissionChecker('kitchen_print')"
-                            type="button"
-                            class="min-h-14 rounded-xl text-base font-bold text-white bg-primary active:scale-[0.98]"
-                            @click="printTicket(order)"
-                        >
-                            {{ $t('button.print_kot') }}
-                        </button>
-                        <button
                             v-if="canReject(order)"
                             type="button"
                             class="min-h-14 rounded-xl text-base font-bold text-white bg-rose-500 active:scale-[0.98]"
@@ -235,7 +226,6 @@
 
 <script>
 import LoadingComponent from "../../common/LoadingComponent.vue";
-import KitchenTicketPrintSheet from "./KitchenTicketPrintSheet.vue";
 import {useKitchenOrderStore} from "../../../stores/kitchenOrder.js";
 import {useCommonStore} from "../../../stores/common.js";
 import {useAuthStore} from "../../../stores/auth.js";
@@ -250,7 +240,7 @@ import sourceEnum from "../../../enums/modules/sourceEnum.js";
 
 export default {
     name: "KitchenQueueComponent",
-    components: {LoadingComponent, KitchenTicketPrintSheet},
+    components: {LoadingComponent},
     setup() {
         return {
             kitchenOrderStore: useKitchenOrderStore(),
@@ -266,7 +256,6 @@ export default {
         return {
             loading: {isActive: false},
             searching: false,
-            printPayload: null,
             nowTick: Date.now(),
             tickTimer: null,
             pollTimer: null,
@@ -542,18 +531,6 @@ export default {
                 this.loading.isActive = true;
                 await this.kitchenOrderStore.cancel(order.id, reason || null, order.updated_at);
                 await this.refresh();
-            } catch (err) {
-                this.loading.isActive = false;
-                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
-            }
-        },
-        async printTicket(order) {
-            try {
-                this.loading.isActive = true;
-                const res = await this.kitchenOrderStore.printData(order.id);
-                this.printPayload = res.data.data.payload;
-                this.loading.isActive = false;
-                this.$nextTick(() => window.print());
             } catch (err) {
                 this.loading.isActive = false;
                 alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));

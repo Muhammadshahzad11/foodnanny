@@ -121,10 +121,7 @@
                                     {{ $t('label.method') }}:
                                 </span>
                                 <span class="capitalize text-sm leading-6 text-heading">
-                                    {{
-                                        order.transaction ? order.transaction.payment_method :
-                                            enums.paymentTypeEnumArray[order.payment_method]
-                                    }}
+                                    {{ paymentMethodLabel }}
                                 </span>
                             </li>
                             <li class="flex items-center gap-2">
@@ -254,8 +251,46 @@
                     </div>
 
                     <div class="p-4" v-if="order.status === enums.orderStatusEnum.PENDING">
-                        <button @click="cancelOrder(enums.orderStatusEnum.CANCELED)"
-                            class="w-full rounded-3xl capitalize font-medium leading-6 py-3 text-white bg-[#FB4E4E]">
+                        <div
+                            v-if="isScanMenuOrder"
+                            class="mb-4 overflow-hidden rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 shadow-[0_8px_24px_rgba(245,158,11,0.18)]"
+                        >
+                            <div class="flex gap-3 p-4">
+                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white shadow-md">
+                                    <i class="lab-line-info-circle text-xl"></i>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-bold uppercase tracking-wide text-amber-800">
+                                        {{ $t('label.cancel_window') }}
+                                    </p>
+                                    <p class="mt-1 text-sm leading-5 text-amber-950">
+                                        {{ $t('message.scan_menu_cancel_window') }}
+                                    </p>
+                                    <p
+                                        v-if="canCancelOrder"
+                                        class="mt-3 inline-flex items-center gap-2 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-900"
+                                    >
+                                        <span class="h-2 w-2 animate-pulse rounded-full bg-amber-500"></span>
+                                        {{ $t('label.time_left') }}: {{ cancelCountdown }}
+                                    </p>
+                                    <p
+                                        v-else
+                                        class="mt-3 inline-flex items-center gap-2 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-700"
+                                    >
+                                        {{ $t('message.scan_menu_cancel_closed') }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <button
+                            @click="cancelOrder(enums.orderStatusEnum.CANCELED)"
+                            type="button"
+                            :disabled="!canCancelOrder"
+                            class="w-full rounded-3xl capitalize font-medium leading-6 py-3 text-white transition"
+                            :class="canCancelOrder
+                                ? 'bg-[#FB4E4E] hover:bg-[#e53e3e]'
+                                : 'cursor-not-allowed bg-gray-300 text-gray-500'"
+                        >
                             {{ $t('button.cancel_order') }}
                         </button>
                     </div>
@@ -480,12 +515,67 @@ export default {
             deliveryBoyReviewErrors: {},
             details: "",
             images: {},
-            text: ""
+            text: "",
+            nowTick: Date.now(),
+            cancelTimer: null,
         }
     },
     computed: {
         order: function () {
             return this.frontendOrderStore.show;
+        },
+        isScanMenuOrder: function () {
+            const o = this.order;
+            if (!o || !Object.keys(o).length) return false;
+            if (typeof o.is_scan_menu_order !== 'undefined') {
+                return !!o.is_scan_menu_order;
+            }
+            return Number(o.order_type) === orderTypeEnum.DINING_TABLE && Number(o.table_id) > 0;
+        },
+        canCancelOrder: function () {
+            void this.nowTick;
+            const o = this.order;
+            if (!o || Number(o.status) !== this.enums.orderStatusEnum.PENDING) {
+                return false;
+            }
+            if (!this.isScanMenuOrder) {
+                return true;
+            }
+            if (typeof o.can_cancel === 'boolean' && !o.cancel_expires_at) {
+                return o.can_cancel;
+            }
+            const expiresAt = o.cancel_expires_at
+                ? new Date(o.cancel_expires_at).getTime()
+                : (o.order_datetime_iso
+                    ? new Date(o.order_datetime_iso).getTime() + 120000
+                    : 0);
+            if (!expiresAt) return false;
+            return Date.now() <= expiresAt;
+        },
+        cancelCountdown: function () {
+            void this.nowTick;
+            const o = this.order;
+            if (!o) return '0:00';
+            const expiresAt = o.cancel_expires_at
+                ? new Date(o.cancel_expires_at).getTime()
+                : (o.order_datetime_iso
+                    ? new Date(o.order_datetime_iso).getTime() + 120000
+                    : 0);
+            const left = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+            const m = Math.floor(left / 60);
+            const s = String(left % 60).padStart(2, '0');
+            return `${m}:${s}`;
+        },
+        paymentMethodLabel: function () {
+            const o = this.order;
+            if (!o || !Object.keys(o).length) return '';
+            if (o.transaction?.payment_method) {
+                return o.transaction.payment_method;
+            }
+            if (Number(o.payment_method) === paymentTypeEnum.CASH_ON_DELIVERY) {
+                return this.$t('label.pay_at_counter');
+            }
+            return this.enums.paymentTypeEnumArray[o.payment_method] || '';
         },
         orderRestaurant: function () {
             return this.frontendOrderStore.orderRestaurant;
@@ -548,6 +638,7 @@ export default {
                 }
 
                 this.loading.isActive = false;
+                this.startCancelTimer();
                 if (res.data.data.restaurant_review_status) {
                     await this.frontendReviewStore.fetchRestaurantReview(this.$route.params.id).then(restaurantReviewRes => {
                         if (restaurantReviewRes.data?.data) {
@@ -574,11 +665,35 @@ export default {
             })
         }
     },
+    beforeUnmount() {
+        if (this.cancelTimer) {
+            clearInterval(this.cancelTimer);
+            this.cancelTimer = null;
+        }
+    },
     methods: {
+        startCancelTimer() {
+            if (this.cancelTimer) {
+                clearInterval(this.cancelTimer);
+            }
+            if (!this.isScanMenuOrder) return;
+            this.nowTick = Date.now();
+            this.cancelTimer = setInterval(() => {
+                this.nowTick = Date.now();
+                if (!this.canCancelOrder && this.cancelTimer) {
+                    clearInterval(this.cancelTimer);
+                    this.cancelTimer = null;
+                }
+            }, 1000);
+        },
         textShortener: function (text, number) {
             return appService.textShortener(text, number);
         },
         cancelOrder: function (status) {
+            if (!this.canCancelOrder) {
+                alertService.error(this.$t('message.scan_menu_cancel_closed'));
+                return;
+            }
             return new VueSimpleAlert.confirm(
                 this.$t('message.cancel_your_order'),
                 this.$t('message.are_you_sure'),

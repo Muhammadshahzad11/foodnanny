@@ -84,6 +84,7 @@ import KitchenTicketPrintSheet from "../kitchen/KitchenTicketPrintSheet.vue";
 import {useWaiterOrderStore} from "../../../stores/waiterOrder.js";
 import alertService from "../../../services/alertService.js";
 import {apiErrorMessage} from "../../../services/apiError.js";
+import {printKot as printKotSheet} from "../../../services/printService.js";
 
 export default {
     name: "WaiterOrderShowComponent",
@@ -125,7 +126,7 @@ export default {
                 this.printPayload = res.data.data.payload;
                 this.loading.isActive = false;
                 await this.$nextTick();
-                window.print();
+                await printKotSheet();
             } catch (err) {
                 this.loading.isActive = false;
                 alertService.error(apiErrorMessage(err, this.$t('message.something_wrong')));

@@ -1,18 +1,24 @@
 <template>
     <div id="receipt-modal" class="modal">
-        <div class="modal-dialog max-w-[340px] rounded-none" id="print" :dir="displayMode">
+        <div class="modal-dialog max-w-[340px] rounded-none pos-receipt-print-root" id="print" :dir="displayMode">
             <div class="modal-header hidden-print">
                 <button type="button" @click="reset" class="modal-close flex items-center justify-center gap-1.5 py-2 px-4 rounded bg-[#FB4E4E]">
                     <i class="lab lab-fill-back-circle text-base text-white"></i>
                     <span class="text-xs leading-5 capitalize text-white">{{ $t('button.close') }}</span>
                 </button>
-                <button type="button" v-print="printObj" class="flex items-center justify-center gap-1.5 py-2 px-4 rounded bg-[#1AB759]">
+                <button type="button" @click="manualPrint" class="flex items-center justify-center gap-1.5 py-2 px-4 rounded bg-[#1AB759]">
                     <i class="lab lab-fill-printer text-base text-white"></i>
                     <span class="text-xs leading-5 capitalize text-white">{{ $t('button.print_invoice') }}</span>
                 </button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body receipt-body">
                 <div class="text-center pb-3.5 border-b border-dashed border-gray-400">
+                    <img
+                        v-if="restaurant.logo"
+                        :src="restaurant.logo"
+                        alt=""
+                        class="receipt-logo mx-auto mb-2"
+                    />
                     <h3 class="text-2xl font-bold mb-1">{{ restaurant.name }}</h3>
                     <h4 class="text-sm font-normal">{{ restaurant.address }}</h4>
                     <h5 v-if="restaurant.phone" class="text-sm font-normal">{{ $t('label.tel') }}:
@@ -22,8 +28,18 @@
                 <table class="w-full my-1.5">
                     <tbody>
                     <tr>
+                        <td class="text-xs text-left py-0.5 text-heading">
+                            {{ $t('label.invoice') || 'Invoice' }} #{{ order.order_serial_no }}
+                        </td>
+                    </tr>
+                    <tr>
                         <td class="text-xs text-left py-0.5 text-heading">{{ $t('label.order') }}
                             #{{ order.order_serial_no }}
+                        </td>
+                    </tr>
+                    <tr v-if="resolvedCashier">
+                        <td class="text-xs text-left py-0.5 text-heading" colspan="2">
+                            {{ $t('label.cashier') }}: {{ resolvedCashier }}
                         </td>
                     </tr>
                     <tr>
@@ -52,9 +68,9 @@
                             <p class="text-xs leading-5 text-heading">{{ item.quantity }}</p>
                         </td>
                         <td class="text-left font-normal align-top py-1">
-                            <div class="flex items-center justify-between">
-                                <h4 class="text-sm font-normal capitalize">{{ item.item_name }}</h4>
-                                <p class="text-xs leading-5 text-heading">{{ item.total_currency_price }} </p>
+                            <div class="flex items-center justify-between gap-2">
+                                <h4 class="text-sm font-normal capitalize receipt-item-name">{{ item.item_name }}</h4>
+                                <p class="text-xs leading-5 text-heading whitespace-nowrap">{{ item.total_currency_price }} </p>
                             </div>
                             <p v-if="Object.keys(item.item_variations).length !== 0"
                                class="text-xs leading-5 font-normal text-heading max-w-[200px]">
@@ -166,38 +182,41 @@
 </template>
 
 <script>
-import print from "vue3-print-nb";
 import {useModal} from "../../../../composables/modal.js";
 import {useCommonStore} from "../../../../stores/common.js";
 import {usePosOrderStore} from "../../../../stores/posOrder.js";
 import {useFrontendSettingStore} from "../../../../stores/frontendSetting.js";
+import {useAuthStore} from "../../../../stores/auth.js";
 import posPaymentMethodEnum from "../../../../enums/modules/posPaymentMethodEnum.js";
 import DisplayModeEnum from "../../../../enums/modules/displayModeEnum.js";
-
+import {printReceipt} from "../../../../services/printService.js";
+import alertService from "../../../../services/alertService.js";
 
 export default {
     name: "PosReceiptComponent",
     props: {
-        order: Object
+        order: Object,
+        cashierName: {
+            type: String,
+            default: '',
+        },
     },
     setup() {
         const {closeModal}         = useModal();
         const commonStore          = useCommonStore();
         const posOrderStore        = usePosOrderStore();
         const frontendSettingStore = useFrontendSettingStore();
+        const authStore            = useAuthStore();
         return {
             closeModal,
             commonStore,
             posOrderStore,
-            frontendSettingStore
+            frontendSettingStore,
+            authStore,
         }
     },
     data() {
         return {
-            printObj: {
-                id: "print",
-                popTitle: this.$t("menu.order_receipt"),
-            },
             enums: {
                 posPaymentMethodEnumArray: {
                     [posPaymentMethodEnum.CASH]: this.$t("label.cash"),
@@ -223,15 +242,66 @@ export default {
         },
         displayMode: function () {
             return this.commonStore.display_mode === DisplayModeEnum.LTR ? 'ltr' : 'rtl';
+        },
+        resolvedCashier() {
+            return this.cashierName || this.authStore.info?.name || '';
         }
     },
     methods: {
         reset: function () {
             this.closeModal('receipt-modal');
-        }
+        },
+        async manualPrint() {
+            try {
+                await printReceipt();
+            } catch (err) {
+                alertService.error(this.$t('message.receipt_print_failed'));
+            }
+        },
+        /** Called by PaymentComponent after checkout for auto-print. */
+        async autoPrint() {
+            return printReceipt();
+        },
     },
-    directives: {
-        print
-    }
 }
 </script>
+
+<style>
+.receipt-logo {
+    max-height: 48px;
+    max-width: 120px;
+    object-fit: contain;
+}
+.receipt-item-name {
+    word-break: break-word;
+}
+
+@media print {
+    body.printing-receipt * {
+        visibility: hidden !important;
+    }
+    body.printing-receipt .pos-receipt-print-root,
+    body.printing-receipt .pos-receipt-print-root * {
+        visibility: visible !important;
+    }
+    body.printing-receipt .pos-receipt-print-root .hidden-print {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    body.printing-receipt .pos-receipt-print-root {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 72mm;
+        max-width: 100%;
+        margin: 0;
+        box-shadow: none !important;
+        border: none !important;
+        background: #fff !important;
+    }
+    body.printing-receipt .pos-receipt-print-root .receipt-body {
+        padding: 0 !important;
+    }
+}
+</style>

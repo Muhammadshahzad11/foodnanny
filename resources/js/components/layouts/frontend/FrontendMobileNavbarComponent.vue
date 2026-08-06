@@ -22,7 +22,12 @@
             <span class="text-xs capitalize">{{ $t('label.favorite') }}</span>
         </router-link>
 
-        <button type="button" class="flex flex-col items-center gap-1 text-text transition-all duration-300 hover:text-primary" @click.prevent="openPwaInstall">
+        <button
+            v-if="showInstallNav"
+            type="button"
+            class="flex flex-col items-center gap-1 text-text transition-all duration-300 hover:text-primary"
+            @click.prevent="openPwaInstall"
+        >
             <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 21h14"/>
             </svg>
@@ -186,11 +191,22 @@ export default {
         },
         carts: function () {
             return this.frontendCartStore.lists;
-        }
+        },
+        showInstallNav: function () {
+            // Hide Install once the app is already installed / running as PWA.
+            return !this.state?.installed;
+        },
     },
     created() {
         if(this.$route.meta.mode !== "undefined" && this.$route.meta.mode) {
             this.mode = this.$route.meta.mode;
+        }
+    },
+    async mounted() {
+        try {
+            await this.init();
+        } catch (e) {
+            // ignore PWA init failures
         }
     },
     methods: {

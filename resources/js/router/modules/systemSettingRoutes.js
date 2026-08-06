@@ -387,7 +387,7 @@ export default [
                 meta: {
                     template: "admin",
                     auth: true,
-                    permissionUrl: "settings",
+                    permissionUrl: "system-settings",
                     breadcrumb: "role_permissions"
                 },
                 children: [
@@ -398,7 +398,7 @@ export default [
                         meta: {
                             template: "admin",
                             auth: true,
-                            permissionUrl: "settings",
+                            permissionUrl: "system-settings",
                             breadcrumb: ""
                         },
                     },
@@ -409,7 +409,7 @@ export default [
                         meta: {
                             template: "admin",
                             auth: true,
-                            permissionUrl: "settings",
+                            permissionUrl: "system-settings",
                             breadcrumb: "view"
                         },
                     },
@@ -491,7 +491,7 @@ export default [
                 meta: {
                     template: "admin",
                     auth: true,
-                    permissionUrl: "system",
+                    permissionUrl: "system-settings",
                     breadcrumb: "storage"
                 },
             },

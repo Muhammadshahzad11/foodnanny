@@ -22,7 +22,7 @@ export default [
                 meta: {
                     template: "admin",
                     auth: true,
-                    permissionUrl: 'push-notification',
+                    permissionUrl: 'push-notifications',
                     breadcrumb: ''
                 }
             },
@@ -33,7 +33,7 @@ export default [
                 meta: {
                     template: "admin",
                     auth: true,
-                    permissionUrl: "push-notification",
+                    permissionUrl: "push-notifications",
                     breadcrumb: "view"
                 }
             }

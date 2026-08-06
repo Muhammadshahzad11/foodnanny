@@ -189,8 +189,33 @@ class OrderService
                 $start       = $currentTime->format('H:i');
                 $end         = $endTime->format('H:i');
 
+                $orderType = (int) $request->input('order_type', OrderType::TAKEAWAY);
+                if (!in_array($orderType, [OrderType::DELIVERY, OrderType::TAKEAWAY, OrderType::DINING_TABLE], true)) {
+                    $orderType = OrderType::TAKEAWAY;
+                }
+
+                $tableId = null;
+                if ($orderType === OrderType::DINING_TABLE) {
+                    $tableId = (int) $request->input('table_id');
+                    $table   = \App\Models\RestaurantTable::query()
+                        ->where('id', $tableId)
+                        ->where('restaurant_id', $restaurantId)
+                        ->first();
+                    if (!$table) {
+                        throw new Exception(trans('all.message.table_required_for_dine_in'), 422);
+                    }
+                }
+
+                $payload = collect($request->validated())->except([
+                    'items',
+                    'payment_method',
+                    'payment_note',
+                    'received_amount',
+                    'customer_name',
+                ])->all();
+
                 $this->order = Order::create(
-                    $request->validated() + [
+                    $payload + [
                         'user_id'          => 2,
                         'restaurant_id'    => $restaurantId,
                         'status'           => OrderStatus::ACCEPT,
@@ -200,7 +225,9 @@ class OrderService
                         'payment_method'   => 1,
                         'preparation_time' => $orderSetup?->food_preparation_time ?? 30,
                         'is_advance_order' => IsAdvance::NO,
-                        'order_type'       => OrderType::POS,
+                        'order_type'       => $orderType,
+                        'table_id'         => $tableId,
+                        'order_note'       => $request->input('order_note'),
                         'source'           => Source::POS,
                         'delivery_time'    => "$start - $end",
                         'delivery_fee'     => 0,

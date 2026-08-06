@@ -55,6 +55,7 @@ class OrderDetailsResource extends JsonResource
                 ];
             }),
             'order_datetime'              => AppLibrary::datetime($this->order_datetime),
+            'order_datetime_iso'          => optional($this->order_datetime)?->toIso8601String(),
             'order_date'                  => AppLibrary::date($this->order_datetime),
             'order_time'                  => AppLibrary::time($this->order_datetime),
             'delivery_date'               => $this->is_advance_order == Ask::YES ? AppLibrary::increaseDate($this->order_datetime, 1) : AppLibrary::date($this->order_datetime),
@@ -68,6 +69,10 @@ class OrderDetailsResource extends JsonResource
             'is_received'                 => $this->is_received,
             'status_name'                 => trans('order_status.' . $this->status),
             'reason'                      => $this->reason,
+            'is_scan_menu_order'          => $this->isScanMenuOrder(),
+            'cancel_window_seconds'       => $this->isScanMenuOrder() ? 120 : null,
+            'cancel_expires_at'           => $this->cancelExpiresAt(),
+            'can_cancel'                  => $this->customerCanCancel(),
             'restaurant_review_status'    => $this->restaurantReviewStatus(),
             'delivery_boy_review_status'  => $this->deliveryBoyReviewStatus(),
             'cash_back_amount'            => $this->posDetail?->received_amount - $this->total,
@@ -82,6 +87,37 @@ class OrderDetailsResource extends JsonResource
             'pos_detail'                  => new PosDetailsResource($this->posDetail),
             'return_images'               => $this->returnImages
         ];
+    }
+
+    private function isScanMenuOrder(): bool
+    {
+        return (int) $this->order_type === OrderType::DINING_TABLE && (int) $this->table_id > 0;
+    }
+
+    private function cancelExpiresAt(): ?string
+    {
+        if (!$this->isScanMenuOrder() || !$this->order_datetime) {
+            return null;
+        }
+
+        return Carbon::parse($this->order_datetime)->addSeconds(120)->toIso8601String();
+    }
+
+    private function customerCanCancel(): bool
+    {
+        if ((int) $this->status !== OrderStatus::PENDING) {
+            return false;
+        }
+
+        if (!$this->isScanMenuOrder()) {
+            return true;
+        }
+
+        if (!$this->order_datetime) {
+            return false;
+        }
+
+        return Carbon::now()->lte(Carbon::parse($this->order_datetime)->addSeconds(120));
     }
 
     private function restaurantReviewStatus(): bool

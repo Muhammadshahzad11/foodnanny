@@ -774,20 +774,52 @@ class KitchenOrderService
             ];
         })->values()->all();
 
+        $ticketNo = 'KOT - ' . $order->id;
+        $totalQty = (int) $order->orderItems->sum('quantity');
+
+        $orderTypeLabel = match ((int) $order->order_type) {
+            OrderType::DINING_TABLE => 'Dine In',
+            OrderType::DELIVERY => 'Delivery',
+            OrderType::TAKEAWAY => 'Take Away',
+            OrderType::POS => 'Take Away',
+            default => 'POS',
+        };
+
+        $itemInstructions = $order->orderItems
+            ->pluck('instruction')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $specialNote = trim(implode(' ', array_filter([
+            $order->order_note,
+            ...$itemInstructions,
+        ])));
+
         return [
-            'copy'              => 'KITCHEN',
+            'copy'              => 'KITCHEN KOT',
+            'ticket_no'         => $ticketNo,
+            'kot_no'            => (string) $order->id,
             'restaurant'        => $order->restaurant?->name,
             'order_serial_no'   => $order->order_serial_no,
             'order_type'        => $order->order_type,
+            'order_type_label'  => $orderTypeLabel,
+            'source'            => $order->source,
+            'counter'           => ((int) $order->source === \App\Enums\Source::POS) ? 'POS' : null,
+            'biller'            => Auth::user()?->name ?: 'Cashier',
             'table'             => $order->diningTable ? [
                 'number' => $order->diningTable->table_number,
                 'name'   => $order->diningTable->name,
                 'zone'   => $order->diningTable->zone,
             ] : null,
+            'table_no'          => $order->diningTable?->table_number,
             'waiter'            => $order->waiter?->name,
             'customer'          => $order->user?->name,
             'order_note'        => $order->order_note,
+            'special_note'      => $specialNote,
             'order_datetime'    => AppLibrary::datetime($order->order_datetime),
+            'order_date'        => AppLibrary::date($order->order_datetime),
+            'order_time'        => AppLibrary::time($order->order_datetime),
             'preparation_time'  => $order->preparation_time,
             'status'            => $order->status,
             'status_name'       => trans('order_status.' . $order->status),
@@ -795,6 +827,7 @@ class KitchenOrderService
             'priority_label'    => KitchenPriority::LABELS[$order->kitchen_priority] ?? 'normal',
             'station'           => $order->kitchenStation?->name,
             'items'             => $items,
+            'total_qty'         => $totalQty,
             'printed_at'        => AppLibrary::datetime(now()),
             'reprint'           => $reprint,
         ];

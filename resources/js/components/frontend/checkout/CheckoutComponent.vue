@@ -138,35 +138,36 @@
 
                     <div class="p-4 rounded-2xl shadow-xs bg-white">
                         <h3 class="mb-5 text-lg font-medium capitalize">{{ $t('label.payment_method') }}</h3>
-                        <div class="grid grid-cols-3 gap-4">
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                             <div
                                 v-if="Object.keys(cashOnDelivery).length > 0 && setting.site_cash_on_delivery === activityEnum.ENABLE"
                                 @click.prevent="selectPaymentMethod(cashOnDelivery)"
                                 :class="Object.keys(paymentMethod).length > 0 && cashOnDelivery.id === paymentMethod.id ? 'bg-primary/5 border-primary/30' : 'bg-white border-white'"
-                                class="w-full px-3 py-4 text-center rounded-lg shadow-xs cursor-pointer border transition-all duration-300">
+                                class="w-full min-w-0 px-2 sm:px-3 py-4 text-center rounded-lg shadow-xs cursor-pointer border transition-all duration-300">
                                 <img class="w-10 mx-auto mb-2" :src="cashOnDelivery.image" alt="payment">
-                                <span class="block text-xs capitalize whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {{ cashOnDelivery.name }}
+                                <span class="block text-[11px] sm:text-xs leading-snug capitalize whitespace-normal break-words">
+                                    {{ cashPaymentLabel }}
                                 </span>
                             </div>
 
                             <div v-if="profile.balance >= total + checkoutProps.form.delivery_fee"
                                  @click.prevent="selectPaymentMethod(credit)"
                                  :class="Object.keys(paymentMethod).length > 0 && credit.id === paymentMethod.id ? 'bg-primary/5 border-primary/30' : 'bg-white border-white'"
-                                 class="w-full px-3 py-4 text-center rounded-lg shadow-xs cursor-pointer border transition-all duration-300">
+                                 class="w-full min-w-0 px-2 sm:px-3 py-4 text-center rounded-lg shadow-xs cursor-pointer border transition-all duration-300">
                                 <img class="w-10 mx-auto mb-2" :src="credit.image" alt="payment">
-                                <span class="block text-xs capitalize whitespace-nowrap overflow-hidden text-ellipsis">
+                                <span class="block text-[11px] sm:text-xs leading-snug capitalize whitespace-normal break-words">
                                     {{ credit.name }} ({{ profile.balance }})
                                 </span>
                             </div>
 
                             <div v-if="setting.site_online_payment_gateway === activityEnum.ENABLE"
                                  v-for="paymentGateway in paymentGateways"
+                                 :key="paymentGateway.id"
                                  @click.prevent="selectPaymentMethod(paymentGateway)"
                                  :class="Object.keys(paymentMethod).length > 0 && paymentGateway.id === paymentMethod.id ? 'bg-primary/5 border-primary/30' : 'bg-white border-white'"
-                                 class="w-full px-3 py-4 text-center rounded-lg shadow-xs cursor-pointer border transition-all duration-300">
+                                 class="w-full min-w-0 px-2 sm:px-3 py-4 text-center rounded-lg shadow-xs cursor-pointer border transition-all duration-300">
                                 <img class="w-10 mx-auto mb-2" :src="paymentGateway.image" alt="payment">
-                                <span class="block text-xs capitalize whitespace-nowrap overflow-hidden text-ellipsis">
+                                <span class="block text-[11px] sm:text-xs leading-snug capitalize whitespace-normal break-words">
                                     {{ paymentGateway.name }}
                                 </span>
                             </div>
@@ -589,9 +590,21 @@ export default {
             return this.frontendCartStore.orderType;
         },
         isDineIn: function () {
-            return this.orderType === orderTypeEnum.DINING_TABLE
-                || (this.dineInContextStore.isActive
-                    && this.dineInContextStore.matchesRestaurant(this.restaurant?.id || this.restaurant?.slug));
+            const orderType = Number(this.orderType ?? this.checkoutProps?.form?.order_type);
+            const tableId = Number(
+                this.frontendCartStore.tableId
+                || this.checkoutProps?.form?.table_id
+                || this.dineInContextStore.context?.table_id
+                || 0
+            );
+            if (orderType === orderTypeEnum.DINING_TABLE || tableId > 0) {
+                return true;
+            }
+            return this.dineInContextStore.isActive
+                && this.dineInContextStore.matchesRestaurant(this.restaurant?.id || this.restaurant?.slug);
+        },
+        cashPaymentLabel: function () {
+            return this.$t('label.pay_at_counter');
         },
         dineInTableLabel: function () {
             return this.dineInContextStore.tableLabel || this.$t('label.dining_table');
@@ -702,7 +715,11 @@ export default {
                     if (gateway.slug === "credit") {
                         this.credit = gateway;
                     } else if (gateway.slug === "cashondelivery") {
-                        this.cashOnDelivery = gateway;
+                        this.cashOnDelivery = {
+                            ...gateway,
+                            // Always use contextual UI label — ignore DB "Cash On Delivery" name
+                            name: this.cashPaymentLabel,
+                        };
                     } else {
                         this.paymentGateways.push(gateway);
                     }

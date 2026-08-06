@@ -217,25 +217,47 @@ class FrontendOrderService
                 if ($request->status == OrderStatus::CANCELED) {
                     if ($frontendOrder->status >= OrderStatus::ACCEPT) {
                         throw new Exception(trans('all.message.order_accept'), 422);
-                    } else {
-                        if ($frontendOrder->transaction) {
-                            $paymentService = new PaymentService();
-                            $paymentService->cashBack($frontendOrder, 'credit', rand(111111111111111, 999999999999999));
-                        }
-
-                        $frontendOrder->status = $request->status;
-                        $frontendOrder->save();
-
-                        OrderPlacedEmail::dispatch(['order_id' => $frontendOrder->id, 'status' => $request->status]);
-                        OrderPlacedSMS::dispatch(['order_id' => $frontendOrder->id, 'status' => $request->status]);
-                        OrderPlacedPushNotification::dispatch(['order_id' => $frontendOrder->id, 'status' => $request->status]);
                     }
+
+                    // Scan-menu (dine-in table) orders: cancel only within 2 minutes of placement.
+                    if (
+                        (int) $frontendOrder->order_type === \App\Enums\OrderType::DINING_TABLE
+                        && (int) $frontendOrder->table_id > 0
+                        && $frontendOrder->order_datetime
+                    ) {
+                        $expiresAt = \Carbon\Carbon::parse($frontendOrder->order_datetime)->addSeconds(120);
+                        if (\Carbon\Carbon::now()->gt($expiresAt)) {
+                            throw new Exception(trans('all.message.order_cancel_window_expired'), 422);
+                        }
+                    }
+
+                    if ($frontendOrder->transaction) {
+                        $paymentService = new PaymentService();
+                        $paymentService->cashBack($frontendOrder, 'credit', rand(111111111111111, 999999999999999));
+                    }
+
+                    $frontendOrder->status = $request->status;
+                    $frontendOrder->save();
+
+                    if (
+                        (int) $frontendOrder->order_type === \App\Enums\OrderType::DINING_TABLE
+                        && $frontendOrder->table_id
+                    ) {
+                        app(WaiterOrderService::class)->releaseTableIfIdle((int) $frontendOrder->table_id);
+                    }
+
+                    OrderPlacedEmail::dispatch(['order_id' => $frontendOrder->id, 'status' => $request->status]);
+                    OrderPlacedSMS::dispatch(['order_id' => $frontendOrder->id, 'status' => $request->status]);
+                    OrderPlacedPushNotification::dispatch(['order_id' => $frontendOrder->id, 'status' => $request->status]);
                 }
             }
             return $frontendOrder;
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
-            throw new Exception(QueryExceptionLibrary::message($exception), 422);
+            throw new Exception(
+                $exception->getCode() === 422 ? $exception->getMessage() : QueryExceptionLibrary::message($exception),
+                422
+            );
         }
     }
 }

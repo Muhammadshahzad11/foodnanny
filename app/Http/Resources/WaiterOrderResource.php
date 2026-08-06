@@ -56,8 +56,12 @@ class WaiterOrderResource extends JsonResource
             }),
             'restaurant'                => $this->whenLoaded('restaurant', function () {
                 return [
-                    'id'   => $this->restaurant?->id,
-                    'name' => $this->restaurant?->name,
+                    'id'           => $this->restaurant?->id,
+                    'name'         => $this->restaurant?->name,
+                    'address'      => $this->restaurant?->address,
+                    'phone'        => $this->restaurant?->phone,
+                    'country_code' => $this->restaurant?->country_code,
+                    'logo'         => $this->restaurant?->logo,
                 ];
             }),
             'order_items'               => $this->whenLoaded('orderItems', function () {

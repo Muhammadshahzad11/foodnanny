@@ -77,6 +77,102 @@
                     </nav>
                 </div>
             </div>
+
+            <div class="mb-3">
+                <p class="text-xs font-semibold uppercase tracking-wide text-[#6E7191] mb-2">{{ $t('label.order_type') }}</p>
+                <div class="grid grid-cols-3 gap-1.5">
+                    <button
+                        type="button"
+                        class="rounded-xl py-2.5 px-1 text-xs font-bold border-2 transition active:scale-[0.98]"
+                        :class="Number(checkoutProps.form.order_type) === enums.orderTypeEnum.TAKEAWAY
+                            ? 'bg-primary border-primary text-white shadow-sm'
+                            : 'bg-white border-[#EFF0F6] text-heading hover:border-primary/40'"
+                        @click.prevent="setPosService(enums.orderTypeEnum.TAKEAWAY)"
+                    >
+                        {{ $t('label.takeaway') }}
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-xl py-2.5 px-1 text-xs font-bold border-2 transition active:scale-[0.98]"
+                        :class="Number(checkoutProps.form.order_type) === enums.orderTypeEnum.DINING_TABLE
+                            ? 'bg-primary border-primary text-white shadow-sm'
+                            : 'bg-white border-[#EFF0F6] text-heading hover:border-primary/40'"
+                        @click.prevent="setPosService(enums.orderTypeEnum.DINING_TABLE)"
+                    >
+                        {{ $t('label.dine_in') }}
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-xl py-2.5 px-1 text-xs font-bold border-2 transition active:scale-[0.98]"
+                        :class="Number(checkoutProps.form.order_type) === enums.orderTypeEnum.DELIVERY
+                            ? 'bg-primary border-primary text-white shadow-sm'
+                            : 'bg-white border-[#EFF0F6] text-heading hover:border-primary/40'"
+                        @click.prevent="setPosService(enums.orderTypeEnum.DELIVERY)"
+                    >
+                        {{ $t('label.delivery') }}
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="Number(checkoutProps.form.order_type) === enums.orderTypeEnum.DINING_TABLE" class="mb-3">
+                <label class="text-xs font-medium text-[#6E7191] mb-1.5 block">{{ $t('label.table') }}</label>
+                <select v-model="checkoutProps.form.table_id" class="db-field-control w-full">
+                    <option value="">{{ $t('label.select_table') || 'Select table' }}</option>
+                    <option v-for="t in diningTables" :key="t.id" :value="t.id">
+                        {{ t.table_number }} · {{ t.name }}
+                    </option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <input
+                    v-model="checkoutProps.form.order_note"
+                    type="text"
+                    class="db-field-control w-full"
+                    :placeholder="$t('label.order_note')"
+                />
+            </div>
+
+            <div class="mb-3">
+                <div class="w-full h-10 rounded-md ps-3 p-[1px] border border-[#E5E7EB] flex items-center justify-between gap-3">
+                    <span class="text-[#6E7191] text-sm font-normal flex gap-1 items-center min-w-0">
+                        {{ $t('label.print_preview') }}
+                        <div class="group relative shrink-0">
+                            <i class="lab-line-info-circle text-base text-[#6E7191]"></i>
+                            <span class="inline-block absolute min-w-[220px] max-w-[280px] w-auto z-[999] -top-1 left-0 translate-y-10 text-xs rounded-md py-1.5 px-2 bg-gray-800 text-white before:absolute before:w-2 before:h-2 before:bg-gray-800 before:rotate-45 before:left-4 before:-top-1 group-hover:opacity-100 group-hover:visible group-hover:-top-2 opacity-0 invisible transition-all duration-300">
+                                {{ $t('message.print_preview_help') }}
+                            </span>
+                        </div>
+                    </span>
+                    <nav class="w-fit h-full flex items-center justify-center p-0.5 rounded-md bg-[#FFF8F2] shrink-0">
+                        <button
+                            type="button"
+                            @click.prevent="setPrintPreview(false)"
+                            :class="!printPreviewOn ? 'text-white bg-[#6E7191]' : 'text-[#6E7191]'"
+                            class="text-sm font-medium uppercase h-full px-2 rounded"
+                        >
+                            {{ $t('label.off') }}
+                        </button>
+                        <button
+                            type="button"
+                            @click.prevent="setPrintPreview(true)"
+                            :class="printPreviewOn ? 'text-white bg-primary' : 'text-[#6E7191]'"
+                            class="text-sm font-medium uppercase h-full px-2 rounded"
+                        >
+                            {{ $t('label.on') }}
+                        </button>
+                    </nav>
+                </div>
+                <p v-if="!printPreviewOn && !silentPrintReady" class="mt-1.5 text-[11px] leading-4 text-amber-700">
+                    {{ $t('message.direct_print_setup_needed') }}
+                    <a href="/silent-print-setup.html" target="_blank" class="underline font-semibold">
+                        {{ $t('label.setup_silent_print') }}
+                    </a>
+                </p>
+                <p v-else-if="!printPreviewOn && silentPrintReady" class="mt-1.5 text-[11px] leading-4 text-emerald-700">
+                    {{ $t('message.direct_print_ready') }}
+                </p>
+            </div>
         </div>
 
         <table class="w-full">
@@ -232,7 +328,7 @@
         </span>
     </button>
 
-    <PaymentComponent :method="submitReset" :props="checkoutProps"/>
+    <PaymentComponent ref="paymentRef" :method="submitReset" :props="checkoutProps"/>
 </template>
 
 <script>
@@ -255,6 +351,15 @@ import discountTypeEnum from "../../../enums/modules/discountTypeEnum.js";
 import _ from "lodash";
 import PaymentComponent from "./PaymentComponent.vue";
 import posPaymentMethodEnum from "../../../enums/modules/posPaymentMethodEnum.js";
+import orderTypeEnum from "../../../enums/modules/orderTypeEnum.js";
+import {usePosOrderStore} from "../../../stores/posOrder.js";
+import alertService from "../../../services/alertService.js";
+import {
+    isPrintPreviewOn,
+    isSilentPrintReady,
+    setPrintPreviewOn,
+    syncSilentPrintFromUrl,
+} from "../../../services/printPreference.js";
 
 export default {
     name: "PosComponent",
@@ -274,6 +379,7 @@ export default {
         const posCategoryStore        = usePosCategoryStore();
         const defaultAccessStore      = useDefaultAccessStore();
         const frontendSettingStore    = useFrontendSettingStore();
+        const posOrderStore           = usePosOrderStore();
 
         return {
             openModal,
@@ -284,7 +390,8 @@ export default {
             posOfferStore,
             posCategoryStore,
             defaultAccessStore,
-            frontendSettingStore
+            frontendSettingStore,
+            posOrderStore,
         }
     },
     data() {
@@ -293,14 +400,18 @@ export default {
                 isActive: false,
             },
             posOpen: false,
+            printPreviewOn: true,
+            silentPrintReady: false,
             offerStatus: switchEnum.ON,
             mainOffer: {},
             offer: {},
             discount: null,
+            diningTables: [],
             errors: {},
             enums: {
                 switchEnum: switchEnum,
                 discountTypeEnum: discountTypeEnum,
+                orderTypeEnum: orderTypeEnum,
             },
             checkoutProps: {
                 form: {
@@ -312,7 +423,10 @@ export default {
                     items: [],
                     payment_method: posPaymentMethodEnum.CASH,
                     payment_note: null,
-                    received_amount: null
+                    received_amount: null,
+                    order_type: orderTypeEnum.TAKEAWAY,
+                    table_id: '',
+                    order_note: '',
                 }
             },
             props: {
@@ -366,9 +480,19 @@ export default {
     },
     async mounted() {
         try {
+            syncSilentPrintFromUrl();
+            this.printPreviewOn = isPrintPreviewOn();
+            this.silentPrintReady = isSilentPrintReady();
+            this._onPrintPreviewChanged = (e) => {
+                this.printPreviewOn = !!(e?.detail?.on ?? isPrintPreviewOn());
+                this.silentPrintReady = isSilentPrintReady();
+            };
+            window.addEventListener('fn-print-preview-changed', this._onPrintPreviewChanged);
+
             this.closeSidebar();
             this.itemCategories();
             this.itemList();
+            this.loadDiningTables();
 
             this.loading.isActive = true;
             await this.posOfferStore.fetch().then(res => {
@@ -383,7 +507,20 @@ export default {
             this.loading.isActive = false;
         }
     },
+    beforeUnmount() {
+        if (this._onPrintPreviewChanged) {
+            window.removeEventListener('fn-print-preview-changed', this._onPrintPreviewChanged);
+        }
+    },
     methods: {
+        setPrintPreview(on) {
+            setPrintPreviewOn(!!on);
+            this.printPreviewOn = !!on;
+            this.silentPrintReady = isSilentPrintReady();
+            if (!on && !this.silentPrintReady) {
+                alertService.warning(this.$t('message.direct_print_setup_needed'));
+            }
+        },
         onlyNumber: function (e) {
             return appService.onlyNumber(e);
         },
@@ -472,7 +609,29 @@ export default {
         resetCart: function () {
             this.posCartStore.resetCart();
         },
+        setPosService(type) {
+            this.checkoutProps.form.order_type = type;
+            if (Number(type) !== orderTypeEnum.DINING_TABLE) {
+                this.checkoutProps.form.table_id = '';
+            } else if (!this.diningTables.length) {
+                this.loadDiningTables();
+            }
+        },
+        async loadDiningTables() {
+            try {
+                const res = await this.posOrderStore.fetchTables();
+                this.diningTables = res.data.data || [];
+            } catch (e) {
+                this.diningTables = [];
+            }
+        },
         orderSubmit: function () {
+            if (Number(this.checkoutProps.form.order_type) === orderTypeEnum.DINING_TABLE
+                && !this.checkoutProps.form.table_id) {
+                alertService.error(this.$t('message.table_required_for_dine_in') || 'Please select a table for dine-in.');
+                return;
+            }
+
             this.checkoutProps.form.subtotal = this.subtotal;
             this.checkoutProps.form.tax      = this.tax;
             this.checkoutProps.form.total    = this.total;
@@ -538,6 +697,9 @@ export default {
             this.checkoutProps.form.items = JSON.stringify(this.checkoutProps.form.items);
 
             this.openModal('order-payment-modal');
+            this.$nextTick(() => {
+                this.$refs.paymentRef?.prefillCashAmount?.();
+            });
         },
         submitReset: function (objects) {
             if (objects.hasOwnProperty('mainOffer')) {

@@ -95,6 +95,24 @@ export const usePosOrderStore = defineStore('posOrder', {
                     reject(err);
                 });
             });
-        }
+        },
+        printKot: function (orderId) {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/pos-order/${orderId}/print-kot`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        fetchTables: function () {
+            return new Promise((resolve, reject) => {
+                axios.get('admin/pos/tables').then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
     }
 })

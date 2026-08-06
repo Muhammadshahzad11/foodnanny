@@ -158,7 +158,105 @@
         </div>
     </div>
 
-    <PosReceiptComponent :order="order"/>
+    <PosReceiptComponent ref="receiptRef" :order="order"/>
+    <CustomerReceiptPrintSheet
+        :order="order"
+        :restaurant="posOrderStore.restaurant"
+        :items="receiptItems"
+        :cashier-name="cashierName"
+        :payment-label="paymentLabel"
+        :table-label="tableLabel"
+    />
+    <KitchenTicketPrintSheet :payload="kotPayload"/>
+
+    <!-- POS thank-you popup: KOT Print + Customer Print -->
+    <teleport to="body">
+        <div
+            v-if="showThankYou"
+            class="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/45"
+            @click.self="closeThankYou"
+        >
+            <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" @click.stop>
+                <div class="p-6 text-center border-b border-[#EFF0F6]">
+                    <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#1AB759]/10">
+                        <span class="text-2xl text-[#1AB759]">✓</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-heading mb-1">{{ $t('label.thank_you') }}</h3>
+                    <p class="text-base font-medium text-heading mb-1">{{ $t('label.order_placed') }}</p>
+                    <p class="text-sm text-[#6E7191]" v-if="order.order_serial_no">
+                        #{{ order.order_serial_no }}
+                        <span v-if="tableLabel"> · {{ $t('label.table') }} {{ tableLabel }}</span>
+                        <span v-if="orderTypeLabel"> · {{ orderTypeLabel }}</span>
+                    </p>
+                </div>
+
+                <div class="px-6 py-4 overflow-y-auto text-left flex-1" v-if="receiptItems.length">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-[#6E7191] mb-2">
+                        {{ $t('label.order_details') }}
+                    </p>
+                    <ul class="space-y-2 mb-4">
+                        <li
+                            v-for="(item, idx) in receiptItems"
+                            :key="idx"
+                            class="flex items-start justify-between gap-3 text-sm"
+                        >
+                            <p class="font-medium text-heading min-w-0">
+                                {{ item.quantity }} × {{ item.item_name || item.name }}
+                            </p>
+                            <span class="shrink-0 text-heading">{{ item.total_currency_price }}</span>
+                        </li>
+                    </ul>
+                    <div class="flex justify-between font-semibold text-heading text-sm border-t border-[#EFF0F6] pt-3">
+                        <span>{{ $t('label.total') }}</span>
+                        <span>{{ order.total_currency_price }}</span>
+                    </div>
+                </div>
+
+                <div class="p-6 pt-2 flex flex-col gap-2 border-t border-[#EFF0F6]">
+                    <div class="flex items-center justify-between gap-2 mb-1 px-1">
+                        <span class="text-xs font-medium text-[#6E7191]">{{ $t('label.print_preview') }}</span>
+                        <nav class="w-fit flex items-center justify-center p-0.5 rounded-md bg-[#FFF8F2]">
+                            <button
+                                type="button"
+                                class="text-xs font-medium uppercase px-2 py-1 rounded"
+                                :class="!printPreviewOn ? 'text-white bg-[#6E7191]' : 'text-[#6E7191]'"
+                                @click.prevent="setPrintPreview(false)"
+                            >{{ $t('label.off') }}</button>
+                            <button
+                                type="button"
+                                class="text-xs font-medium uppercase px-2 py-1 rounded"
+                                :class="printPreviewOn ? 'text-white bg-primary' : 'text-[#6E7191]'"
+                                @click.prevent="setPrintPreview(true)"
+                            >{{ $t('label.on') }}</button>
+                        </nav>
+                    </div>
+                    <button
+                        type="button"
+                        class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2.5 text-white bg-amber-600"
+                        :disabled="printingKot || printingReceipt"
+                        @click.prevent="printKotOnly"
+                    >
+                        {{ printingKot ? 'Printing…' : $t('button.print_kot') }}
+                    </button>
+                    <button
+                        type="button"
+                        class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2.5 text-white bg-[#1AB759]"
+                        :disabled="printingKot || printingReceipt"
+                        @click.prevent="printCustomerOnly"
+                    >
+                        {{ printingReceipt ? 'Printing…' : $t('button.customer_print') }}
+                    </button>
+                    <button
+                        type="button"
+                        class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2.5 border border-[#EFF0F6] text-heading"
+                        @click.prevent="closeThankYou"
+                    >
+                        {{ $t('button.done') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </teleport>
 </template>
 <script>
 import {useModal} from "../../../composables/modal.js";
@@ -175,11 +273,23 @@ import {usePosCartStore} from "../../../stores/posCart.js";
 import discountTypeEnum from "../../../enums/modules/discountTypeEnum.js";
 import {usePosOfferStore} from "../../../stores/posOffer.js";
 import PosReceiptComponent from "../components/order/PosReceiptComponent.vue";
+import CustomerReceiptPrintSheet from "../components/order/CustomerReceiptPrintSheet.vue";
+import KitchenTicketPrintSheet from "../kitchen/KitchenTicketPrintSheet.vue";
+import {printKot, printReceipt, PrintUnavailableError} from "../../../services/printService.js";
+import {
+    isPrintPreviewOn,
+    isSilentPrintReady,
+    setPrintPreviewOn,
+} from "../../../services/printPreference.js";
+import {useAuthStore} from "../../../stores/auth.js";
+import orderTypeEnum from "../../../enums/modules/orderTypeEnum.js";
 
 export default {
     name: "PaymentComponent",
     components: {
         PosReceiptComponent,
+        CustomerReceiptPrintSheet,
+        KitchenTicketPrintSheet,
         LoadingComponent
     },
     props: {
@@ -197,6 +307,7 @@ export default {
         const posOrderStore           = usePosOrderStore();
         const posOfferStore           = usePosOfferStore();
         const frontendSettingStore    = useFrontendSettingStore();
+        const authStore               = useAuthStore();
 
         return {
             handleTab,
@@ -206,7 +317,8 @@ export default {
             posOrderStore,
             posOfferStore,
             createKeyboard,
-            frontendSettingStore
+            frontendSettingStore,
+            authStore,
         }
     },
     data() {
@@ -220,24 +332,90 @@ export default {
             inputIdName: "paymentMethodCashInput",
             mainOffer: {},
             offer: {},
-            order: {}
+            order: {},
+            kotPayload: null,
+            showThankYou: false,
+            placedOrderId: null,
+            printingKot: false,
+            printingReceipt: false,
+            printPreviewOn: true,
         }
     },
     computed: {
         setting: function () {
             return this.frontendSettingStore.lists;
         },
+        receiptItems() {
+            const items = this.posOrderStore.orderItems;
+            if (Array.isArray(items)) return items;
+            return items ? Object.values(items) : [];
+        },
+        cashierName() {
+            return this.authStore.info?.name || '';
+        },
+        paymentLabel() {
+            const method = this.posOrderStore.posDetail?.payment_method;
+            const map = {
+                [posPaymentMethodEnum.CASH]: this.$t('label.cash'),
+                [posPaymentMethodEnum.CARD]: this.$t('label.card'),
+                [posPaymentMethodEnum.MOBILE_BANKING]: this.$t('label.mfs'),
+                [posPaymentMethodEnum.OTHER]: this.$t('label.other'),
+            };
+            return map[method] || '';
+        },
+        tableLabel() {
+            const t = this.order?.table;
+            if (!t) return '';
+            return t.table_number || t.name || '';
+        },
+        orderTypeLabel() {
+            const t = Number(this.order?.order_type);
+            if (t === orderTypeEnum.DINING_TABLE) return this.$t('label.dine_in');
+            if (t === orderTypeEnum.DELIVERY) return this.$t('label.delivery');
+            if (t === orderTypeEnum.TAKEAWAY || t === orderTypeEnum.POS) return this.$t('label.takeaway');
+            return '';
+        },
+    },
+    watch: {
+        showThankYou(val) {
+            if (val) {
+                this.printPreviewOn = isPrintPreviewOn();
+            }
+        },
     },
     methods: {
+        setPrintPreview(on) {
+            setPrintPreviewOn(!!on);
+            this.printPreviewOn = !!on;
+            if (!on && !isSilentPrintReady()) {
+                alertService.warning(this.$t('message.direct_print_setup_needed'));
+            }
+        },
+        printErrorMessage(err, fallbackKey) {
+            if (err instanceof PrintUnavailableError || err?.code === 'PRINT_UNAVAILABLE') {
+                return this.$t('message.printer_not_connected');
+            }
+            return err?.response?.data?.message || err?.message || this.$t(fallbackKey);
+        },
         currencyFormat: function (amount, decimal, currency, position) {
             return appService.currencyFormat(amount, decimal, currency, position);
         },
         floatNumber(e) {
             return appService.floatNumber(e);
         },
+        prefillCashAmount() {
+            const total = parseFloat(this.$props.props?.form?.total || 0);
+            const decimals = parseInt(this.setting?.site_digit_after_decimal_point ?? 2, 10);
+            const value = Number.isFinite(total) ? total.toFixed(decimals) : '0';
+            if (this.$refs.paymentMethodCashInput) {
+                this.$refs.paymentMethodCashInput.value = value;
+            }
+            this.$props.props.form.received_amount = value;
+            this.inputIdName = 'paymentMethodCashInput';
+        },
         reset: function () {
             Object.keys(this.$refs).forEach(refName => {
-                if (this.$refs[refName].value !== undefined) {
+                if (this.$refs[refName]?.value !== undefined) {
                     this.$refs[refName].value = "";
                 }
             });
@@ -250,7 +428,7 @@ export default {
         },
         paymentMethod: function (event, method, id, refName) {
             Object.keys(this.$refs).forEach(refName => {
-                if (this.$refs[refName].value !== undefined) {
+                if (this.$refs[refName]?.value !== undefined) {
                     this.$refs[refName].value = "";
                 }
             });
@@ -263,6 +441,11 @@ export default {
             this.$refs.paymentMethodCardInput.value          = "";
             this.$refs.paymentMethodMobileBankingInput.value = "";
             this.$refs.paymentMethodOtherInput.value         = "";
+
+            // Exact cash amount by default — cashier can still overwrite via keypad
+            if (method === posPaymentMethodEnum.CASH) {
+                this.prefillCashAmount();
+            }
 
             if (method === posPaymentMethodEnum.MOBILE_BANKING || method === posPaymentMethodEnum.OTHER) {
                 this.createKeyboard(id);
@@ -278,6 +461,37 @@ export default {
                 v.value += val;
             }
         },
+        closeThankYou() {
+            this.showThankYou = false;
+            this.kotPayload = null;
+            this.closeModal('receipt-modal');
+        },
+        async printCustomerOnly() {
+            if (!this.placedOrderId) return;
+            try {
+                this.printingReceipt = true;
+                await this.$nextTick();
+                await printReceipt();
+            } catch (err) {
+                alertService.error(this.printErrorMessage(err, 'message.receipt_print_failed'));
+            } finally {
+                this.printingReceipt = false;
+            }
+        },
+        async printKotOnly() {
+            if (!this.placedOrderId) return;
+            try {
+                this.printingKot = true;
+                const res = await this.posOrderStore.printKot(this.placedOrderId);
+                this.kotPayload = res.data.data.payload;
+                await this.$nextTick();
+                await printKot();
+            } catch (err) {
+                alertService.error(this.printErrorMessage(err, 'message.kot_print_failed'));
+            } finally {
+                this.printingKot = false;
+            }
+        },
         confirmOrder: function () {
             try {
                 if (this.$props.props.form.payment_method === posPaymentMethodEnum.CASH && this.$refs.paymentMethodCashInput.value) {
@@ -285,12 +499,6 @@ export default {
                 } else {
                     this.$props.props.form.received_amount = null;
                 }
-
-
-                this.$refs.paymentMethodCashInput.value;
-                this.$refs.paymentMethodCardInput.value;
-                this.$refs.paymentMethodMobileBankingInput.value;
-                this.$refs.paymentMethodOtherInput.value;
 
                 if (this.$props.props.form.payment_method === posPaymentMethodEnum.CARD && this.$refs.paymentMethodCardInput.value) {
                     this.$props.props.form.payment_note = this.$refs.paymentMethodCardInput.value;
@@ -304,6 +512,9 @@ export default {
 
                 this.loading.isActive = true;
                 this.posOrderStore.save(this.$props.props.form).then(async orderResponse => {
+                    const orderId = orderResponse.data.data.id;
+                    this.placedOrderId = orderId;
+
                     this.$props.props.form.token                     = "";
                     this.$props.props.form.subtotal                  = 0;
                     this.$props.props.form.discount                  = 0;
@@ -313,6 +524,9 @@ export default {
                     this.$props.props.form.payment_method            = posPaymentMethodEnum.CASH;
                     this.$props.props.form.payment_note              = null;
                     this.$props.props.form.received_amount           = null;
+                    this.$props.props.form.order_type                = orderTypeEnum.TAKEAWAY;
+                    this.$props.props.form.table_id                  = '';
+                    this.$props.props.form.order_note                = '';
                     this.$refs.paymentMethodCashInput.value          = "";
                     this.$refs.paymentMethodCardInput.value          = "";
                     this.$refs.paymentMethodMobileBankingInput.value = "";
@@ -322,30 +536,36 @@ export default {
                     await this.posOfferStore.fetch().then(res => {
                         this.mainOffer = res.data.data;
                         this.offer     = this.mainOffer;
-                    }).catch()
+                    }).catch(() => {});
 
-                    await this.$props.method({
-                        mainOffer: this.mainOffer,
-                        offer: this.offer,
-                        discount: null,
-                        discountType: discountTypeEnum.PERCENTAGE,
-                    })
+                    if (typeof this.$props.method === 'function') {
+                        await this.$props.method({
+                            mainOffer: this.mainOffer,
+                            offer: this.offer,
+                            discount: null,
+                            discountType: discountTypeEnum.PERCENTAGE,
+                        });
+                    }
 
-                    await this.posOrderStore.view(orderResponse.data.data.id).then(res => {
-                        this.order            = res.data.data;
-                        this.loading.isActive = false;
-                    }).catch((error) => {
-                        this.loading.isActive = false;
-                        alertService.error(error.response.data.message);
-                    });
+                    try {
+                        const res = await this.posOrderStore.view(orderId);
+                        this.order = res.data.data;
+                    } catch (error) {
+                        alertService.error(error.response?.data?.message || this.$t('message.something_wrong'));
+                    }
+
+                    this.loading.isActive = false;
                     this.closeModal('order-payment-modal');
-                    this.openModal('receipt-modal');
+                    // Thank-you with explicit KOT + Customer print buttons (no auto-print)
+                    this.showThankYou = true;
                 }).catch((err) => {
                     this.loading.isActive = false;
-                    if (typeof err.response.data.errors === 'object') {
+                    if (typeof err.response?.data?.errors === 'object') {
                         _.forEach(err.response.data.errors, (error) => {
                             alertService.error(error[0]);
                         });
+                    } else {
+                        alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
                     }
                 })
             } catch (err) {

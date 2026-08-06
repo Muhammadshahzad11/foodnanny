@@ -14,27 +14,35 @@
                         <h3 class="text-xl sm:text-2xl font-medium mb-4">
                             {{ $t('message.search_restaurants_in_your_area') }}</h3>
                         <form @submit.prevent="searchLocation"
-                              class="flex items-center gap-4 w-full max-w-md sm:max-w-lg h-12 sm:h-[60px] rounded-full shadow-xs bg-white relative">
-                            <button type="button" id="map-current-location"
-                                    title="Use current location"
-                                    :disabled="locating"
-                                    @click.prevent="useCurrentLocation"
-                                    class="lab-line-gps text-xl flex-shrink-0 text-primary ltr:ml-3 rtl:mr-3 absolute ltr:left-2 rtl:right-2 z-[1] hover:opacity-80 disabled:opacity-40"></button>
-                            <input id="map-autocomplete-input" type="search" v-model="modelLocation"
-                                   ref="homeLocationName" :placeholder="$t('label.enter_your_location')"
-                                   class="w-full h-full ltr:pl-12 ltr:pr-28 ltr:sm:pr-36 rtl:pl-28 rtl:sm:pl-36 rtl:pr-12">
-                            <button v-if="modelLocation"
-                                    type="button"
-                                    title="Clear location"
-                                    @click.prevent="clearLocationInput"
-                                    class="lab-fill-close-circle text-lg text-danger absolute ltr:right-[5.5rem] sm:ltr:right-[7.5rem] rtl:left-[5.5rem] sm:rtl:left-[7.5rem] z-[1]"></button>
+                              class="flex items-center gap-2 sm:gap-3 w-full max-w-md sm:max-w-xl">
+                            <div class="relative flex-1 min-w-0 h-12 sm:h-[60px] rounded-full shadow-[0_8px_24px_rgba(15,23,42,0.08)] bg-white border border-[#EFF0F6]">
+                                <button type="button" id="map-current-location"
+                                        :title="$t('label.use_current_location') || 'Use current location'"
+                                        :disabled="locating"
+                                        @click.prevent="useCurrentLocation({navigate: false})"
+                                        class="lab-line-gps text-xl flex-shrink-0 text-primary absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 z-[1] hover:scale-110 transition disabled:opacity-40"></button>
+                                <input id="map-autocomplete-input" type="search" v-model="modelLocation"
+                                       ref="homeLocationName"
+                                       :placeholder="locating ? ($t('label.detecting_location') || 'Detecting your location…') : $t('label.enter_your_location')"
+                                       autocomplete="off"
+                                       class="w-full h-full rounded-full bg-transparent outline-none text-sm sm:text-base text-heading placeholder:text-[#A0A3BD] ltr:pl-12 ltr:pr-10 rtl:pr-12 rtl:pl-10">
+                                <button v-if="modelLocation && !locating"
+                                        type="button"
+                                        title="Clear location"
+                                        @click.prevent="clearLocationInput"
+                                        class="lab-fill-close-circle text-lg text-[#A0A3BD] hover:text-danger absolute top-1/2 -translate-y-1/2 ltr:right-3 rtl:left-3 z-[1]"></button>
+                            </div>
                             <button type="submit"
-                                    :class="!canSearch ? 'bg-primary/50' : ''"
                                     :disabled="!canSearch || locating"
-                                    class="h-full px-4 sm:px-6 rounded-full text-base sm:text-lg capitalize font-medium bg-primary text-white absolute ltr:right-0 rtl:left-0">
-                                {{ locating ? '...' : $t('button.search') }}
+                                    class="shrink-0 h-12 sm:h-[60px] min-w-[108px] sm:min-w-[128px] px-5 sm:px-7 rounded-full text-sm sm:text-base capitalize font-semibold text-white bg-primary shadow-[0_10px_24px_rgba(11,143,77,0.35)] transition active:scale-[0.97] hover:brightness-110 disabled:opacity-50 disabled:shadow-none disabled:active:scale-100">
+                                <span v-if="locating" class="inline-flex items-center gap-2">
+                                    <span class="h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin"></span>
+                                    …
+                                </span>
+                                <span v-else>{{ $t('button.search') }}</span>
                             </button>
                         </form>
+                        <p v-if="locationHint" class="mt-2 text-xs text-[#6E7191]">{{ locationHint }}</p>
                     </div>
                 </div>
                 <div class="col-12 md:col-6">
@@ -200,6 +208,7 @@ export default {
                 isActive: false,
             },
             locating: false,
+            locationHint: '',
             modelLocation: null,
             position: {
                 name: null,
@@ -227,6 +236,7 @@ export default {
     async mounted() {
         if (this.commonStore.location) {
             await this.$router.push({name: 'frontend.restaurant'});
+            return;
         }
 
         this.loading.isActive = true;
@@ -252,6 +262,8 @@ export default {
         });
 
         await this.initPlacesAutocomplete();
+        // Auto-fill current GPS address into the search box (do not navigate yet).
+        await this.autoFillCurrentLocation();
     },
     computed: {
         setting: function () {
@@ -291,6 +303,7 @@ export default {
                     const name = place.formatted_address || this.$refs.homeLocationName?.value || '';
                     const area = locationService.areaFromPlace(place);
                     this.modelLocation = name;
+                    this.locationHint = '';
                     this.applyCoords(lat, lng, name, area);
                 });
             } catch (e) {
@@ -312,6 +325,7 @@ export default {
         },
         clearLocationInput() {
             this.modelLocation = null;
+            this.locationHint = '';
             this.position = {
                 name: null,
                 address: null,
@@ -335,20 +349,43 @@ export default {
             await this.commonStore.update(payload);
             this.$router.push({ name: 'frontend.restaurant' });
         },
-        async useCurrentLocation() {
+        async autoFillCurrentLocation() {
+            if (String(this.modelLocation || '').trim()) return;
             this.locating = true;
-            this.loading.isActive = true;
+            this.locationHint = this.$t('message.detecting_your_location') || 'Detecting your current location…';
             try {
                 const coords = await locationService.getCurrentPosition();
                 const geo = await locationService.reverseGeocode(coords.lat, coords.lng);
                 this.modelLocation = geo.name;
                 this.applyCoords(coords.lat, coords.lng, geo.name, geo);
-                await this.goToRestaurants(coords.lat, coords.lng, geo.name, geo);
+                this.locationHint = this.$t('message.location_auto_filled') || 'Current location filled. Edit or tap Search.';
+            } catch (e) {
+                this.locationHint = this.$t('message.allow_location_or_type')
+                    || 'Allow location access, or type your address to search.';
+            } finally {
+                this.locating = false;
+            }
+        },
+        async useCurrentLocation({navigate = true} = {}) {
+            this.locating = true;
+            this.loading.isActive = navigate;
+            this.locationHint = this.$t('message.detecting_your_location') || 'Detecting your current location…';
+            try {
+                const coords = await locationService.getCurrentPosition();
+                const geo = await locationService.reverseGeocode(coords.lat, coords.lng);
+                this.modelLocation = geo.name;
+                this.applyCoords(coords.lat, coords.lng, geo.name, geo);
+                this.locationHint = '';
+                if (navigate) {
+                    await this.goToRestaurants(coords.lat, coords.lng, geo.name, geo);
+                }
             } catch (e) {
                 const msg = e?.message === 'geolocation_unsupported'
                     ? "Your browser doesn't support geolocation."
                     : 'Could not get your current location. Please allow location access and try again.';
                 alertService.error(msg);
+                this.locationHint = this.$t('message.allow_location_or_type')
+                    || 'Allow location access, or type your address to search.';
             } finally {
                 this.locating = false;
                 this.loading.isActive = false;

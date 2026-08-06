@@ -29,6 +29,48 @@ class MenuTableSeeder extends Seeder
                 'updated_at' => now()
             ],
             [
+                'name'       => 'Restaurant Operations',
+                'language'   => 'restaurant_operations',
+                'url'        => '#',
+                'icon'       => 'lab lab-line-restaurants',
+                'priority'   => 21,
+                'status'     => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+                'children'   => [
+                    [
+                        'name'       => 'Tables',
+                        'language'   => 'tables',
+                        'url'        => 'tables',
+                        'icon'       => 'lab lab-line-restaurants',
+                        'priority'   => 22,
+                        'status'     => 1,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ],
+                    [
+                        'name'       => 'Waiter',
+                        'language'   => 'waiter',
+                        'url'        => 'waiter',
+                        'icon'       => 'lab lab-line-users',
+                        'priority'   => 23,
+                        'status'     => 1,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ],
+                    [
+                        'name'       => 'Kitchen',
+                        'language'   => 'kitchen',
+                        'url'        => 'kitchen',
+                        'icon'       => 'lab lab-line-flame',
+                        'priority'   => 24,
+                        'status'     => 1,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ],
+                ]
+            ],
+            [
                 'name'       => 'Restaurants',
                 'language'   => 'restaurants',
                 'url'        => 'restaurants',
@@ -507,48 +549,6 @@ class MenuTableSeeder extends Seeder
                     ]
                 ]
             ],
-            [
-                'name'       => 'Restaurant Operations',
-                'language'   => 'restaurant_operations',
-                'url'        => '#',
-                'icon'       => 'lab lab-line-restaurants',
-                'priority'   => 33,
-                'status'     => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-                'children'   => [
-                    [
-                        'name'       => 'Tables',
-                        'language'   => 'tables',
-                        'url'        => 'tables',
-                        'icon'       => 'lab lab-line-restaurants',
-                        'priority'   => 34,
-                        'status'     => 1,
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ],
-                    [
-                        'name'       => 'Waiter',
-                        'language'   => 'waiter',
-                        'url'        => 'waiter',
-                        'icon'       => 'lab lab-line-users',
-                        'priority'   => 35,
-                        'status'     => 1,
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ],
-                    [
-                        'name'       => 'Kitchen',
-                        'language'   => 'kitchen',
-                        'url'        => 'kitchen',
-                        'icon'       => 'lab lab-line-flame',
-                        'priority'   => 36,
-                        'status'     => 1,
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ],
-                ]
-            ]
         ];
 
         if (Menu::query()->exists()) {
@@ -594,7 +594,7 @@ class MenuTableSeeder extends Seeder
                 'language'   => 'restaurant_operations',
                 'url'        => '#',
                 'icon'       => 'lab lab-line-restaurants',
-                'priority'   => 33,
+                'priority'   => 21,
                 'status'     => 1,
                 'parent'     => 0,
                 'type'       => 1,
@@ -607,7 +607,7 @@ class MenuTableSeeder extends Seeder
                 'name'       => 'Restaurant Operations',
                 'language'   => 'restaurant_operations',
                 'icon'       => 'lab lab-line-restaurants',
-                'priority'   => 33,
+                'priority'   => 21,
                 'updated_at' => $now,
             ]);
         }
@@ -618,21 +618,21 @@ class MenuTableSeeder extends Seeder
                 'language' => 'tables',
                 'url'      => 'tables',
                 'icon'     => 'lab lab-line-restaurants',
-                'priority' => 34,
+                'priority' => 22,
             ],
             [
                 'name'     => 'Waiter',
                 'language' => 'waiter',
                 'url'      => 'waiter',
                 'icon'     => 'lab lab-line-users',
-                'priority' => 35,
+                'priority' => 23,
             ],
             [
                 'name'     => 'Kitchen',
                 'language' => 'kitchen',
                 'url'      => 'kitchen',
                 'icon'     => 'lab lab-line-flame',
-                'priority' => 36,
+                'priority' => 24,
             ],
         ];
 

@@ -119,11 +119,11 @@ export default {
     },
 
     /**
-     * Sticky status / kitchen alert bar (30s). Order numbers are clickable.
+     * Status / kitchen alert bar. Order numbers are clickable.
      */
-    statusAlert: function (message = "Update", tone = "info", timeout = 30000, meta = {}) {
+    statusAlert: function (message = "Update", tone = "info", timeout = 2000, meta = {}) {
         const toast = useToast();
-        const duration = Number(timeout) > 0 ? Number(timeout) : 30000;
+        const duration = Number(timeout) > 0 ? Number(timeout) : 2000;
         const content = buildStatusContent(message, meta.orderSerial, meta.orderUrl);
         const options = {
             position: "top-right",

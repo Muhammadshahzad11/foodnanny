@@ -19,6 +19,9 @@ import 'swiper/css';
 import 'swiper/css/bundle';
 import './echo.js';
 import VueApexCharts from "vue3-apexcharts";
+import {syncSilentPrintFromUrl} from "./services/printPreference.js";
+
+syncSilentPrintFromUrl();
 
 // Capture PWA install prompt before Vue mounts (browser may fire early)
 window.__ctcPwa = window.__ctcPwa || { deferredPrompt: null, installed: false };
@@ -62,7 +65,7 @@ app.use(VueSimpleAlert)
 app.use(VueApexCharts);
 app.use(Toast, {
     position: "top-right",
-    timeout: 30000,
+    timeout: 2000,
     closeOnClick: true,
     pauseOnFocusLoss: true,
     pauseOnHover: true,

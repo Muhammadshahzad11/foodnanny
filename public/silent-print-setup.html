@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Silent Print Setup — Cost to Cost Foods</title>
+    <style>
+        :root {
+            --bg: #f6f7fb;
+            --card: #fff;
+            --text: #1f1f39;
+            --muted: #6e7191;
+            --primary: #0b8f4d;
+            --border: #e5e7eb;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            background: linear-gradient(160deg, #eef8f1, var(--bg) 40%, #f3efe8);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 32px 16px;
+        }
+        .wrap { max-width: 720px; margin: 0 auto; }
+        h1 { font-size: 1.6rem; margin: 0 0 8px; }
+        p { color: var(--muted); line-height: 1.5; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 22px;
+            margin-top: 18px;
+            box-shadow: 0 8px 24px rgba(31, 31, 57, 0.06);
+        }
+        ol { margin: 0; padding-left: 1.2rem; color: var(--text); }
+        li { margin: 8px 0; line-height: 1.45; }
+        .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+        button, a.btn {
+            appearance: none;
+            border: 0;
+            border-radius: 999px;
+            padding: 10px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .primary { background: var(--primary); color: #fff; }
+        .ghost { background: #f3f4f8; color: var(--text); }
+        code {
+            background: #f3f4f8;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        .note {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: #fff8e8;
+            color: #8a5a00;
+            font-size: 0.92rem;
+        }
+        .ok {
+            background: #e8f8ef;
+            color: #0b8f4d;
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Silent / Direct Print Setup</h1>
+    <p>
+        Browsers cannot hide the print dialog from a normal tab. For <strong>Print Preview OFF</strong>
+        (direct print), open POS with Chrome’s <code>--kiosk-printing</code> flag and set your thermal
+        printer as the Windows default (not “Save as PDF”).
+    </p>
+
+    <div class="card">
+        <h2 style="margin:0 0 8px;font-size:1.1rem;">Steps</h2>
+        <ol>
+            <li>Connect your TVS / thermal printer and set it as the <strong>Windows default printer</strong>.</li>
+            <li>Download the launcher below and put it on the POS desktop.</li>
+            <li>Always open POS with that launcher (not a normal Chrome bookmark).</li>
+            <li>In POS, set <strong>Print Preview → OFF</strong>.</li>
+            <li>Print KOT / Customer receipt — it goes straight to the printer (no dialog).</li>
+        </ol>
+        <div class="actions">
+            <button class="primary" type="button" onclick="downloadBat('pos')">Download POS Silent Print (.bat)</button>
+            <button class="ghost" type="button" onclick="downloadBat('waiter')">Download Waiter Silent Print (.bat)</button>
+            <a class="btn ghost" id="openPos" href="#">Open POS with silent flag</a>
+        </div>
+        <p class="note" id="status">
+            Silent print is not marked ready on this browser yet. Use the .bat launcher once.
+        </p>
+    </div>
+</div>
+<script>
+    const origin = window.location.origin;
+    const posUrl = origin + '/admin/pos?silent_print=1';
+    const waiterUrl = origin + '/admin/waiter?silent_print=1';
+
+    document.getElementById('openPos').href = posUrl;
+
+    function batContent(target) {
+        const url = target === 'waiter' ? waiterUrl : posUrl;
+        return [
+            '@echo off',
+            'REM Cost to Cost Foods — Silent Print launcher',
+            'REM Requires Google Chrome. Sets default printer print without dialog.',
+            'set "CHROME="',
+            'if exist "%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe" set "CHROME=%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe"',
+            'if exist "%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe" set "CHROME=%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe"',
+            'if exist "%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe" set "CHROME=%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe"',
+            'if "%CHROME%"=="" (',
+            '  echo Chrome not found. Install Google Chrome first.',
+            '  pause',
+            '  exit /b 1',
+            ')',
+            'start "" "%CHROME%" --kiosk-printing --app="' + url + '"',
+            ''
+        ].join('\r\n');
+    }
+
+    function downloadBat(target) {
+        const blob = new Blob([batContent(target)], {type: 'application/octet-stream'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = target === 'waiter' ? 'launch-waiter-silent-print.bat' : 'launch-pos-silent-print.bat';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('silent_print') === '1') {
+            localStorage.setItem('fn_silent_print_ready', '1');
+        }
+        const ready = localStorage.getItem('fn_silent_print_ready') === '1';
+        const el = document.getElementById('status');
+        if (ready) {
+            el.className = 'note ok';
+            el.textContent = 'Silent print is marked ready on this browser. Use Print Preview OFF on POS.';
+        }
+    } catch (e) {}
+</script>
+</body>
+</html>

@@ -19,6 +19,16 @@ class PosOrderRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (!$this->filled('table_id')) {
+            $this->merge(['table_id' => null]);
+        }
+        if (!$this->filled('order_note')) {
+            $this->merge(['order_note' => null]);
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -36,7 +46,11 @@ class PosOrderRequest extends FormRequest
             'items'           => ['required', 'json', new ValidJsonOrder],
             'payment_note'    => request('payment_method') === PosPaymentMethod::CARD || request('payment_method') === PosPaymentMethod::MOBILE_BANKING || request('payment_method') === PosPaymentMethod::OTHER ? (request('payment_method') === PosPaymentMethod::CARD ? ['required', 'numeric', 'min_digits:4', 'max_digits:4'] : ['required', 'string']) : ['nullable', 'string'],
             'received_amount' => request('payment_method') === PosPaymentMethod::CASH ? ['required', 'numeric'] : ['nullable', 'numeric'],
-
+            // POS service channel: takeaway / dine-in / delivery
+            'order_type'      => ['required', 'numeric', 'in:5,10,20'],
+            'table_id'        => ['nullable', 'integer', 'exists:restaurant_tables,id'],
+            'order_note'      => ['nullable', 'string', 'max:500'],
+            'customer_name'   => ['nullable', 'string', 'max:120'],
         ];
     }
 
@@ -45,6 +59,10 @@ class PosOrderRequest extends FormRequest
         $validator->after(function ($validator) {
             if (request('payment_method') == PosPaymentMethod::CASH && ((float)request('total') > (float)request('received_amount'))) {
                 $validator->errors()->add('received_amount', trans('all.message.received_amount_can_not_less'));
+            }
+            // Dine-in requires a table
+            if ((int) request('order_type') === \App\Enums\OrderType::DINING_TABLE && (int) request('table_id') <= 0) {
+                $validator->errors()->add('table_id', trans('all.message.table_required_for_dine_in') ?: 'Please select a table for dine-in orders.');
             }
         });
     }

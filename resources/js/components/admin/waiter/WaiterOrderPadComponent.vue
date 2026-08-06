@@ -201,7 +201,16 @@
         </span>
     </button>
 
-    <!-- Order placed confirmation → thank you, details, Print KOT -->
+    <CustomerReceiptPrintSheet
+        :order="customerReceiptOrder"
+        :restaurant="customerReceiptRestaurant"
+        :items="customerReceiptItems"
+        :waiter-name="customerReceiptWaiter"
+        :table-label="customerReceiptTable"
+        :cashier-name="customerReceiptCashier"
+    />
+
+    <!-- Order placed confirmation → thank you, KOT + Customer print -->
     <teleport to="body">
         <div
             v-if="showOrderPlaced"
@@ -267,10 +276,18 @@
                     <button
                         type="button"
                         class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2.5 text-white bg-amber-600"
-                        :disabled="printingKot"
+                        :disabled="printingKot || printingReceipt"
                         @click.prevent="printKotFromModal"
                     >
                         {{ printingKot ? 'Printing…' : $t('button.print_kot') }}
+                    </button>
+                    <button
+                        type="button"
+                        class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2.5 text-white bg-[#1AB759]"
+                        :disabled="printingKot || printingReceipt"
+                        @click.prevent="printCustomerFromModal"
+                    >
+                        {{ printingReceipt ? 'Printing…' : $t('button.customer_print') }}
                     </button>
                     <button
                         type="button"
@@ -296,6 +313,7 @@
 import {provide} from "vue";
 import LoadingComponent from "../../common/LoadingComponent.vue";
 import KitchenTicketPrintSheet from "../kitchen/KitchenTicketPrintSheet.vue";
+import CustomerReceiptPrintSheet from "../components/order/CustomerReceiptPrintSheet.vue";
 import statusEnum from "../../../enums/modules/statusEnum.js";
 import orderStatusEnum from "../../../enums/modules/orderStatusEnum.js";
 import {useItemStore} from "../../../stores/item.js";
@@ -309,14 +327,23 @@ import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
 import {useWaiterCartStore} from "../../../stores/waiterCart.js";
 import {useWaiterOrderStore} from "../../../stores/waiterOrder.js";
 import {useWaiterTableStore} from "../../../stores/waiterTable.js";
+import {useAuthStore} from "../../../stores/auth.js";
 import appService from "../../../services/appService.js";
 import alertService from "../../../services/alertService.js";
 import {apiErrorMessage} from "../../../services/apiError.js";
+import {printKot as printKotSheet, printReceipt, PrintUnavailableError} from "../../../services/printService.js";
 import _ from "lodash";
 
 export default {
     name: "WaiterOrderPadComponent",
-    components: {LoadingComponent, KitchenTicketPrintSheet, ItemComponent, Swiper, SwiperSlide},
+    components: {
+        LoadingComponent,
+        KitchenTicketPrintSheet,
+        CustomerReceiptPrintSheet,
+        ItemComponent,
+        Swiper,
+        SwiperSlide,
+    },
     setup() {
         const waiterCartStore = useWaiterCartStore();
         provide('cartStore', waiterCartStore);
@@ -330,6 +357,7 @@ export default {
             posOfferStore: usePosOfferStore(),
             posCategoryStore: usePosCategoryStore(),
             frontendSettingStore: useFrontendSettingStore(),
+            authStore: useAuthStore(),
         };
     },
     data() {
@@ -339,6 +367,7 @@ export default {
             showOrderPlaced: false,
             placedOrderSnapshot: null,
             printingKot: false,
+            printingReceipt: false,
             posOpen: false,
             offer: {},
             table: null,
@@ -487,6 +516,26 @@ export default {
                 return this.placedOrderSnapshot.note || '';
             }
             return this.waiterOrderStore.show?.order_note || this.orderNote || '';
+        },
+        customerReceiptOrder() {
+            return this.waiterOrderStore.show || {};
+        },
+        customerReceiptRestaurant() {
+            return this.waiterOrderStore.show?.restaurant || {};
+        },
+        customerReceiptItems() {
+            return this.waiterOrderStore.show?.order_items || [];
+        },
+        customerReceiptWaiter() {
+            return this.waiterOrderStore.show?.waiter?.name || this.authStore.info?.name || '';
+        },
+        customerReceiptTable() {
+            const t = this.waiterOrderStore.show?.table || this.table;
+            if (!t) return '';
+            return [t.table_number, t.name].filter(Boolean).join(' · ');
+        },
+        customerReceiptCashier() {
+            return this.authStore.info?.name || '';
         },
         sendKitchenButtonLabel() {
             if (this.waiterOrderStore.context.orderId && !this.waiterOrderStore.context.isDraft) {
@@ -933,6 +982,27 @@ export default {
         async printKotFromModal() {
             await this.printKot();
         },
+        async printCustomerFromModal() {
+            const orderId = this.waiterOrderStore.context.orderId;
+            if (!orderId || this.waiterOrderStore.context.isDraft) {
+                alertService.warning(this.$t('message.waiter_send_before_kot'));
+                return;
+            }
+            try {
+                this.printingReceipt = true;
+                if (!this.waiterOrderStore.show?.order_items?.length) {
+                    await this.waiterOrderStore.view(orderId);
+                }
+                await this.$nextTick();
+                await printReceipt();
+            } catch (err) {
+                alertService.error(
+                    err?.response?.data?.message || this.$t('message.receipt_print_failed')
+                );
+            } finally {
+                this.printingReceipt = false;
+            }
+        },
         async printKot({silent = false} = {}) {
             const orderId = this.waiterOrderStore.context.orderId;
             if (!orderId || this.waiterOrderStore.context.isDraft) {
@@ -949,12 +1019,15 @@ export default {
                 this.loading.isActive = false;
                 this.printingKot = false;
                 await this.$nextTick();
-                window.print();
+                await printKotSheet();
             } catch (err) {
                 this.loading.isActive = false;
                 this.printingKot = false;
                 if (!silent) {
-                    alertService.error(apiErrorMessage(err, this.$t('message.something_wrong')));
+                    const msg = (err instanceof PrintUnavailableError || err?.code === 'PRINT_UNAVAILABLE')
+                        ? this.$t('message.printer_not_connected')
+                        : apiErrorMessage(err, this.$t('message.something_wrong'));
+                    alertService.error(msg);
                 }
             }
         },

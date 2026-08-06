@@ -22,7 +22,7 @@ function showStatusAlert(payload) {
     const orderSerial = notificationOrderSerial(payload);
     const orderUrl = resolveNotificationUrl(payload);
 
-    alertService.statusAlert(text, color, 30000, {
+    alertService.statusAlert(text, color, 2000, {
         orderSerial,
         orderUrl,
     });
