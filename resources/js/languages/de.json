@@ -16,6 +16,7 @@
         "theme": "Design",
         "payment_gateway": "Zahlungsgateway",
         "storage": "Speicher",
+        "cache": "Cache",
         "order_setup": "Bestellungs-Setup",
         "taxes": "Steuern",
         "coupons": "Gutscheine",
@@ -819,7 +820,20 @@
         "restaurant_registration_received": "Registrierung erhalten",
         "go_to_login": "Zum Login",
         "registration_complete": "Registrierung abgeschlossen",
-        "step_of": "Schritt {current} von {total}"
+        "step_of": "Schritt {current} von {total}",
+        "clear_cache": "Clear Cache",
+        "cache_application": "Application cache",
+        "cache_config": "Config cache",
+        "cache_routes": "Route cache",
+        "cache_views": "View cache",
+        "last_updated": "Last Updated",
+        "estimated_preparation_time": "Estimated preparation time",
+        "track_order_received": "Order Received",
+        "track_accepted": "Accepted",
+        "track_preparing": "Preparing",
+        "track_ready": "Ready",
+        "track_on_the_way": "On the Way",
+        "track_completed": "Completed"
     },
     "button": {
         "action": "Aktion",
@@ -954,7 +968,9 @@
         "mark_done": "Als erledigt markieren",
         "start_preparing": "Zubereitung starten",
         "approve": "Genehmigen",
-        "add_and_send_to_kitchen": "Hinzufügen & an Küche senden"
+        "add_and_send_to_kitchen": "Hinzufügen & an Küche senden",
+        "clear_cache": "Clear Cache",
+        "clearing_cache": "Clearing Cache..."
     },
     "number": {
         "0": "0",
@@ -1134,6 +1150,22 @@
         "restaurant_thank_you_login_note": "Sie können sich erst anmelden, wenn Ihr Restaurant freigegeben wurde. Nach der Freigabe melden Sie sich mit derselben E-Mail oder Telefonnummer an.",
         "restaurant_approve_confirm": "Diese Restaurant-Registrierung freigeben und dem Inhaber die Anmeldung erlauben?",
         "restaurant_approved_successfully": "Restaurant erfolgreich freigegeben. Der Inhaber kann sich jetzt anmelden.",
-        "restaurant_pending_approval": "Ihre Restaurant-Registrierung wartet auf die Freigabe durch einen Administrator. Sie können sich anmelden, sobald sie freigegeben wurde."
+        "restaurant_pending_approval": "Ihre Restaurant-Registrierung wartet auf die Freigabe durch einen Administrator. Sie können sich anmelden, sobald sie freigegeben wurde.",
+        "clear_cache_help": "Clear application, config, route, and view caches. Use this after updates when the site shows outdated data or settings.",
+        "cache_cleared_successfully": "Cache cleared successfully.",
+        "cache_clear_failed": "Unable to clear cache. Please try again.",
+        "cache_cleared_items": "Cleared",
+        "dine_in_order_completed": "Your order is complete. Enjoy your meal!",
+        "dine_in_pay_at_counter_reminder": "Please pay at the counter if you have not already.",
+        "your_food_is_ready_for_table": "Your food is ready and will be served to your table.",
+        "order_status_popup_received": "Your order has been received.",
+        "order_status_popup_accepted": "Your order has been accepted.",
+        "order_status_popup_preparing": "Your food is being prepared.",
+        "order_status_popup_ready": "Your food is ready.",
+        "order_status_popup_on_the_way": "Your food is on the way.",
+        "order_status_popup_completed": "Your order has been completed.",
+        "order_status_popup_rejected": "Your order was rejected.",
+        "order_status_popup_canceled": "Your order was cancelled.",
+        "order_status_popup_updated": "Your order status was updated."
     }
 }

@@ -145,17 +145,17 @@
                 </p>
                 <div
                     v-if="order.table"
-                    class="mb-5 overflow-hidden rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 text-left"
+                    class="mb-5 overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-emerald-50 via-white to-amber-50 text-left"
                 >
                     <div class="flex gap-3 p-3.5">
-                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">
-                            <i class="lab-line-info-circle text-lg"></i>
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-white">
+                            <i class="lab-line-clock text-lg"></i>
                         </div>
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-wide text-amber-800">
-                                {{ $t('label.cancel_window') }}
+                            <p class="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                                {{ $t('label.cancel_policy_title') }}
                             </p>
-                            <p class="mt-1 text-sm leading-5 text-amber-950">
+                            <p class="mt-1 text-sm leading-5 text-heading">
                                 {{ $t('message.scan_menu_cancel_window') }}
                             </p>
                         </div>

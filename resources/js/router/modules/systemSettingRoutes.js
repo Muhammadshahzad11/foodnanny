@@ -14,6 +14,7 @@ const ThemeComponent              = () => import("../../components/admin/systemS
 const NotificationAlertComponent  = () => import("../../components/admin/systemSetting/NotificationAlert/NotificationAlertComponent.vue");
 const PaymentGatewayComponent     = () => import("../../components/admin/systemSetting/PaymentGateway/PaymentGatewayComponent.vue");
 const StorageComponent            = () => import("../../components/admin/systemSetting/Storage/StorageComponent.vue");
+const CacheComponent              = () => import("../../components/admin/systemSetting/Cache/CacheComponent.vue");
 const BenefitComponent            = () => import("../../components/admin/systemSetting/Benefit/BenefitComponent.vue");
 const BenefitListComponent        = () => import("../../components/admin/systemSetting/Benefit/BenefitListComponent.vue");
 const BenefitShowComponent        = () => import("../../components/admin/systemSetting/Benefit/BenefitShowComponent.vue");
@@ -493,6 +494,17 @@ export default [
                     auth: true,
                     permissionUrl: "system-settings",
                     breadcrumb: "storage"
+                },
+            },
+            {
+                path: "cache",
+                component: CacheComponent,
+                name: "admin.systemSettings.cache",
+                meta: {
+                    template: "admin",
+                    auth: true,
+                    permissionUrl: "system-settings",
+                    breadcrumb: "cache"
                 },
             },
             {

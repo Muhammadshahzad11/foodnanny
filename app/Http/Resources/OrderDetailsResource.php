@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Enums\Ask;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
+use App\Enums\PaymentGateway;
 use App\Libraries\AppLibrary;
 use Carbon\Carbon;
 use Dipokhalder\Settings\Facades\Settings;
@@ -61,6 +62,7 @@ class OrderDetailsResource extends JsonResource
             'delivery_date'               => $this->is_advance_order == Ask::YES ? AppLibrary::increaseDate($this->order_datetime, 1) : AppLibrary::date($this->order_datetime),
             'delivery_time'               => AppLibrary::deliveryTime($this->delivery_time),
             'payment_method'              => $this->payment_method,
+            'payment_method_label'        => $this->paymentMethodLabel(),
             'payment_status'              => $this->payment_status,
             'is_advance_order'            => $this->is_advance_order,
             'preparation_time'            => $this->preparation_time,
@@ -69,10 +71,12 @@ class OrderDetailsResource extends JsonResource
             'is_received'                 => $this->is_received,
             'status_name'                 => trans('order_status.' . $this->status),
             'reason'                      => $this->reason,
-            'is_scan_menu_order'          => $this->isScanMenuOrder(),
-            'cancel_window_seconds'       => $this->isScanMenuOrder() ? 120 : null,
+            'is_scan_menu_order'          => $this->resource->isScanMenuOrder(),
+            'cancel_window_seconds'       => $this->resource->isScanMenuOrder() ? 600 : null,
             'cancel_expires_at'           => $this->cancelExpiresAt(),
             'can_cancel'                  => $this->customerCanCancel(),
+            'updated_at'                  => AppLibrary::datetime($this->updated_at),
+            'updated_at_iso'              => optional($this->updated_at)?->toIso8601String(),
             'restaurant_review_status'    => $this->restaurantReviewStatus(),
             'delivery_boy_review_status'  => $this->deliveryBoyReviewStatus(),
             'cash_back_amount'            => $this->posDetail?->received_amount - $this->total,
@@ -89,18 +93,30 @@ class OrderDetailsResource extends JsonResource
         ];
     }
 
-    private function isScanMenuOrder(): bool
+    private function paymentMethodLabel(): string
     {
-        return (int) $this->order_type === OrderType::DINING_TABLE && (int) $this->table_id > 0;
+        $method = (int) $this->payment_method;
+
+        if ($method === PaymentGateway::CASH_ON_DELIVERY) {
+            return $this->resource->isScanMenuOrder()
+                ? trans('all.label.pay_at_counter')
+                : trans('all.label.cash_on_delivery');
+        }
+
+        if ($this->transaction?->payment_method) {
+            return (string) $this->transaction->payment_method;
+        }
+
+        return (string) (trans('payment_gateway.' . $method) ?: '');
     }
 
     private function cancelExpiresAt(): ?string
     {
-        if (!$this->isScanMenuOrder() || !$this->order_datetime) {
+        if (!$this->resource->isScanMenuOrder() || !$this->order_datetime) {
             return null;
         }
 
-        return Carbon::parse($this->order_datetime)->addSeconds(120)->toIso8601String();
+        return Carbon::parse($this->order_datetime)->addMinutes(10)->toIso8601String();
     }
 
     private function customerCanCancel(): bool
@@ -109,7 +125,7 @@ class OrderDetailsResource extends JsonResource
             return false;
         }
 
-        if (!$this->isScanMenuOrder()) {
+        if (!$this->resource->isScanMenuOrder()) {
             return true;
         }
 
@@ -117,7 +133,7 @@ class OrderDetailsResource extends JsonResource
             return false;
         }
 
-        return Carbon::now()->lte(Carbon::parse($this->order_datetime)->addSeconds(120));
+        return Carbon::now()->lte(Carbon::parse($this->order_datetime)->addMinutes(10));
     }
 
     private function restaurantReviewStatus(): bool

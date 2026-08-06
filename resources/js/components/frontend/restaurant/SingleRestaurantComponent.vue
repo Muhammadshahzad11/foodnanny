@@ -1,11 +1,11 @@
 <template>
     <div v-if="isMenuFixed && carts.length > 0" @click.prevent="openCanvas('cart-canvas')"
-        class="fixed lg:block hidden top-1/2 -translate-y-1/2 ltr:right-0 rtl:left-0 ltr:rounded-l-xl rtl:rounded-r-xl z-30 overflow-hidden cursor-pointer">
-        <div class="flex flex-col items-center justify-center text-center gap-1 py-2 px-3.5 bg-primary text-white">
+        class="fixed lg:block hidden top-1/2 -translate-y-1/2 ltr:right-0 rtl:left-0 z-30 overflow-hidden cursor-pointer restaurant-float-cart">
+        <div class="flex flex-col items-center justify-center text-center gap-1 py-2.5 px-4 bg-primary text-white">
             <i class="lab-fill-bag text-2xl leading-none"></i>
             <span class="text-sm font-medium">{{ carts.length }} {{ $t('label.items') }}</span>
         </div>
-        <span class="text-sm font-medium py-2 px-3.5 bg-heading text-white w-full">
+        <span class="text-sm font-semibold py-2.5 px-4 bg-heading text-white w-full block text-center">
             {{
                 currencyFormat(subtotal, setting.site_digit_after_decimal_point, setting.site_default_currency_symbol,
                     setting.site_currency_position)
@@ -13,7 +13,7 @@
         </span>
     </div>
 
-    <section class="mb-24 md:mb-14">
+    <section class="restaurant-page mb-24 md:mb-14">
         <div class="container">
             <DineInBannerComponent
                 :visible="isDineInSession"
@@ -21,231 +21,234 @@
                 :zone="dineInContextStore.context?.zone || ''"
                 :allow-exit="true"
                 @exit="exitDineIn"/>
-            <div class="relative pb-2">
+
+            <div class="restaurant-hero relative overflow-hidden mb-5 sm:mb-8">
                 <img :src="restaurant.cover" alt="banner"
-                    class="rounded-[0%_0%_30%_30%/_0%_0%_15%_15%] w-full h-[200px] md:h-[250px] object-cover">
-                <img :src="restaurant.logo" alt="logo"
-                    class="absolute -bottom-[3%] ltr:left-6 rtl:right-6 w-16 sm:w-20 h-16 sm:h-20 object-cover rounded-full border-2 border-white">
-            </div>
-            <div class="flex flex-col sm:flex-row items-start justify-between gap-y-6 gap-x-4 py-6">
-                <div>
-                    <h3 class="text-2xl sm:text-[40px] leading-10 font-semibold capitalize mb-4">
-                        {{ restaurant.name }}
-                    </h3>
-                    <ul class="mb-2.5 flex flex-wrap gap-y-2.5 gap-x-1.5 w-full max-w-xl text-paragraph">
-                        <li class="text-sm flex items-center gap-1.5">
-                            {{ restaurant.cuisine }}
-                        </li>
-                        <li class="text-sm flex items-center gap-1.5 before:content-[''] before:w-1 before:h-1 before:rounded-full before:bg-paragraph">
-                            {{ restaurant.distance }} {{ $t('label.km') }}
-                        </li>
-                        <li v-if="restaurant.rating_star > 0 && restaurant.rating_star_count > 0"
-                            class="text-sm flex items-center gap-1.5 before:content-[''] before:w-1 before:h-1 before:rounded-full before:bg-paragraph">
-                            <div class="flex items-center gap-1">
-                                <i class="lab-fill-star-round -mt-0.5 text-amber-500"></i>
-                                <b class="font-normal text-heading">
-                                    {{ (restaurant.rating_star / restaurant.rating_star_count).toFixed(1) }}
-                                </b>
-                                <p>
-                                    ({{ restaurant.rating_star_count }}
-                                    {{ restaurant.rating_star_count > 1 ? $t('label.reviews') : $t('label.review') }})
-                                </p>
+                    class="restaurant-hero__media absolute inset-0 w-full h-full object-cover">
+                <div class="restaurant-hero__veil absolute inset-0"></div>
+                <div class="relative z-[1] flex min-h-[220px] sm:min-h-[300px] lg:min-h-[340px] flex-col justify-end p-4 sm:p-8 lg:p-10">
+                    <div class="flex flex-col gap-4 sm:gap-5 sm:flex-row sm:items-end sm:justify-between">
+                        <div class="restaurant-hero__copy max-w-3xl">
+                            <div class="mb-3 sm:mb-4 flex flex-wrap items-end gap-3 sm:gap-4">
+                                <img :src="restaurant.logo" alt="logo"
+                                    class="restaurant-hero__logo h-14 w-14 sm:h-20 sm:w-20 object-cover ring-2 ring-white/80">
+                                <div
+                                    :class="restaurant.availability === enums.availabilityEnum.OPEN
+                                        ? 'bg-primary/90 text-white'
+                                        : 'bg-rose-600/90 text-white'"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] sm:text-xs font-semibold uppercase tracking-wide backdrop-blur-sm">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-white animate-pulse"></span>
+                                    {{
+                                        restaurant.availability === enums.availabilityEnum.OPEN
+                                            ? $t('label.open_now')
+                                            : $t('label.close_now')
+                                    }}
+                                </div>
                             </div>
-                        </li>
-                    </ul>
-                    <ul class="flex flex-wrap gap-y-2.5 gap-x-1.5 w-full max-w-2xl text-paragraph">
-                        <li
-                            class="text-sm flex items-center gap-1.5">
-                            <div class="flex items-center gap-1">
-                                <i :class="restaurant.availability === enums.availabilityEnum.OPEN ? 'text-green-500' : 'text-red-500'"
-                                    class="lab-line-clock -mt-0.5 "></i>
-                                <p :class="restaurant.availability === enums.availabilityEnum.OPEN ? 'text-green-500' : 'text-red-500'"
-                                    class="capitalize">{{
-                                        restaurant.availability === enums.availabilityEnum.OPEN ? $t('label.open_now') :
-                                            $t('label.close_now')
-                                    }}</p>
+                            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-semibold leading-tight text-white capitalize mb-2 sm:mb-3">
+                                {{ restaurant.name }}
+                            </h1>
+                            <div class="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1.5 text-xs sm:text-sm text-white/85">
+                                <span>{{ restaurant.cuisine }}</span>
+                                <span class="opacity-40">·</span>
+                                <span>{{ restaurant.distance }} {{ $t('label.km') }}</span>
+                                <template v-if="restaurant.rating_star > 0 && restaurant.rating_star_count > 0">
+                                    <span class="opacity-40">·</span>
+                                    <span class="inline-flex items-center gap-1">
+                                        <i class="lab-fill-star-round text-amber-300"></i>
+                                        <strong class="font-semibold text-white">
+                                            {{ (restaurant.rating_star / restaurant.rating_star_count).toFixed(1) }}
+                                        </strong>
+                                        <span class="text-white/70">
+                                            ({{ restaurant.rating_star_count }}
+                                            {{ restaurant.rating_star_count > 1 ? $t('label.reviews') : $t('label.review') }})
+                                        </span>
+                                    </span>
+                                </template>
                             </div>
-                        </li>
-                        <li
-                            class="text-sm flex items-center gap-1.5 before:content-[''] before:w-1 before:h-1 before:rounded-full before:bg-paragraph">
-                            {{ restaurant.today }}
-                            <span v-if="restaurant.single_time_slots">, {{ restaurant.single_time_slots }}</span>
-                        </li>
-                        <li
-                            class="text-sm flex items-center gap-1.5 before:content-[''] before:w-1 before:h-1 before:rounded-full before:bg-paragraph">
-                            {{ $t('label.minimum_order_limit') }} : {{ minimumOrderLimit }}
-                        </li>
-                    </ul>
-                </div>
+                            <div class="mt-2.5 sm:mt-3 flex flex-wrap gap-2 text-[11px] sm:text-sm text-white/80">
+                                <span class="restaurant-meta-chip">
+                                    <i class="lab-line-clock"></i>
+                                    {{ restaurant.today }}
+                                    <template v-if="restaurant.single_time_slots"> · {{ restaurant.single_time_slots }}</template>
+                                </span>
+                                <span class="restaurant-meta-chip">
+                                    {{ $t('label.minimum_order_limit') }}: {{ minimumOrderLimit }}
+                                </span>
+                            </div>
+                        </div>
 
-                <nav class="flex items-center sm:self-end gap-3">
-                    <button @click.prevent="openInfoModal"
-                        class="flex items-center gap-2 h-11 px-4 rounded-3xl transition-all bg-gray-100 hover:text-primary text-heading">
-                        <i class="lab-line-info-circle text-xl"></i>
-                        <span class="capitalize text-sm font-medium whitespace-nowrap">
-                            {{ $t('label.more_info') }}
-                        </span>
-                    </button>
-                    <button @click.prevent="favorite(restaurant, restaurant.favorite = !restaurant.favorite)"
-                        class="flex items-center justify-center h-11 w-11 rounded-full transition-all bg-gray-100 hover:text-primary">
-                        <i :class="restaurant.favorite ? 'lab-fill-heart text-primary' : 'lab-line-heart'"
-                            class="text-xl"></i>
-                    </button>
-                </nav>
-            </div>
-
-            <div
-                class="mb-5 overflow-hidden rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 shadow-[0_8px_24px_rgba(245,158,11,0.18)]"
-            >
-                <div class="flex gap-3 p-4 sm:p-5">
-                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-500 text-lg shadow-md">
-                        ⚠️
+                        <nav class="flex items-center gap-2 shrink-0">
+                            <button @click.prevent="openInfoModal"
+                                class="inline-flex items-center gap-2 h-10 sm:h-11 px-3.5 sm:px-4 bg-white/95 text-heading hover:bg-white transition">
+                                <i class="lab-line-info-circle text-xl text-primary"></i>
+                                <span class="capitalize text-sm font-medium whitespace-nowrap">
+                                    {{ $t('label.more_info') }}
+                                </span>
+                            </button>
+                            <button @click.prevent="favorite(restaurant, restaurant.favorite = !restaurant.favorite)"
+                                class="inline-flex items-center justify-center h-10 w-10 sm:h-11 sm:w-11 bg-white/95 text-heading hover:bg-white transition">
+                                <i :class="restaurant.favorite ? 'lab-fill-heart text-primary' : 'lab-line-heart'"
+                                    class="text-xl"></i>
+                            </button>
+                        </nav>
                     </div>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-sm font-bold tracking-wide text-amber-900 sm:text-base">
+                </div>
+            </div>
+
+            <aside class="restaurant-notice mb-5 sm:mb-8">
+                <div class="flex gap-3 sm:gap-4">
+                    <div class="restaurant-notice__icon shrink-0">
+                        <i class="lab-line-info-circle text-xl"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="restaurant-notice__title text-xs sm:text-sm font-bold tracking-wide uppercase">
                             {{ $t('label.important_notice') }}
                         </p>
-                        <p class="mt-1.5 text-sm leading-6 text-amber-950">
+                        <p class="restaurant-notice__body mt-1.5 text-xs sm:text-sm leading-6">
                             {{ $t('message.restaurant_platform_disclaimer') }}
                         </p>
-                        <p class="mt-2 text-sm font-medium leading-6 text-amber-900">
+                        <p class="restaurant-notice__emphasis mt-2 text-xs sm:text-sm font-semibold leading-6">
                             {{ $t('message.restaurant_contact_disclaimer') }}
                         </p>
                     </div>
                 </div>
-            </div>
+            </aside>
 
-            <div v-if="coupons.length > 0" class="pt-3 sm:pt-4 pb-4 sm:pb-6 border-t border-gray-100">
-                <h3 class="sm:text-xl font-medium capitalize mb-2.5">{{ $t('label.available_deals') }}</h3>
-                <Swiper :dir="displayMode" :loop="false" :speed="1000" :navigation="true" :modules="modules" :breakpoints="couponBreakPoints" class="middle-navigate">
-                    <SwiperSlide @click.prevent="openCouponModal(coupon.id)" v-for="coupon in coupons" class="mobile:!w-60 cursor-pointer">
-                        <div class="w-full p-3 rounded-lg border border-gray-100">
-                            <h3 class="flex items-center gap-1 mb-1.5">
-                                <i v-if="coupon.type === enums.discountEnum.DEFAULT" :class="coupon.discount_type === enums.discountTypeEnum.PERCENTAGE ? 'lab-line-offers' : 'lab-line-coupon'" class="text-base leading-none -mt-[0.5px] text-primary"></i>
-                                <i v-if="coupon.type === enums.discountEnum.FREE_DELIVERY"
-                                    class="lab-line-bike text-base leading-none -mt-[0.5px] text-primary"></i>
-                                <span v-if="coupon.type === enums.discountEnum.DEFAULT"
-                                    class="text-sm font-medium text-primary">
-                                    {{ coupon.discount_alt }} {{ $t('label.off') }}
+            <div v-if="coupons.length > 0" class="mb-7 sm:mb-10 overflow-hidden">
+                <div class="mb-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-primary mb-1">{{ $t('label.offers') }}</p>
+                    <h2 class="text-xl sm:text-2xl font-semibold text-heading capitalize">{{ $t('label.available_deals') }}</h2>
+                </div>
+                <Swiper :dir="displayMode" :loop="false" :speed="800" :navigation="true" :modules="modules" :breakpoints="couponBreakPoints" class="middle-navigate restaurant-deals !overflow-hidden">
+                    <SwiperSlide @click.prevent="openCouponModal(coupon.id)" v-for="coupon in coupons" :key="coupon.id" class="!w-[85%] xs:!w-72 sm:!w-auto mobile:!w-64 cursor-pointer">
+                        <div class="restaurant-deal h-full p-4 transition duration-300">
+                            <div class="mb-3 flex items-center gap-2">
+                                <span class="inline-flex h-9 w-9 items-center justify-center bg-primary/10 text-primary rounded-lg">
+                                    <i v-if="coupon.type === enums.discountEnum.DEFAULT" :class="coupon.discount_type === enums.discountTypeEnum.PERCENTAGE ? 'lab-line-offers' : 'lab-line-coupon'" class="text-lg"></i>
+                                    <i v-if="coupon.type === enums.discountEnum.FREE_DELIVERY" class="lab-line-bike text-lg"></i>
                                 </span>
-                                <span v-if="coupon.type === enums.discountEnum.FREE_DELIVERY"
-                                    class="text-sm font-medium text-primary">
-                                    {{ textShortener(coupon.name, 14) }}
-                                </span>
-                                <span class="text-sm text-secondary uppercase">({{
-                                    textShortener(coupon.code, 10)
-                                }})</span>
-                            </h3>
-                            <h4 v-if="coupon.type === enums.discountEnum.DEFAULT" class="text-xs mb-1">
+                                <div class="min-w-0">
+                                    <p v-if="coupon.type === enums.discountEnum.DEFAULT" class="text-sm font-semibold text-primary truncate">
+                                        {{ coupon.discount_alt }} {{ $t('label.off') }}
+                                    </p>
+                                    <p v-if="coupon.type === enums.discountEnum.FREE_DELIVERY" class="text-sm font-semibold text-primary truncate">
+                                        {{ textShortener(coupon.name, 18) }}
+                                    </p>
+                                    <p class="text-[11px] font-medium uppercase tracking-wider text-secondary">
+                                        {{ textShortener(coupon.code, 12) }}
+                                    </p>
+                                </div>
+                            </div>
+                            <p v-if="coupon.type === enums.discountEnum.DEFAULT" class="text-xs leading-5 text-paragraph mb-2">
                                 {{
                                     coupon.minimum_order > 0 ? $t('message.discount_off_above', {
                                         discount: coupon.discount_alt,
                                         min_order: coupon.minimum_order_currency_amount
                                     }) : $t('message.discount_off', { discount: coupon.discount_alt })
                                 }}
-                            </h4>
-
-                            <h4 v-if="coupon.type === enums.discountEnum.FREE_DELIVERY" class="text-xs mb-1">
+                            </p>
+                            <p v-if="coupon.type === enums.discountEnum.FREE_DELIVERY" class="text-xs leading-5 text-paragraph mb-2">
                                 {{
                                     coupon.minimum_order > 0 ? textShortener($t('message.discount_delivery_off_above',
-                                        { min_order: coupon.minimum_order_currency_amount }), 40) :
+                                        { min_order: coupon.minimum_order_currency_amount }), 48) :
                                         $t('message.discount_delivery_off')
                                 }}
-                            </h4>
-                            <p class="text-xs text-paragraph">{{ $t('label.use_in_checkout') }}</p>
+                            </p>
+                            <p class="text-[11px] font-medium text-heading/70">{{ $t('label.use_in_checkout') }}</p>
                         </div>
                     </SwiperSlide>
                 </Swiper>
             </div>
 
-            <div :class="isMenuFixed ? 'fixed top-0 left-0 w-full z-40 px-3 py-3 shadow-xs bg-white' : 'py-4 border-y border-gray-100'" v-if="categoryWiseItems && categoryWiseItems.length">
-                <div :class="isMenuFixed ? 'w-full max-w-6xl mx-auto' : 'w-full'">
-                    <div :class="isMenuFixed ? 'mb-4' : 'mb-7'" class="flex items-center justify-between gap-3">
-                        <h3 v-if="!isMenuFixed" class="sm:text-xl font-medium capitalize min-w-[150px] whitespace-nowrap overflow-hidden text-ellipsis">
-                            {{ $t('label.restaurant_menu') }}
-                        </h3>
-
-                        <div v-if="isMenuFixed" class="flex items-center gap-2 overflow-hidden">
-                            <router-link :to="{ name: 'frontend.restaurant' }">
+            <div
+                :class="isMenuFixed ? 'restaurant-menu-bar--fixed' : 'restaurant-menu-bar'"
+                v-if="categoryWiseItems && categoryWiseItems.length"
+            >
+                <div :class="isMenuFixed ? 'container' : 'w-full'">
+                    <div :class="isMenuFixed ? 'mb-3' : 'mb-5'" class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <router-link v-if="isMenuFixed" :to="{ name: 'frontend.restaurant' }" class="text-heading hover:text-primary">
                                 <i class="lab-line-chevron-left text-lg font-bold"></i>
                             </router-link>
-                            <h3 class="sm:text-xl font-medium capitalize min-w-[120px] whitespace-nowrap overflow-hidden text-ellipsis">
-                                {{ restaurant.name }}
-                            </h3>
+                            <div class="min-w-0">
+                                <p v-if="!isMenuFixed" class="text-xs font-semibold uppercase tracking-[0.14em] text-primary mb-1">Menu</p>
+                                <h2 class="text-xl sm:text-2xl font-semibold capitalize text-heading truncate">
+                                    {{ isMenuFixed ? restaurant.name : $t('label.restaurant_menu') }}
+                                </h2>
+                            </div>
                         </div>
 
-                        <nav class="flex gap-4">
+                        <nav class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                             <button
                                 @click.prevent="itemType === enums.itemTypeEnum.NON_VEG ? itemType = null : itemType = enums.itemTypeEnum.NON_VEG"
-                                :class="itemType === enums.itemTypeEnum.NON_VEG ? 'shadow-filter bg-white' : 'bg-slate-100'"
-                                class="flex-shrink-0 hidden sm:flex items-center gap-2 h-8 px-3 rounded-3xl transition-all duration-300">
+                                :class="itemType === enums.itemTypeEnum.NON_VEG ? 'restaurant-filter--on' : 'restaurant-filter'"
+                                class="inline-flex shrink-0 items-center gap-2 h-9 px-3 transition">
                                 <img :src="setting.image_non_vag" alt="food-type" class="h-4 drop-shadow-mealtype">
-                                <span class="capitalize text-sm font-medium text-heading">{{
-                                    $t('label.non_veg')
-                                }}</span>
-                                <i :class="itemType === enums.itemTypeEnum.NON_VEG ? 'ltr:me-0 rtl:ms-0' : 'ltr:-me-5 rtl:-ms-5 opacity-0'"
-                                    class="lab-line-circle-cross text-sm text-red-500 transition-all duration-300"></i>
+                                <span class="capitalize text-sm font-medium">{{ $t('label.non_veg') }}</span>
                             </button>
                             <button
                                 @click.prevent="itemType === enums.itemTypeEnum.VEG ? itemType = null : itemType = enums.itemTypeEnum.VEG"
-                                :class="itemType === enums.itemTypeEnum.VEG ? 'shadow-filter bg-white' : 'bg-slate-100'"
-                                class="flex-shrink-0 hidden sm:flex items-center gap-2 h-8 px-3 rounded-3xl transition-all duration-300">
+                                :class="itemType === enums.itemTypeEnum.VEG ? 'restaurant-filter--on' : 'restaurant-filter'"
+                                class="inline-flex shrink-0 items-center gap-2 h-9 px-3 transition">
                                 <img :src="setting.image_vag" alt="food-type" class="h-4 drop-shadow-mealtype">
-                                <span class="capitalize text-sm font-medium text-heading">{{ $t('label.veg') }}</span>
-                                <i :class="itemType === enums.itemTypeEnum.VEG ? 'ltr:me-0 rtl:ms-0' : 'ltr:-me-5 rtl:-ms-5 opacity-0'"
-                                    class="lab-line-circle-cross text-sm text-red-500 transition-all duration-300"></i>
+                                <span class="capitalize text-sm font-medium">{{ $t('label.veg') }}</span>
                             </button>
                             <form @submit.prevent="search"
-                                class="group w-full max-w-[270px] h-8 rounded-3xl flex items-center gap-2 px-3 border border-slate-100 bg-slate-100 focus-within:border-secondary">
-                                <button class="lab-line-search text-lg flex-shrink-0"></button>
+                                class="group flex h-9 w-full sm:w-auto sm:min-w-[180px] sm:max-w-[260px] flex-1 items-center gap-2 px-3 restaurant-search focus-within:ring-1 focus-within:ring-primary/40">
+                                <button type="submit" class="lab-line-search text-lg shrink-0 text-paragraph"></button>
                                 <input type="search" @keyup="search" v-model="searchItem" :placeholder="$t('label.search_in_menu')"
-                                    class="w-full placeholder:text-sm">
-                                <button @click.prevent="searchReset"
-                                    class="lab-fill-close-circle transition-all text-danger invisible group-focus-within:visible"></button>
+                                    class="w-full bg-transparent text-sm placeholder:text-paragraph/70 outline-none">
+                                <button type="button" @click.prevent="searchReset"
+                                    class="lab-fill-close-circle text-danger opacity-0 group-focus-within:opacity-100 transition"></button>
                             </form>
                         </nav>
                     </div>
 
-                    <Swiper :dir="displayMode" :speed="1000" :spaceBetween="0" :navigation="true" :modules="modules"
-                        slidesPerView="auto" class="middle-navigate menu-categories">
+                    <Swiper :dir="displayMode" :speed="700" :spaceBetween="8" :navigation="true" :modules="modules"
+                        slidesPerView="auto" class="middle-navigate menu-categories restaurant-cats">
                         <SwiperSlide v-for="(categoryWiseItem, categoryWiseItemIndex) in categoryWiseItems"
                             :key="categoryWiseItemIndex"
-                            :class="{ '!bg-primary !text-white': currentSectionId === categoryWiseItem.slug }"
-                            class="!w-fit text-sm whitespace-nowrap text-primary first-letter:capitalize px-3 h-8 leading-8 rounded-3xl hover:bg-primary/10 transition-all duration-500 cursor-pointer"
+                            :class="{ 'restaurant-cat--active': currentSectionId === categoryWiseItem.slug }"
+                            class="restaurant-cat !w-fit"
                             @click="handleMenuCategory($event, categoryWiseItem.slug)">
                             {{ categoryWiseItem.name }}
                         </SwiperSlide>
                     </Swiper>
                 </div>
             </div>
-            <div class="text-center text-gray-500 py-4" v-else>
-                <h3 class="sm:text-xl font-medium capitalize mb-2.5">{{ $t('message.no_menu_available') }}</h3>
+            <div class="text-center text-paragraph py-10" v-else>
+                <h3 class="sm:text-xl font-medium capitalize">{{ $t('message.no_menu_available') }}</h3>
             </div>
 
-            <dl v-if="searchItem.length > 0" class="mt-8">
+            <dl v-if="searchItem.length > 0" class="mt-8 restaurant-section">
                 <dt class="mb-5 text-2xl font-semibold capitalize text-heading">
                     {{ $t("message.we_found", { length: searchItems.length, search: searchItem }) }}
                 </dt>
-                <dd class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 bg-gray-100 rounded-lg p-5">
+                <dd class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 items-stretch restaurant-menu-grid restaurant-menu-grid--search">
                     <ItemComponent :offer="checkOffer" :type="itemType" :itemIndex="100000" :items="searchItems" />
                 </dd>
             </dl>
 
             <dl v-for="(categoryWiseItem, categoryWiseItemIndex) in categoryWiseItems" :key="categoryWiseItemIndex"
-                :id="categoryWiseItem.slug" class="mt-8">
-                <dt class="mb-5 text-2xl font-semibold capitalize text-heading">{{ categoryWiseItem.name }}</dt>
-                <dd class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                    <div v-if="categoryWiseItem.items.length === 0" class="text-lg font-normal">{{ $t('message.item_not_found') }}</div>
-                    <div v-else-if="categoryWiseItem.items.filter(item => itemType == null || item.item_type === itemType).length === 0" class="text-lg font-normal">{{ $t('message.item_not_found') }}</div>
+                :id="categoryWiseItem.slug" class="mt-10 restaurant-section">
+                <dt class="mb-5 flex items-center gap-3">
+                    <span class="h-6 w-1 bg-primary"></span>
+                    <span class="text-2xl font-semibold capitalize text-heading">{{ categoryWiseItem.name }}</span>
+                </dt>
+                <dd class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 items-stretch restaurant-menu-grid">
+                    <div v-if="categoryWiseItem.items.length === 0" class="text-lg font-normal text-paragraph">{{ $t('message.item_not_found') }}</div>
+                    <div v-else-if="categoryWiseItem.items.filter(item => itemType == null || item.item_type === itemType).length === 0" class="text-lg font-normal text-paragraph">{{ $t('message.item_not_found') }}</div>
                     <ItemComponent v-if="categoryWiseItem.items.length > 0" :offer="checkOffer" :type="itemType" :itemIndex="categoryWiseItemIndex" :items="categoryWiseItem.items" />
                 </dd>
             </dl>
         </div>
     </section>
 
+    <Teleport to="body">
     <div id="coupon-info-modal"
-        class="fixed inset-0 z-50 p-3 w-screen h-dvh overflow-y-auto bg-black/50 transition-all duration-300 opacity-0 invisible">
-        <div class="max-w-lg w-full rounded-xl mx-auto bg-white transition-all duration-300">
+        class="fixed inset-0 z-[120] p-3 w-screen h-dvh overflow-y-auto bg-black/55 transition-all duration-300 opacity-0 invisible">
+        <div class="max-w-lg w-full rounded-2xl mx-auto bg-white transition-all duration-300 shadow-2xl">
             <div class="flex items-center justify-between gap-4 py-4 px-6 border-b border-gray-100">
                 <h3 class="text-lg font-semibold capitalize">{{ $t('label.offer_details') }}</h3>
                 <button @click.prevent="closeCouponModal" class="lab-line-circle-cross text-lg text-danger"></button>
@@ -279,10 +282,12 @@
             </div>
         </div>
     </div>
+    </Teleport>
 
+    <Teleport to="body">
     <div id="more-information"
-        class="fixed inset-0 z-50 p-3 w-screen h-dvh overflow-y-auto bg-black/50 transition-all duration-300 opacity-0 invisible">
-        <div class="w-full rounded-xl mx-auto bg-white transition-all duration-300 max-w-2xl">
+        class="fixed inset-0 z-[120] p-3 w-screen h-dvh overflow-y-auto bg-black/55 transition-all duration-300 opacity-0 invisible">
+        <div class="w-full rounded-2xl mx-auto bg-white transition-all duration-300 max-w-2xl shadow-2xl">
             <div class="flex items-center justify-between gap-4 py-4 px-6">
                 <h3 class="text-lg font-semibold capitalize">{{ restaurant.name }}</h3>
                 <button @click.prevent="closeInfoModal" class="lab-line-circle-cross text-lg text-danger"></button>
@@ -389,6 +394,7 @@
             </div>
         </div>
     </div>
+    </Teleport>
 </template>
 
 <script>
@@ -586,7 +592,7 @@ export default {
             return appService.currencyFormat(amount, decimal, currency, position);
         },
         handleMenuFixed: function () {
-            let scrollHeight = this.coupons.length > 0 ? 600 : 300;
+            let scrollHeight = this.coupons.length > 0 ? 720 : 420;
             this.isMenuFixed = window.scrollY > scrollHeight;
             let section = document.querySelectorAll("dl");
             section.forEach((sec) => {
@@ -668,3 +674,178 @@ export default {
     }
 }
 </script>
+
+<style scoped>
+.restaurant-page {
+    position: relative;
+}
+.restaurant-page::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 480px;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 80% 55% at 10% -10%, rgb(var(--primary) / 0.12), transparent 55%),
+        linear-gradient(180deg, #f3faf5 0%, transparent 100%);
+}
+.restaurant-hero {
+    position: relative;
+    z-index: 1;
+    border-radius: 1rem;
+    box-shadow: 0 16px 36px rgb(10 61 40 / 0.12);
+    animation: restaurant-fade 600ms ease both;
+}
+@media (min-width: 640px) {
+    .restaurant-hero { border-radius: 1.25rem; }
+}
+.restaurant-hero__media {
+    /* no persistent transform — avoids trapping fixed modals */
+}
+.restaurant-hero__veil {
+    background:
+        linear-gradient(180deg, rgb(10 61 40 / 0.18) 0%, rgb(10 61 40 / 0.58) 48%, rgb(10 61 40 / 0.9) 100%),
+        linear-gradient(90deg, rgb(10 61 40 / 0.3), transparent 60%);
+}
+.restaurant-hero__logo {
+    border-radius: 0.85rem;
+    background: #fff;
+}
+.restaurant-meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    background: rgb(255 255 255 / 0.12);
+    border: 1px solid rgb(255 255 255 / 0.18);
+    backdrop-filter: blur(8px);
+    border-radius: 0.45rem;
+}
+.restaurant-notice {
+    position: relative;
+    z-index: 1;
+    padding: 0.9rem 1rem;
+    border: 1px solid rgb(220 38 38 / 0.35);
+    border-left: 4px solid #dc2626;
+    background: linear-gradient(135deg, #fff5f5 0%, #fee2e2 55%, #fff7ed 100%);
+    border-radius: 0.85rem;
+    box-shadow: 0 8px 24px rgb(220 38 38 / 0.12);
+}
+.restaurant-notice__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.35rem;
+    height: 2.35rem;
+    color: #fff;
+    background: #dc2626;
+    border-radius: 0.7rem;
+    box-shadow: 0 4px 12px rgb(220 38 38 / 0.35);
+}
+.restaurant-notice__title {
+    color: #991b1b;
+}
+.restaurant-notice__body {
+    color: #7f1d1d;
+}
+.restaurant-notice__emphasis {
+    color: #b91c1c;
+}
+.restaurant-deal {
+    border: 1px solid rgb(var(--primary) / 0.12);
+    border-radius: 1rem;
+    background: linear-gradient(145deg, #ffffff 0%, #f5fbf7 100%);
+}
+.restaurant-deals {
+    overflow: hidden;
+}
+.restaurant-menu-bar {
+    position: relative;
+    z-index: 1;
+    padding: 1rem 0 0.75rem;
+    border-top: 1px solid rgb(10 61 40 / 0.06);
+}
+.restaurant-menu-bar--fixed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 45;
+    padding: 0.75rem 0.75rem;
+    background: rgb(255 255 255 / 0.96);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgb(10 61 40 / 0.08);
+    box-shadow: 0 8px 24px rgb(10 61 40 / 0.06);
+}
+.restaurant-filter {
+    color: rgb(var(--heading));
+    background: #eef6f0;
+    border-radius: 0.55rem;
+}
+.restaurant-filter--on {
+    color: #fff;
+    background: rgb(var(--primary));
+    border-radius: 0.55rem;
+}
+.restaurant-search {
+    background: #eef6f0;
+    border: 1px solid transparent;
+    border-radius: 0.65rem;
+}
+.restaurant-cat {
+    cursor: pointer;
+    height: 2.15rem;
+    line-height: 2.15rem;
+    padding: 0 0.95rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    text-transform: capitalize;
+    color: rgb(var(--heading));
+    background: #fff;
+    border: 1px solid rgb(10 61 40 / 0.1);
+    border-radius: 999px;
+    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.restaurant-cat:hover {
+    border-color: rgb(var(--primary) / 0.35);
+    color: rgb(var(--primary));
+}
+.restaurant-cat--active {
+    color: #fff !important;
+    background: rgb(var(--primary)) !important;
+    border-color: rgb(var(--primary)) !important;
+}
+.restaurant-float-cart {
+    border-radius: 0.85rem 0 0 0.85rem;
+    box-shadow: 0 12px 28px rgb(10 61 40 / 0.2);
+    z-index: 50;
+}
+.restaurant-menu-grid--search {
+    padding: 1rem;
+    background: #f3faf5;
+    border-radius: 1rem;
+}
+.restaurant-menu-grid {
+    position: relative;
+    z-index: 1;
+}
+.restaurant-section {
+    position: relative;
+    z-index: 1;
+}
+@keyframes restaurant-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@media (max-width: 640px) {
+    .restaurant-menu-bar--fixed .container {
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .restaurant-hero { animation: none !important; }
+}
+</style>
+

@@ -3,6 +3,8 @@
 namespace App\Http\Resources;
 
 use App\Enums\KitchenPriority;
+use App\Enums\OrderType;
+use App\Enums\Source;
 use App\Libraries\AppLibrary;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,6 +19,8 @@ class KitchenOrderResource extends JsonResource
             'order_serial_no'           => $this->order_serial_no,
             'token'                     => $this->token,
             'order_type'                => $this->order_type,
+            'source'                    => $this->source,
+            'channel_key'               => $this->channelKey(),
             'status'                    => $this->status,
             'status_name'               => trans('order_status.' . $this->status),
             'active'                    => $this->active,
@@ -108,6 +112,29 @@ class KitchenOrderResource extends JsonResource
                 });
             }),
         ];
+    }
+
+    protected function channelKey(): string
+    {
+        if ((int) $this->order_type === OrderType::DINING_TABLE && (int) $this->table_id > 0) {
+            $source = (int) $this->source;
+            if (in_array($source, [Source::WEB, Source::APP], true)) {
+                return 'qr';
+            }
+            if ($source === Source::WAITER) {
+                return 'waiter';
+            }
+            if ($source === Source::POS) {
+                return 'pos';
+            }
+        }
+
+        return match ((int) $this->source) {
+            Source::POS => 'pos',
+            Source::WAITER => 'waiter',
+            Source::APP => 'app',
+            default => 'online',
+        };
     }
 
     protected function timerIsFrozen(): bool

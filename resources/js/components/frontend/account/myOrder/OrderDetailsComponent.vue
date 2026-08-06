@@ -97,7 +97,7 @@
                         </div>
                     </div>
 
-                    <div v-if="order.order_type === enums.orderTypeEnum.TAKEAWAY"
+                    <div v-if="order.order_type === enums.orderTypeEnum.TAKEAWAY || isScanMenuOrder"
                         class="p-4 mb-6 last:mb-0 rounded-2xl shadow-xs bg-white">
                         <h3 class="font-medium capitalize mb-4"> {{ $t('label.restaurant_address') }}</h3>
                         <div class="flex items-start gap-3">
@@ -108,14 +108,20 @@
                                     {{ order.restaurant.state }}
                                 </dd>
                             </dl>
-                            <OrderDetailsMapComponent :order="order" />
+                            <OrderDetailsMapComponent v-if="order.order_type === enums.orderTypeEnum.TAKEAWAY" :order="order" />
                         </div>
                     </div>
 
+                    <div v-if="order.order_note"
+                        class="p-4 mb-6 last:mb-0 rounded-2xl shadow-xs bg-white">
+                        <h3 class="font-medium capitalize mb-2.5">{{ $t('label.special_instructions') }}</h3>
+                        <p class="text-sm text-heading leading-6">{{ order.order_note }}</p>
+                    </div>
+
                     <div v-if="parseInt(order.status) !== enums.orderStatusEnum.REJECTED && parseInt(order.status) !== enums.orderStatusEnum.CANCELED"
-                        class="p-4 rounded-2xl shadow-xs bg-white">
+                        class="p-4 mb-6 last:mb-0 rounded-2xl shadow-xs bg-white">
                         <h3 class="capitalize font-medium text-md leading-6 mb-2">{{ $t('label.payment_info') }}</h3>
-                        <ul class="flex flex-col gap-2 mb-6">
+                        <ul class="flex flex-col gap-2">
                             <li class="flex items-center gap-2">
                                 <span class="capitalize text-sm leading-6 text-paragraph">
                                     {{ $t('label.method') }}:
@@ -251,37 +257,6 @@
                     </div>
 
                     <div class="p-4" v-if="order.status === enums.orderStatusEnum.PENDING">
-                        <div
-                            v-if="isScanMenuOrder"
-                            class="mb-4 overflow-hidden rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 shadow-[0_8px_24px_rgba(245,158,11,0.18)]"
-                        >
-                            <div class="flex gap-3 p-4">
-                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white shadow-md">
-                                    <i class="lab-line-info-circle text-xl"></i>
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <p class="text-sm font-bold uppercase tracking-wide text-amber-800">
-                                        {{ $t('label.cancel_window') }}
-                                    </p>
-                                    <p class="mt-1 text-sm leading-5 text-amber-950">
-                                        {{ $t('message.scan_menu_cancel_window') }}
-                                    </p>
-                                    <p
-                                        v-if="canCancelOrder"
-                                        class="mt-3 inline-flex items-center gap-2 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-900"
-                                    >
-                                        <span class="h-2 w-2 animate-pulse rounded-full bg-amber-500"></span>
-                                        {{ $t('label.time_left') }}: {{ cancelCountdown }}
-                                    </p>
-                                    <p
-                                        v-else
-                                        class="mt-3 inline-flex items-center gap-2 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-700"
-                                    >
-                                        {{ $t('message.scan_menu_cancel_closed') }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
                         <button
                             @click="cancelOrder(enums.orderStatusEnum.CANCELED)"
                             type="button"
@@ -293,6 +268,49 @@
                         >
                             {{ $t('button.cancel_order') }}
                         </button>
+
+                        <div
+                            v-if="isScanMenuOrder"
+                            class="mt-4 overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-emerald-50 via-white to-amber-50 shadow-[0_10px_28px_rgba(20,138,60,0.12)]"
+                        >
+                            <div class="flex gap-3 p-4">
+                                <div
+                                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-md"
+                                    :class="canCancelOrder ? 'bg-primary' : 'bg-rose-500'"
+                                >
+                                    <i :class="canCancelOrder ? 'lab-line-clock' : 'lab-line-info-circle'" class="text-xl"></i>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-xs font-bold uppercase tracking-[0.12em]"
+                                       :class="canCancelOrder ? 'text-primary' : 'text-rose-700'">
+                                        {{ canCancelOrder ? $t('label.cancel_policy_title') : $t('label.cancel_window') }}
+                                    </p>
+                                    <p class="mt-1.5 text-sm leading-6 text-heading">
+                                        {{ canCancelOrder
+                                            ? $t('message.scan_menu_cancel_window')
+                                            : $t('message.scan_menu_cancel_closed') }}
+                                    </p>
+                                    <p class="mt-2 text-xs leading-5 text-paragraph">
+                                        {{ canCancelOrder
+                                            ? $t('message.scan_menu_cancel_hint_active')
+                                            : $t('message.scan_menu_cancel_hint_closed') }}
+                                    </p>
+                                    <p
+                                        v-if="canCancelOrder"
+                                        class="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary"
+                                    >
+                                        <span class="h-2 w-2 animate-pulse rounded-full bg-primary"></span>
+                                        {{ $t('label.time_left') }}: {{ cancelCountdown }}
+                                    </p>
+                                    <p
+                                        v-else
+                                        class="mt-3 inline-flex items-center gap-2 rounded-full bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-700"
+                                    >
+                                        {{ $t('message.scan_menu_cancel_closed') }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -455,6 +473,8 @@ import { useFrontendMessageStore } from "../../../../stores/frontendMessage.js";
 import messageChannelTypeEnum from "../../../../enums/modules/messageChannelTypeEnum.js";
 import LoadingComponent from "../../../common/LoadingComponent.vue";
 import ENV from "../../../../config/env.js";
+import {isScanMenuOrder as orderIsScanMenu, resolvePaymentMethodLabel} from "../../../../utils/orderHelpers.js";
+import {subscribeCustomerOrderRealtime} from "../../../../composables/useCustomerOrderRealtime.js";
 
 export default {
     name: "OrderDetailsComponent",
@@ -518,6 +538,7 @@ export default {
             text: "",
             nowTick: Date.now(),
             cancelTimer: null,
+            unsubscribeOrderRealtime: null,
         }
     },
     computed: {
@@ -525,12 +546,7 @@ export default {
             return this.frontendOrderStore.show;
         },
         isScanMenuOrder: function () {
-            const o = this.order;
-            if (!o || !Object.keys(o).length) return false;
-            if (typeof o.is_scan_menu_order !== 'undefined') {
-                return !!o.is_scan_menu_order;
-            }
-            return Number(o.order_type) === orderTypeEnum.DINING_TABLE && Number(o.table_id) > 0;
+            return orderIsScanMenu(this.order);
         },
         canCancelOrder: function () {
             void this.nowTick;
@@ -547,7 +563,7 @@ export default {
             const expiresAt = o.cancel_expires_at
                 ? new Date(o.cancel_expires_at).getTime()
                 : (o.order_datetime_iso
-                    ? new Date(o.order_datetime_iso).getTime() + 120000
+                    ? new Date(o.order_datetime_iso).getTime() + 600000
                     : 0);
             if (!expiresAt) return false;
             return Date.now() <= expiresAt;
@@ -559,7 +575,7 @@ export default {
             const expiresAt = o.cancel_expires_at
                 ? new Date(o.cancel_expires_at).getTime()
                 : (o.order_datetime_iso
-                    ? new Date(o.order_datetime_iso).getTime() + 120000
+                    ? new Date(o.order_datetime_iso).getTime() + 600000
                     : 0);
             const left = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
             const m = Math.floor(left / 60);
@@ -567,15 +583,7 @@ export default {
             return `${m}:${s}`;
         },
         paymentMethodLabel: function () {
-            const o = this.order;
-            if (!o || !Object.keys(o).length) return '';
-            if (o.transaction?.payment_method) {
-                return o.transaction.payment_method;
-            }
-            if (Number(o.payment_method) === paymentTypeEnum.CASH_ON_DELIVERY) {
-                return this.$t('label.pay_at_counter');
-            }
-            return this.enums.paymentTypeEnumArray[o.payment_method] || '';
+            return resolvePaymentMethodLabel(this.order, (key) => this.$t(key));
         },
         orderRestaurant: function () {
             return this.frontendOrderStore.orderRestaurant;
@@ -639,6 +647,7 @@ export default {
 
                 this.loading.isActive = false;
                 this.startCancelTimer();
+                this.bindCustomerOrderRealtime();
                 if (res.data.data.restaurant_review_status) {
                     await this.frontendReviewStore.fetchRestaurantReview(this.$route.params.id).then(restaurantReviewRes => {
                         if (restaurantReviewRes.data?.data) {
@@ -670,8 +679,32 @@ export default {
             clearInterval(this.cancelTimer);
             this.cancelTimer = null;
         }
+        if (typeof this.unsubscribeOrderRealtime === 'function') {
+            this.unsubscribeOrderRealtime();
+            this.unsubscribeOrderRealtime = null;
+        }
     },
     methods: {
+        bindCustomerOrderRealtime() {
+            if (typeof this.unsubscribeOrderRealtime === 'function') {
+                this.unsubscribeOrderRealtime();
+                this.unsubscribeOrderRealtime = null;
+            }
+            const userId = this.authStore.info?.id;
+            const orderId = this.$route.params.id;
+            if (!userId || !orderId) return;
+
+            this.unsubscribeOrderRealtime = subscribeCustomerOrderRealtime({
+                userId,
+                orderId,
+                t: (key) => this.$t(key),
+                onUpdate: () => {
+                    this.frontendOrderStore.view(orderId).then(() => {
+                        this.startCancelTimer();
+                    }).catch(() => {});
+                },
+            });
+        },
         startCancelTimer() {
             if (this.cancelTimer) {
                 clearInterval(this.cancelTimer);

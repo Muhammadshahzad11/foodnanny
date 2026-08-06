@@ -150,7 +150,7 @@
                                 </span>
                             </div>
 
-                            <div v-if="profile.balance >= total + checkoutProps.form.delivery_fee"
+                            <div v-if="!isDineIn && profile.balance >= total + checkoutProps.form.delivery_fee"
                                  @click.prevent="selectPaymentMethod(credit)"
                                  :class="Object.keys(paymentMethod).length > 0 && credit.id === paymentMethod.id ? 'bg-primary/5 border-primary/30' : 'bg-white border-white'"
                                  class="w-full min-w-0 px-2 sm:px-3 py-4 text-center rounded-lg shadow-xs cursor-pointer border transition-all duration-300">
@@ -160,7 +160,7 @@
                                 </span>
                             </div>
 
-                            <div v-if="setting.site_online_payment_gateway === activityEnum.ENABLE"
+                            <div v-if="!isDineIn && setting.site_online_payment_gateway === activityEnum.ENABLE"
                                  v-for="paymentGateway in paymentGateways"
                                  :key="paymentGateway.id"
                                  @click.prevent="selectPaymentMethod(paymentGateway)"
@@ -604,7 +604,11 @@ export default {
                 && this.dineInContextStore.matchesRestaurant(this.restaurant?.id || this.restaurant?.slug);
         },
         cashPaymentLabel: function () {
-            return this.$t('label.pay_at_counter');
+            // QR / dine-in table → Pay at Counter; website delivery/takeaway → Cash On Delivery
+            if (this.isDineIn) {
+                return this.$t('label.pay_at_counter');
+            }
+            return this.$t('label.cash_on_delivery');
         },
         dineInTableLabel: function () {
             return this.dineInContextStore.tableLabel || this.$t('label.dining_table');
@@ -717,13 +721,15 @@ export default {
                     } else if (gateway.slug === "cashondelivery") {
                         this.cashOnDelivery = {
                             ...gateway,
-                            // Always use contextual UI label — ignore DB "Cash On Delivery" name
                             name: this.cashPaymentLabel,
                         };
                     } else {
                         this.paymentGateways.push(gateway);
                     }
                 });
+                if (this.isDineIn && Object.keys(this.cashOnDelivery).length > 0) {
+                    this.selectPaymentMethod(this.cashOnDelivery);
+                }
             }
             this.loading.isActive = false;
         }).catch((err) => {

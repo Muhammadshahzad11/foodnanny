@@ -16,6 +16,7 @@
         "theme": "Tema",
         "payment_gateway": "Pasarela de pago",
         "storage": "Almacenamiento",
+        "cache": "Cache",
         "order_setup": "Configuración de pedidos",
         "taxes": "Impuestos",
         "coupons": "Cupones",
@@ -819,7 +820,20 @@
         "restaurant_registration_received": "Registro recibido",
         "go_to_login": "Ir a iniciar sesión",
         "registration_complete": "Registro completo",
-        "step_of": "Paso {current} de {total}"
+        "step_of": "Paso {current} de {total}",
+        "clear_cache": "Clear Cache",
+        "cache_application": "Application cache",
+        "cache_config": "Config cache",
+        "cache_routes": "Route cache",
+        "cache_views": "View cache",
+        "last_updated": "Last Updated",
+        "estimated_preparation_time": "Estimated preparation time",
+        "track_order_received": "Order Received",
+        "track_accepted": "Accepted",
+        "track_preparing": "Preparing",
+        "track_ready": "Ready",
+        "track_on_the_way": "On the Way",
+        "track_completed": "Completed"
     },
     "button": {
         "action": "Acción",
@@ -954,7 +968,9 @@
         "mark_done": "Marcar como hecho",
         "start_preparing": "Empezar preparación",
         "approve": "Aprobar",
-        "add_and_send_to_kitchen": "Agregar y enviar a cocina"
+        "add_and_send_to_kitchen": "Agregar y enviar a cocina",
+        "clear_cache": "Clear Cache",
+        "clearing_cache": "Clearing Cache..."
     },
     "number": {
         "0": "0",
@@ -1134,6 +1150,22 @@
         "restaurant_thank_you_login_note": "No podrá iniciar sesión hasta que se apruebe su restaurante. Después de la aprobación, use el mismo correo o teléfono para iniciar sesión.",
         "restaurant_approve_confirm": "¿Aprobar este registro de restaurante y permitir que el propietario inicie sesión?",
         "restaurant_approved_successfully": "Restaurante aprobado correctamente. El propietario ya puede iniciar sesión.",
-        "restaurant_pending_approval": "El registro de su restaurante está pendiente de aprobación del administrador. Podrá iniciar sesión cuando un administrador lo apruebe."
+        "restaurant_pending_approval": "El registro de su restaurante está pendiente de aprobación del administrador. Podrá iniciar sesión cuando un administrador lo apruebe.",
+        "clear_cache_help": "Clear application, config, route, and view caches. Use this after updates when the site shows outdated data or settings.",
+        "cache_cleared_successfully": "Cache cleared successfully.",
+        "cache_clear_failed": "Unable to clear cache. Please try again.",
+        "cache_cleared_items": "Cleared",
+        "dine_in_order_completed": "Your order is complete. Enjoy your meal!",
+        "dine_in_pay_at_counter_reminder": "Please pay at the counter if you have not already.",
+        "your_food_is_ready_for_table": "Your food is ready and will be served to your table.",
+        "order_status_popup_received": "Your order has been received.",
+        "order_status_popup_accepted": "Your order has been accepted.",
+        "order_status_popup_preparing": "Your food is being prepared.",
+        "order_status_popup_ready": "Your food is ready.",
+        "order_status_popup_on_the_way": "Your food is on the way.",
+        "order_status_popup_completed": "Your order has been completed.",
+        "order_status_popup_rejected": "Your order was rejected.",
+        "order_status_popup_canceled": "Your order was cancelled.",
+        "order_status_popup_updated": "Your order status was updated."
     }
 }

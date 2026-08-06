@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Enums\Role as EnumRole;
 use App\Enums\TableStatus;
 use App\Events\AppNotificationCreated;
+use App\Events\CustomerOrderStatusUpdated;
 use App\Events\EmployeeUpdated;
 use App\Events\KitchenOrderUpdated;
 use App\Events\TableStatusUpdated;
@@ -40,9 +41,59 @@ class RealtimePublisher
         }
 
         try {
+            $this->customerOrderStatus($order, $action, $previousStatus, $meta);
+        } catch (\Throwable $e) {
+            Log::info('Realtime customer order broadcast failed: ' . $e->getMessage());
+        }
+
+        try {
             $this->notifyKitchenStakeholders($order, $action);
         } catch (\Throwable $e) {
             Log::info('Realtime kitchen notify failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Notify the ordering customer of status changes (QR + marketplace).
+     */
+    public function customerOrderStatus(Order $order, string $action, ?int $previousStatus = null, array $meta = []): void
+    {
+        if ((int) $order->user_id <= 0) {
+            return;
+        }
+
+        $customerActions = [
+            'created',
+            'accept',
+            'preparing',
+            'ready',
+            'complete',
+            'reject',
+            'cancel',
+            'delivered',
+            'completed',
+            'out_for_delivery',
+            'status',
+        ];
+
+        if (!in_array($action, $customerActions, true)) {
+            return;
+        }
+
+        if ($previousStatus !== null && (int) $previousStatus === (int) $order->status) {
+            return;
+        }
+
+        try {
+            $order->loadMissing(['diningTable', 'restaurant', 'user']);
+        } catch (\Throwable $e) {
+            Log::info('Realtime customer order load failed: ' . $e->getMessage());
+        }
+
+        try {
+            event(new CustomerOrderStatusUpdated($order, $action, $previousStatus, $meta));
+        } catch (\Throwable $e) {
+            Log::info('Realtime customer order event failed: ' . $e->getMessage());
         }
     }
 

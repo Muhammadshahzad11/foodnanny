@@ -136,6 +136,19 @@
                             <span class="text-sm leading-6 capitalize">{{ $t('button.change_password') }}</span>
                         </router-link>
 
+                        <button
+                            v-if="authInfo.role_id === enums.roleEnum.ADMIN"
+                            type="button"
+                            :disabled="flushingCache"
+                            @click="flushCache"
+                            class="w-full flex items-center gap-3.5 py-2.5 border-t border-gray-100 transition-all duration-300 group hover:text-primary disabled:opacity-60"
+                        >
+                            <i class="lab-line-reset text-lg text-paragraph group-hover:text-primary transition-all duration-300" :class="{ 'animate-spin': flushingCache }"></i>
+                            <span class="text-sm leading-6 capitalize">
+                                {{ flushingCache ? $t('button.clearing_cache') : $t('button.clear_cache') }}
+                            </span>
+                        </button>
+
                         <div class="w-full border-t border-gray-100 py-2.5">
                             <PwaInstallButtonComponent
                                 class="!w-full !justify-start !bg-transparent !text-heading !px-0 !h-auto !gap-3.5"
@@ -220,6 +233,7 @@ import {usePosCartStore} from "../../../stores/posCart.js";
 import {useMyRestaurantStore} from "../../../stores/myRestaurant.js";
 import {useAiStore} from "../../../stores/ai.js";
 import {useInboxNotificationStore} from "../../../stores/inboxNotification.js";
+import {useCacheStore} from "../../../stores/cache.js";
 
 export default {
     name: "BackendNavbarComponent",
@@ -238,6 +252,7 @@ export default {
         const restaurantSwitchStore    = useRestaurantSwitchStore();
         const frontendEditProfileStore = useFrontendEditProfileStore();
         const inboxNotificationStore   = useInboxNotificationStore();
+        const cacheStore               = useCacheStore();
 
 
         return {
@@ -255,6 +270,7 @@ export default {
             restaurantSwitchStore,
             frontendEditProfileStore,
             inboxNotificationStore,
+            cacheStore,
         }
     },
     data() {
@@ -274,6 +290,7 @@ export default {
                 url: ''
             },
             fullscreenStatus: false,
+            flushingCache: false,
             errors: {}
         }
     },
@@ -342,6 +359,22 @@ export default {
                 })
                 this.$router.push({name: "frontend.home"});
             }).catch();
+        },
+        flushCache: function () {
+            if (this.flushingCache) {
+                return;
+            }
+            this.flushingCache = true;
+            this.loading.isActive = true;
+            this.cacheStore.flush().then((res) => {
+                this.flushingCache = false;
+                this.loading.isActive = false;
+                alertService.success(res.data.message || this.$t('message.cache_cleared_successfully'));
+            }).catch((err) => {
+                this.flushingCache = false;
+                this.loading.isActive = false;
+                alertService.error(err.response?.data?.message || this.$t('message.cache_clear_failed'));
+            });
         },
         handleSidebar: function () {
             this.commonStore.update({

@@ -300,6 +300,9 @@ export default {
             return this.frontendCartStore.subtotal;
         },
         dashboardUrl: function () {
+            if (Number(this.profile?.role_id) === this.enums.roleEnum.WAITER) {
+                return "/admin/waiter/tables";
+            }
             if (this.defaultAccess.restaurant_id === 0 && Object.keys(this.authAdminDefaultPermission).length > 0) {
                 return "/admin/" + this.authAdminDefaultPermission.url;
             } else if (this.defaultAccess.restaurant_id > 0 && Object.keys(this.authRestaurantDefaultPermission).length > 0) {

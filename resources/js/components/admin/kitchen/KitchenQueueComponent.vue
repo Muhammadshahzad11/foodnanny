@@ -11,9 +11,17 @@
                     <h3 class="db-card-title mt-1 text-2xl">{{ $t('label.kitchen_queue') }}</h3>
                     <p class="text-sm text-[#6E7191] mt-1">{{ $t('message.kitchen_queue_hint') }}</p>
                 </div>
-                <button type="button" class="db-btn py-3 px-5 text-base text-white bg-primary" @click="refresh">
-                    {{ $t('button.refresh') }}
-                </button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-sm text-[#6E7191]">
+                        {{ orders.length }} {{ $t('label.tickets') }}
+                    </span>
+                    <button type="button" class="db-btn py-2.5 px-4 text-sm text-heading border border-[#EFF0F6]" @click="filtersOpen = !filtersOpen">
+                        {{ $t('button.filter') }}
+                    </button>
+                    <button type="button" class="db-btn py-2.5 px-4 text-sm text-white bg-primary" @click="refresh">
+                        {{ $t('button.refresh') }}
+                    </button>
+                </div>
             </div>
 
             <div class="px-4 pb-3 flex flex-wrap gap-2">
@@ -21,7 +29,7 @@
                     v-for="tab in statusTabs"
                     :key="tab.value === '' ? 'all' : tab.value"
                     type="button"
-                    class="min-h-12 px-4 py-2.5 rounded-xl text-base font-semibold border transition"
+                    class="min-h-11 px-4 py-2 rounded-lg text-sm font-semibold border transition"
                     :class="String(filters.status) === String(tab.value)
                         ? 'bg-primary border-primary text-white'
                         : 'bg-white border-[#EFF0F6] text-heading hover:border-primary'"
@@ -31,12 +39,12 @@
                 </button>
             </div>
 
-            <form class="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3" @submit.prevent="refresh">
-                <div class="relative xl:col-span-2 mb-1">
+            <div class="px-4 pb-3">
+                <div class="relative">
                     <input
                         v-model="filters.search"
                         type="search"
-                        class="db-field-control w-full pr-10"
+                        class="db-field-control w-full"
                         :placeholder="$t('label.search_order_table_waiter')"
                         autocomplete="off"
                     />
@@ -47,10 +55,13 @@
                         @click="clearSearch"
                         :aria-label="$t('button.clear')"
                     >×</button>
-                    <p v-if="searching" class="absolute left-0 -bottom-5 text-xs text-primary">
+                    <p v-if="searching" class="mt-1 text-xs text-primary">
                         {{ $t('label.searching') }}
                     </p>
                 </div>
+            </div>
+
+            <form v-show="filtersOpen" class="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3" @submit.prevent="refresh">
                 <select v-model="filters.period" class="db-field-control" @change="refresh">
                     <option value="today">{{ $t('label.today') }}</option>
                     <option value="yesterday">{{ $t('label.yesterday') }}</option>
@@ -88,41 +99,50 @@
                 <article
                     v-for="order in orders"
                     :key="order.id"
-                    class="rounded-2xl border-2 p-5 flex flex-col gap-4 bg-white shadow-sm"
+                    class="rounded-2xl border bg-white p-4 flex flex-col gap-3 transition hover:shadow-md"
                     :class="cardClass(order)"
                 >
                     <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <p class="text-3xl font-bold tracking-tight text-heading">#{{ order.order_serial_no }}</p>
-                            <p class="text-base text-[#6E7191] mt-1">{{ order.order_time }}</p>
-                            <p class="text-lg font-semibold mt-1" :class="elapsedClass(order)">
-                                ⏱ {{ elapsedLabel(order) }}
-                                <span v-if="isTimerFrozen(order)" class="text-xs font-normal text-[#6E7191] ml-1">
-                                    ({{ $t('label.final') }})
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+                                <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded"
+                                      :class="channelChipClass(order)">
+                                    {{ channelLabel(order) }}
                                 </span>
-                            </p>
+                                <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded"
+                                      :class="priorityChipClass(order.kitchen_priority)">
+                                    {{ priorityLabel(order) }}
+                                </span>
+                            </div>
+                            <p class="text-2xl font-bold tracking-tight text-heading">#{{ order.order_serial_no }}</p>
+                            <p class="text-sm text-[#6E7191] mt-0.5">{{ order.order_time }}</p>
                         </div>
-                        <div class="flex flex-col items-end gap-2">
-                            <span class="text-xs font-bold uppercase tracking-wide px-2.5 py-1.5 rounded-lg"
+                        <div class="text-right shrink-0">
+                            <span class="inline-block text-[11px] font-bold uppercase tracking-wide px-2 py-1 rounded"
                                   :class="statusChipClass(order.status)">
                                 {{ order.status_name }}
                             </span>
-                            <span class="text-xs font-bold uppercase px-2.5 py-1.5 rounded-lg"
-                                  :class="priorityChipClass(order.kitchen_priority)">
-                                {{ priorityLabel(order) }}
-                            </span>
+                            <p class="mt-2 text-lg font-bold tabular-nums" :class="elapsedClass(order)">
+                                {{ elapsedLabel(order) }}
+                                <span v-if="isTimerFrozen(order)" class="block text-[10px] font-medium text-[#6E7191]">
+                                    {{ $t('label.final') }}
+                                </span>
+                            </p>
                         </div>
                     </div>
 
-                    <div class="text-base space-y-1.5 text-heading">
-                        <p v-if="order.restaurant" class="font-medium">
+                    <div v-if="order.table" class="rounded-xl bg-[#F7F7FC] px-3 py-2.5">
+                        <p class="text-xs text-[#6E7191]">{{ $t('label.table') }}</p>
+                        <p class="text-lg font-semibold text-heading">
+                            {{ order.table.table_number }}
+                            <span v-if="order.table.name" class="text-sm font-medium text-[#6E7191]">· {{ order.table.name }}</span>
+                        </p>
+                    </div>
+
+                    <div class="text-sm space-y-1 text-heading">
+                        <p v-if="order.restaurant">
                             <span class="text-[#6E7191]">{{ $t('label.restaurant') }}:</span>
                             {{ order.restaurant.name }}
-                        </p>
-                        <p v-if="order.table" class="text-xl font-semibold">
-                            <span class="text-[#6E7191] text-base font-normal">{{ $t('label.table') }}:</span>
-                            {{ order.table.table_number }}
-                            <span v-if="order.table.name"> · {{ order.table.name }}</span>
                         </p>
                         <p v-if="order.waiter">
                             <span class="text-[#6E7191]">{{ $t('label.waiter') }}:</span>
@@ -138,31 +158,31 @@
                     </div>
 
                     <div v-if="order.order_note"
-                         class="rounded-xl px-3 py-2.5 bg-amber-50 border border-amber-200 text-amber-900 text-base font-semibold">
-                        ⚠ {{ order.order_note }}
+                         class="rounded-lg px-3 py-2 bg-amber-50 border border-amber-100 text-amber-900 text-sm font-medium">
+                        {{ order.order_note }}
                     </div>
 
-                    <ul class="space-y-3 border-t border-[#EFF0F6] pt-3">
-                        <li v-for="item in order.order_items" :key="item.id" class="text-base">
-                            <p class="font-bold text-heading text-lg leading-snug">
+                    <ul class="space-y-2.5 border-t border-[#EFF0F6] pt-3">
+                        <li v-for="item in order.order_items" :key="item.id" class="text-sm">
+                            <p class="font-semibold text-heading text-base leading-snug">
                                 {{ item.quantity }}× {{ item.item_name }}
                             </p>
                             <p v-for="(line, i) in (item.variation_lines || [])" :key="'v'+i"
-                               class="text-[#4E4B66] text-sm mt-0.5 pl-1">• {{ line }}</p>
+                               class="text-[#6E7191] text-xs mt-0.5 pl-1">{{ line }}</p>
                             <p v-for="(line, i) in (item.extra_lines || [])" :key="'e'+i"
-                               class="text-emerald-700 text-sm mt-0.5 pl-1 font-medium">+ {{ line }}</p>
+                               class="text-primary text-xs mt-0.5 pl-1 font-medium">+ {{ line }}</p>
                             <p v-if="item.instruction"
-                               class="mt-1 inline-flex rounded-lg bg-rose-50 text-rose-700 px-2 py-1 text-sm font-semibold">
+                               class="mt-1 inline-flex rounded bg-rose-50 text-rose-700 px-2 py-0.5 text-xs font-medium">
                                 {{ item.instruction }}
                             </p>
                         </li>
                     </ul>
 
-                    <div class="mt-auto grid grid-cols-2 gap-2.5 pt-2">
+                    <div class="mt-auto grid grid-cols-2 gap-2 pt-1">
                         <button
                             v-if="canAccept(order)"
                             type="button"
-                            class="min-h-14 rounded-xl text-base font-bold text-white bg-sky-500 active:scale-[0.98]"
+                            class="col-span-2 min-h-12 rounded-xl text-sm font-semibold text-white bg-primary active:scale-[0.99]"
                             @click="accept(order)"
                         >
                             {{ $t('button.accept') }}
@@ -170,7 +190,7 @@
                         <button
                             v-if="canPrepare(order)"
                             type="button"
-                            class="min-h-14 rounded-xl text-base font-bold text-white bg-amber-500 active:scale-[0.98]"
+                            class="col-span-2 min-h-12 rounded-xl text-sm font-semibold text-white bg-amber-500 active:scale-[0.99]"
                             @click="preparing(order)"
                         >
                             {{ $t('button.preparing') }}
@@ -178,7 +198,7 @@
                         <button
                             v-if="canReady(order)"
                             type="button"
-                            class="min-h-14 rounded-xl text-base font-bold text-white bg-emerald-600 active:scale-[0.98]"
+                            class="col-span-2 min-h-12 rounded-xl text-sm font-semibold text-white bg-emerald-600 active:scale-[0.99]"
                             @click="ready(order)"
                         >
                             {{ $t('button.ready') }}
@@ -186,7 +206,7 @@
                         <button
                             v-if="canComplete(order)"
                             type="button"
-                            class="min-h-14 rounded-xl text-base font-bold text-white bg-emerald-700 active:scale-[0.98]"
+                            class="col-span-2 min-h-12 rounded-xl text-sm font-semibold text-white bg-emerald-700 active:scale-[0.99]"
                             @click="complete(order)"
                         >
                             {{ $t('button.mark_completed') }}
@@ -194,7 +214,8 @@
                         <button
                             v-if="canReject(order)"
                             type="button"
-                            class="min-h-14 rounded-xl text-base font-bold text-white bg-rose-500 active:scale-[0.98]"
+                            class="min-h-11 rounded-xl text-sm font-semibold text-white bg-rose-500 active:scale-[0.99]"
+                            :class="canCancel(order) ? '' : 'col-span-2'"
                             @click="reject(order)"
                         >
                             {{ $t('button.reject') }}
@@ -202,14 +223,15 @@
                         <button
                             v-if="canCancel(order)"
                             type="button"
-                            class="min-h-14 rounded-xl text-base font-bold border-2 border-rose-300 text-rose-700 bg-white active:scale-[0.98]"
+                            class="min-h-11 rounded-xl text-sm font-semibold border border-rose-200 text-rose-700 bg-white active:scale-[0.99]"
+                            :class="canReject(order) ? '' : 'col-span-2'"
                             @click="cancel(order)"
                         >
                             {{ $t('button.cancel') }}
                         </button>
                         <router-link
                             :to="{name: 'admin.kitchen.orders.show', params: {id: order.id}}"
-                            class="min-h-14 rounded-xl text-base font-bold border-2 border-[#EFF0F6] text-heading flex items-center justify-center col-span-2 hover:border-primary"
+                            class="col-span-2 min-h-10 rounded-xl text-sm font-semibold border border-[#EFF0F6] text-heading flex items-center justify-center hover:border-primary"
                         >
                             {{ $t('button.view') }}
                         </router-link>
@@ -217,7 +239,7 @@
                 </article>
             </div>
 
-            <div v-if="!orders.length && !loading.isActive && !searching" class="p-10 text-center text-lg text-[#6E7191]">
+            <div v-if="!orders.length && !loading.isActive && !searching" class="p-10 text-center text-[#6E7191]">
                 {{ filters.search ? $t('label.no_search_results') : $t('message.no_data_found') }}
             </div>
         </div>
@@ -237,6 +259,7 @@ import appService from "../../../services/appService.js";
 import {getAuthRestaurantId, subscribeRestaurantRealtime} from "../../../composables/useRealtime.js";
 import roleEnum from "../../../enums/modules/roleEnum.js";
 import sourceEnum from "../../../enums/modules/sourceEnum.js";
+import orderTypeEnum from "../../../enums/modules/orderTypeEnum.js";
 
 export default {
     name: "KitchenQueueComponent",
@@ -250,12 +273,14 @@ export default {
             orderStatusEnum,
             kitchenPriorityEnum,
             sourceEnum,
+            orderTypeEnum,
         };
     },
     data() {
         return {
             loading: {isActive: false},
             searching: false,
+            filtersOpen: false,
             nowTick: Date.now(),
             tickTimer: null,
             pollTimer: null,
@@ -313,18 +338,10 @@ export default {
         this.bindRealtime();
     },
     beforeUnmount() {
-        if (this.tickTimer) {
-            clearInterval(this.tickTimer);
-        }
-        if (this.pollTimer) {
-            clearInterval(this.pollTimer);
-        }
-        if (this.searchTimer) {
-            clearTimeout(this.searchTimer);
-        }
-        if (typeof this.unsubscribeRealtime === 'function') {
-            this.unsubscribeRealtime();
-        }
+        if (this.tickTimer) clearInterval(this.tickTimer);
+        if (this.pollTimer) clearInterval(this.pollTimer);
+        if (this.searchTimer) clearTimeout(this.searchTimer);
+        if (typeof this.unsubscribeRealtime === 'function') this.unsubscribeRealtime();
     },
     methods: {
         bindRealtime() {
@@ -333,9 +350,7 @@ export default {
             this.unsubscribeRealtime = subscribeRestaurantRealtime({
                 restaurantId: restaurantId || 1,
                 roles: isAdmin ? ['admin'] : [],
-                onKitchenOrder: () => {
-                    this.refreshQuiet();
-                },
+                onKitchenOrder: () => this.refreshQuiet(),
             });
         },
         buildPayload() {
@@ -343,7 +358,6 @@ export default {
             if (payload.from_date || payload.to_date) {
                 payload.period = 'custom';
             }
-            // Drop empty filter keys so API stays clean
             Object.keys(payload).forEach((key) => {
                 if (payload[key] === '' || payload[key] === null || payload[key] === undefined) {
                     delete payload[key];
@@ -375,25 +389,57 @@ export default {
             });
         },
         cardClass(order) {
-            if (order.status === orderStatusEnum.PENDING) return 'border-sky-400';
-            if (order.status === orderStatusEnum.ACCEPT) return 'border-sky-500';
-            if (order.status === orderStatusEnum.PREPARING) return 'border-amber-500';
-            if (order.status === orderStatusEnum.PREPARED) return 'border-emerald-500';
-            if ([orderStatusEnum.CANCELED, orderStatusEnum.REJECTED].includes(order.status)) return 'border-rose-300 opacity-80';
+            if (order.status === orderStatusEnum.PENDING) return 'border-sky-300';
+            if (order.status === orderStatusEnum.ACCEPT) return 'border-sky-400';
+            if (order.status === orderStatusEnum.PREPARING) return 'border-amber-400';
+            if (order.status === orderStatusEnum.PREPARED) return 'border-emerald-400';
+            if ([orderStatusEnum.CANCELED, orderStatusEnum.REJECTED].includes(order.status)) return 'border-rose-200 opacity-80';
             return 'border-[#EFF0F6]';
         },
         statusChipClass(status) {
             if (status === orderStatusEnum.PREPARING) return 'bg-amber-100 text-amber-800';
             if (status === orderStatusEnum.PREPARED) return 'bg-emerald-100 text-emerald-800';
-            if (status === orderStatusEnum.DELIVERED) return 'bg-slate-200 text-slate-700';
-            if ([orderStatusEnum.CANCELED, orderStatusEnum.REJECTED].includes(status)) return 'bg-rose-100 text-rose-800';
+            if (status === orderStatusEnum.DELIVERED) return 'bg-slate-100 text-slate-700';
+            if ([orderStatusEnum.CANCELED, orderStatusEnum.REJECTED].includes(status)) return 'bg-rose-100 text-rose-700';
             return 'bg-sky-100 text-sky-800';
         },
         priorityChipClass(priority) {
             if (priority >= kitchenPriorityEnum.VIP) return 'bg-violet-100 text-violet-800';
-            if (priority >= kitchenPriorityEnum.URGENT) return 'bg-rose-100 text-rose-800';
+            if (priority >= kitchenPriorityEnum.URGENT) return 'bg-rose-100 text-rose-700';
             if (priority >= kitchenPriorityEnum.HIGH) return 'bg-orange-100 text-orange-800';
-            return 'bg-slate-100 text-slate-700';
+            return 'bg-[#F7F7FC] text-[#6E7191]';
+        },
+        channelKey(order) {
+            if (order.channel_key) return order.channel_key;
+            if (Number(order.order_type) === orderTypeEnum.DINING_TABLE && Number(order.table?.id || order.table_id) > 0) {
+                const src = Number(order.source);
+                if (src === sourceEnum.WAITER) return 'waiter';
+                if (src === sourceEnum.POS) return 'pos';
+                return 'qr';
+            }
+            const src = Number(order.source);
+            if (src === sourceEnum.POS) return 'pos';
+            if (src === sourceEnum.WAITER) return 'waiter';
+            if (src === sourceEnum.APP) return 'app';
+            return 'online';
+        },
+        channelLabel(order) {
+            const key = this.channelKey(order);
+            const map = {
+                qr: this.$t('label.qr_order'),
+                waiter: this.$t('label.waiter'),
+                pos: this.$t('label.pos'),
+                app: this.$t('label.app'),
+                online: this.$t('label.online'),
+            };
+            return map[key] || key;
+        },
+        channelChipClass(order) {
+            const key = this.channelKey(order);
+            if (key === 'qr') return 'bg-sky-100 text-sky-800';
+            if (key === 'waiter') return 'bg-indigo-100 text-indigo-800';
+            if (key === 'pos') return 'bg-amber-100 text-amber-800';
+            return 'bg-[#F7F7FC] text-[#6E7191]';
         },
         priorityLabel(order) {
             const map = {
@@ -410,15 +456,12 @@ export default {
             if (!from) return 0;
             const start = new Date(from).getTime();
             if (Number.isNaN(start)) return 0;
-
-            // Completed / canceled / rejected: freeze at finish time (do not keep counting)
             let end = Date.now();
             if (this.isTimerFrozen(order)) {
                 const to = order.elapsed_to || order.updated_at;
                 const parsed = to ? new Date(to).getTime() : NaN;
                 end = Number.isNaN(parsed) ? start : parsed;
             }
-
             return Math.max(0, Math.floor((end - start) / 1000));
         },
         isTimerFrozen(order) {
@@ -437,9 +480,7 @@ export default {
             return `${m}:${String(r).padStart(2, '0')}`;
         },
         elapsedClass(order) {
-            if (this.isTimerFrozen(order)) {
-                return 'text-[#6E7191]';
-            }
+            if (this.isTimerFrozen(order)) return 'text-[#6E7191]';
             const m = Math.floor(this.elapsedSeconds(order) / 60);
             const eta = Number(order.preparation_time || 0);
             if (eta && m >= eta) return 'text-rose-600';

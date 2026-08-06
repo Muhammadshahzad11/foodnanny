@@ -383,6 +383,8 @@ class OrderService
             }
 
             if (in_array($request->status, $status)) {
+                $previousStatus = (int) $order->status;
+
                 if ($request->status == OrderStatus::REJECTED) {
                     $request->validate([
                         'reason' => 'required|max:700',
@@ -423,6 +425,25 @@ class OrderService
                     && $order->table_id
                 ) {
                     app(WaiterOrderService::class)->releaseTableIfIdle((int) $order->table_id);
+                }
+
+                $action = match ((int) $request->status) {
+                    OrderStatus::ACCEPT => 'accept',
+                    OrderStatus::PREPARING => 'preparing',
+                    OrderStatus::PREPARED => 'ready',
+                    OrderStatus::OUT_FOR_DELIVERY => 'out_for_delivery',
+                    OrderStatus::DELIVERED => 'complete',
+                    OrderStatus::REJECTED => 'reject',
+                    OrderStatus::CANCELED => 'cancel',
+                    default => 'status',
+                };
+
+                try {
+                    app(RealtimePublisher::class)->customerOrderStatus($order->fresh(), $action, $previousStatus, [
+                        'status' => (int) $order->status,
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::info('OrderService changeStatus realtime: ' . $e->getMessage());
                 }
 
                 OrderPlacedEmail::dispatch(['order_id' => $order->id, 'status' => $request->status]);

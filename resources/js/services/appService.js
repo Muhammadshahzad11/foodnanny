@@ -6,6 +6,7 @@ import taxTypeEnum from "../enums/modules/taxTypeEnum.js";
 import offerStatusEnum from "../enums/modules/offerStatusEnum.js";
 import campaignStatusEnum from "../enums/modules/campaignStatusEnum.js";
 import orderStatusEnum from "../enums/modules/orderStatusEnum.js";
+import roleEnum from "../enums/modules/roleEnum.js";
 
 export default {
     phoneNumber: function (e) {
@@ -232,15 +233,29 @@ export default {
     },
     /**
      * After login/guest auth, return user to intended page (checkout, restaurant, etc.).
+     * Staff roles go to their admin workspace (waiters land on tables).
      */
     redirectAfterAuth: async function (router, options = {}) {
+        const authStore = useAuthStore();
         const carts = options.carts || [];
         const location = options.location;
         const dineInContext = options.dineInContext || null;
         const redirect = router.currentRoute.value?.query?.redirect;
+        const roleId = Number(authStore.info?.role_id || 0);
 
         if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) {
             return router.push(redirect);
+        }
+
+        if (roleId && roleId !== roleEnum.CUSTOMER) {
+            if (roleId === roleEnum.WAITER) {
+                return router.push({name: 'admin.waiter.tables'});
+            }
+
+            const defaultPermission = authStore.defaultPermission;
+            if (defaultPermission?.url) {
+                return router.push({path: '/admin/' + defaultPermission.url});
+            }
         }
 
         if (carts.length > 0) {

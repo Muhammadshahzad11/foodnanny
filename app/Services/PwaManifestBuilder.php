@@ -59,7 +59,7 @@ class PwaManifestBuilder
             'theme_color' => $manifest['theme_color'],
             'background_color' => $manifest['background_color'],
             // Always same-origin relative path so the popup icon loads on localhost AND 127.0.0.1
-            'icon' => '/images/default/pwa/icons/icon-192x192.png',
+            'icon' => '/images/default/pwa/icons/icon-192x192.png?v=' . (int) ($pwa?->cache_version ?? 1),
             'enable_install_popup' => (bool) ($pwa?->enable_install_popup ?? true),
             'popup_delay_seconds' => (int) ($pwa?->popup_delay_seconds ?? 2),
             'popup_frequency_hours' => (int) ($pwa?->popup_frequency_hours ?? 24),
@@ -84,6 +84,7 @@ class PwaManifestBuilder
         ];
 
         $icons = [];
+        $version = (int) ($pwa?->cache_version ?? 1);
         foreach ($defaults as $size => $fallback) {
             $src = $this->sameOriginPath($fallback);
 
@@ -106,6 +107,10 @@ class PwaManifestBuilder
                 }
             }
 
+            if (!str_contains($src, '?')) {
+                $src .= '?v=' . $version;
+            }
+
             $icons[] = [
                 'src' => $src,
                 'sizes' => $size,
@@ -125,7 +130,8 @@ class PwaManifestBuilder
 
     private function shortcuts(): array
     {
-        $iconSrc = '/images/default/pwa/icons/icon-192x192.png';
+        $version = (int) (Pwa::query()->value('cache_version') ?: 1);
+        $iconSrc = '/images/default/pwa/icons/icon-192x192.png?v=' . $version;
         $defaults = [
             ['name' => 'Orders', 'description' => 'Open orders', 'url' => '/admin/online-orders?source=pwa_shortcut'],
             ['name' => 'Tables', 'description' => 'Restaurant tables', 'url' => '/admin/tables?source=pwa_shortcut'],

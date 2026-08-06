@@ -1,279 +1,266 @@
 <template>
-    <div v-for="item in items" :key="item" v-show="type === null || type === item.item_type"
-         class="group flex rounded-lg overflow-hidden border border-slate-100 bg-white transition-all duration-300 hover:shadow-hover">
-        <figure class="flex-shrink-0 overflow-hidden relative">
+    <div v-for="item in items" :key="item.id || item.name"
+         v-show="type === null || type === item.item_type"
+         class="group restaurant-item flex h-full min-h-[8.5rem] overflow-hidden bg-white transition-all duration-300">
+        <figure class="restaurant-item__media relative flex-shrink-0 overflow-hidden">
             <label v-if="Object.keys(offer).length > 0"
-                   class="absolute top-1.5 ltr:left-1.5 rtl:right-1.5 z-20 whitespace-nowrap text-xs py-0.5 px-1.5 rounded bg-primary text-white">
+                   class="absolute top-2 ltr:left-2 rtl:right-2 z-20 whitespace-nowrap text-[11px] font-semibold py-1 px-2 bg-primary text-white rounded">
                 {{ $t('message.percentage_off', {discount: offer.amount}) }}
             </label>
             <label v-else-if="item.discount > 0 || Object.keys(offer).length > 0"
-                   class="absolute top-1.5 ltr:left-1.5 rtl:right-1.5 z-20 whitespace-nowrap text-xs py-0.5 px-1.5 rounded bg-primary text-white">
+                   class="absolute top-2 ltr:left-2 rtl:right-2 z-20 whitespace-nowrap text-[11px] font-semibold py-1 px-2 bg-primary text-white rounded">
                 {{ item.discount_option }} {{ $t('label.off') }}
             </label>
 
             <img :src="item.thumb" alt="menu"
                  @click.prevent="itemVariationModalShow('item-variation-modal-' + itemIndex, item)"
-                 class="w-28 h-28 object-cover group-hover:rotate-3 group-hover:scale-110 transition-all duration-500 cursor-pointer">
+                 class="restaurant-item__image object-cover group-hover:scale-105 transition-transform duration-500 cursor-pointer">
             <div v-if="parseInt(item.halal) === parseInt(enums.askEnum.YES)"
-                 class="absolute bottom-1.5 ltr:left-1.5 rtl:right-1.5 z-20 flex items-center gap-1.5">
-                <img v-if="parseInt(item.halal) === parseInt(enums.askEnum.YES)" :src="setting.image_halal" alt="halal"
-                     class="w-6 flex-shrink-0">
+                 class="restaurant-item__halal absolute z-20 flex items-center">
+                <img :src="setting.image_halal" alt="halal" class="w-5 h-5 sm:w-6 sm:h-6 object-contain drop-shadow">
             </div>
         </figure>
-        <div class="flex-auto flex flex-col justify-between px-3 py-2 overflow-hidden">
-            <div>
-                <div class="flex items-start gap-3 mb-2">
+        <div class="flex min-w-0 flex-auto flex-col justify-between gap-2 px-3 py-2.5 sm:px-3.5 sm:py-3 overflow-hidden">
+            <div class="min-w-0">
+                <div class="flex items-start gap-2 mb-1">
                     <h3 @click.prevent="itemVariationModalShow('item-variation-modal-' + itemIndex, item)"
-                        class="cursor-pointer text-sm font-medium capitalize whitespace-nowrap overflow-hidden text-ellipsis transition-all duration-300 group-hover:text-primary">
+                        class="min-w-0 flex-1 cursor-pointer text-sm font-semibold capitalize leading-5 line-clamp-1 transition-colors duration-300 group-hover:text-primary">
                         {{ item.name }}
                     </h3>
-                    <button :key="item" v-if="item.caution"
+                    <button v-if="item.caution"
                             @click.prevent="itemInfoModalShow('item-info-modal-' + itemIndex, item.name, item.caution)"
-                            class="lab-fill-info mt-0.5 text-paragraph"></button>
+                            class="lab-fill-info mt-0.5 shrink-0 text-paragraph"></button>
                 </div>
-                <p class="editor-show-design text-xs text-paragraph"
-                   v-html="textShortener(item.description_alt, 65)"></p>
+                <p class="editor-show-design restaurant-item__desc text-xs leading-5 text-paragraph line-clamp-2"
+                   v-html="textShortener(item.description_alt, 72)"></p>
             </div>
-            <div class="flex items-center justify-between">
-                <div v-if="Object.keys(offer).length > 0" class="flex items-center gap-2">
+            <div class="flex items-center justify-between gap-2 mt-auto">
+                <div v-if="Object.keys(offer).length > 0" class="flex min-w-0 items-center gap-2">
                     <del class="text-xs font-medium text-paragraph">
                         {{ item.currency_price }}
                     </del>
-                    <span class="text-sm font-medium text-heading">
+                    <span class="text-sm font-semibold text-heading truncate">
                         {{
                             currencyFormat((item.convert_price - parseFloat((item.convert_price / 100) * offer.amount).toFixed(setting.site_digit_after_decimal_point)), setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position)
                         }}
                     </span>
                 </div>
-                <div v-else class="flex items-center gap-2">
+                <div v-else class="flex min-w-0 items-center gap-2">
                     <del v-if="item.discount > 0" class="text-xs font-medium text-paragraph">
                         {{ item.currency_price }}
                     </del>
-                    <span class="text-sm font-medium text-heading">
+                    <span class="text-sm font-semibold text-heading truncate">
                         {{ item.discount > 0 ? item.currency_discounted_price : item.currency_price }}
                     </span>
                 </div>
                 <button @click.prevent="itemVariationModalShow('item-variation-modal-' + itemIndex, item)"
-                        class="w-fit flex items-center gap-1 h-6 px-2 rounded-3xl shadow text-primary bg-white">
+                        class="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 text-white bg-primary hover:bg-heading transition">
                     <i class="lab-fill-bag text-sm"></i>
-                    <span class="text-xs capitalize">{{ $t('button.add') }}</span>
+                    <span class="text-xs font-semibold capitalize">{{ $t('button.add') }}</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <div :id="'item-info-modal-' + itemIndex"
-         class="fixed inset-0 z-60 p-3 w-screen h-dvh overflow-y-auto bg-black/50 transition-all duration-300 opacity-0 invisible">
-        <div class="max-w-lg w-full rounded-xl mx-auto bg-white transition-all duration-300">
-            <div class="flex items-start justify-between gap-4 py-4 px-6">
-                <h3 class="text-lg font-semibold capitalize">{{ itemInfo.name }}</h3>
-                <button @click.prevent="closeModal('item-info-modal-' + itemIndex)"
-                        class="lab-line-circle-cross text-lg text-danger"></button>
+    <Teleport to="body">
+        <div :id="'item-info-modal-' + itemIndex"
+             class="fixed inset-0 z-[120] p-3 w-screen h-dvh overflow-y-auto bg-black/55 transition-all duration-300 opacity-0 invisible">
+            <div class="max-w-lg w-full rounded-2xl mx-auto bg-white transition-all duration-300 shadow-2xl">
+                <div class="flex items-start justify-between gap-4 py-4 px-5 sm:px-6 border-b border-gray-100">
+                    <h3 class="text-lg font-semibold capitalize">{{ itemInfo.name }}</h3>
+                    <button @click.prevent="closeModal('item-info-modal-' + itemIndex)"
+                            class="lab-line-circle-cross text-lg text-danger"></button>
+                </div>
+                <div v-html="itemInfo.caution" class="p-5 sm:p-6 ql-ul-set editor-show-design"></div>
             </div>
-            <div v-html="itemInfo.caution" class="p-6 ql-ul-set editor-show-design"></div>
         </div>
-    </div>
+    </Teleport>
 
-    <div v-if="item" :id="'item-variation-modal-' + itemIndex"
-         class="fixed inset-0 z-50 p-3 w-screen h-dvh overflow-y-auto bg-black/50 transition-all duration-300 opacity-0 invisible">
-        <div class="max-w-2xl  w-full rounded-xl mx-auto bg-white transition-all duration-300">
-            <div v-if="typeof item === 'object' && Object.keys(item).length > 0" class="p-6">
-                <LoadingContentComponent :props="loading"/>
-                <div class="flex gap-4 mb-4">
-                    <img class="w-28 h-28 object-cover rounded-lg flex-shrink-0" :src="item.thumb" alt="menu">
-                    <div class="flex-auto overflow-hidden">
-                        <div class="flex items-center gap-3 mb-2">
-                            <h3 class="text-lg font-medium capitalize whitespace-nowrap overflow-hidden text-ellipsis">
-                                {{ item.name }}
-                            </h3>
-                            <button v-if="item.caution" restaurants
-                                    @click.prevent="itemInfoModalShow('item-info-modal-' + itemIndex, item.name, item.caution)"
-                                    class="lab-fill-info text-paragraph"></button>
-                        </div>
-                        <p v-if="item.description_alt" class="text-sm text-paragraph text-justify mb-3">
-                            {{ item.description_alt }}
-                        </p>
+    <Teleport to="body">
+        <div v-if="item" :id="'item-variation-modal-' + itemIndex"
+             class="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4 w-screen h-dvh overflow-hidden bg-black/55 transition-all duration-300 opacity-0 invisible">
+            <div class="item-customize-modal w-full max-w-2xl bg-white transition-all duration-300 flex flex-col overflow-hidden">
+                <div v-if="typeof item === 'object' && Object.keys(item).length > 0" class="flex min-h-0 flex-1 flex-col">
+                    <LoadingContentComponent :props="loading"/>
 
-                        <div v-if="Object.keys(offer).length > 0" class="flex items-center gap-2">
-                            <del class="font-medium leading-none text-paragraph">
-                                {{ item.currency_price }}
-                            </del>
-                            <span class="font-medium leading-none text-heading">
-                                {{
-                                    currencyFormat((item.convert_price - parseFloat((item.convert_price / 100) * offer.amount).toFixed(setting.site_digit_after_decimal_point)), setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position)
-                                }}
-                            </span>
-                        </div>
-                        <div v-else class="flex items-center gap-2">
-                            <del v-if="item.discount > 0" class="font-medium leading-none text-paragraph">
-                                {{ item.currency_price }}
-                            </del>
-                            <span class="font-medium leading-none text-heading">
-                                {{ item.discount > 0 ? item.currency_discounted_price : item.currency_price }}
-                            </span>
-                        </div>
-                    </div>
-                    <button @click.prevent="itemVariationModalHide('item-variation-modal-' + itemIndex)"
-                            class="flex-shrink-0 self-start">
-                        <i class="lab-line-circle-cross text-danger"></i>
-                    </button>
-                </div>
-
-                <div class="flex items-center gap-2 mb-4">
-                    <h3 class="text-sm font-medium capitalize">{{ $t('label.quantity') }}:</h3>
-                    <div class="flex items-center w-20 h-6 gap-1 p-1 rounded-full bg-gray-100">
-                        <button @click.prevent="quantityDecrement"
-                                class="flex-shrink-0 lab-line-minus-circle font-medium hover:text-primary"></button>
-                        <input v-model="temp.quantity" v-on:keypress="onlyNumber($event)" v-on:keyup="quantityUp"
-                               type="number" class="appearance-none w-full h-full text-center text-sm">
-                        <button @click.prevent="quantityIncrement"
-                                class="flex-shrink-0 lab-line-add-circle font-medium hover:text-primary"></button>
-                    </div>
-                </div>
-
-                <div class="mb-4" v-if="item.item_attributes.length === 1">
-                    <h3 class="text-sm font-medium capitalize mb-2">{{ item.item_attributes[0].name }}:</h3>
-                    <Swiper :dir="displayMode" :speed="1000" :spaceBetween="10" slidesPerView="auto">
-                        <SwiperSlide :for="variation.item_attribute_id + '-' + variation.name"
-                                     v-for="variation in item.variations[item.item_attributes[0].id]" :key="variation"
-                                     @click="changeVariation(variation.item_attribute_id, variation.id, variation.name)"
-                                     :class="temp.item_variations.variations[variation.item_attribute_id] === variation.id ? 'border-primary/50 bg-primary/10' : 'border-gray-100 bg-gray-100'"
-                                     class="!flex items-center gap-2 !w-fit !h-12 px-2.5 rounded-lg cursor-pointer border">
-                            <input type="radio" :id="variation.item_attribute_id + '-' + variation.name"
-                                   :value="variation.id"
-                                   v-model="temp.item_variations.variations[variation.item_attribute_id]"
-                                   class="cs-custom-radio">
-                            <dl class="flex-auto overflow-hidden">
-                                <dt class="text-xs capitalize whitespace-nowrap text-heading">{{
-                                        textShortener(variation.name, 15)
+                    <div class="shrink-0 flex gap-3 sm:gap-4 p-4 sm:p-5 border-b border-gray-100">
+                        <img class="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl flex-shrink-0" :src="item.thumb" alt="menu">
+                        <div class="flex-auto overflow-hidden min-w-0">
+                            <div class="flex items-start gap-2 mb-1">
+                                <h3 class="text-base sm:text-lg font-semibold capitalize leading-snug">
+                                    {{ item.name }}
+                                </h3>
+                                <button v-if="item.caution"
+                                        @click.prevent="itemInfoModalShow('item-info-modal-' + itemIndex, item.name, item.caution)"
+                                        class="lab-fill-info text-paragraph shrink-0 mt-1"></button>
+                            </div>
+                            <p v-if="item.description_alt" class="text-xs sm:text-sm text-paragraph line-clamp-2 mb-2">
+                                {{ item.description_alt }}
+                            </p>
+                            <div v-if="Object.keys(offer).length > 0" class="flex items-center gap-2">
+                                <del class="text-sm font-medium text-paragraph">{{ item.currency_price }}</del>
+                                <span class="text-sm font-semibold text-heading">
+                                    {{
+                                        currencyFormat((item.convert_price - parseFloat((item.convert_price / 100) * offer.amount).toFixed(setting.site_digit_after_decimal_point)), setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position)
                                     }}
-                                </dt>
-                                <dd class="text-xs font-medium mt-0.5 text-heading">+{{ variation.currency_price }}</dd>
-                            </dl>
-                        </SwiperSlide>
-                    </Swiper>
-                </div>
-
-                <div class="mb-4" v-else-if="item.item_attributes.length > 1">
-                    <div class="row">
-                        <div v-for="item_attribute in item.item_attributes" class="col-12 sm:col-6">
-                            <label class="text-sm leading-6 block font-medium capitalize mb-1.5 text-heading">
-                                {{ item_attribute.name }}:
-                            </label>
-                            <div class="relative">
-                                <i class="lab lab-line-chevron-down text-sm absolute top-1/2 ltr:right-2.5 rtl:left-2.5 -translate-y-1/2 lab-font-size-16"></i>
-                                <select
-                                    @change.prevent="changeVariationAdjust(item_attribute.id, temp.item_variations.variations[item_attribute.id])"
-                                    v-model="temp.item_variations.variations[item_attribute.id]"
-                                    class="text-xs capitalize rounded-lg h-10 w-full py-1.5 px-2.5 appearance-none transition border border-[#EFF0F6] text-heading hover:border-primary/30">
-                                    <option :value="variation.id"
-                                            v-for="variation in item.variations[item_attribute.id]" :key="variation">
-                                        {{ variation.name }} +{{ variation.currency_price }}
-                                    </option>
-                                </select>
+                                </span>
+                            </div>
+                            <div v-else class="flex items-center gap-2">
+                                <del v-if="item.discount > 0" class="text-sm font-medium text-paragraph">{{ item.currency_price }}</del>
+                                <span class="text-sm font-semibold text-heading">
+                                    {{ item.discount > 0 ? item.currency_discounted_price : item.currency_price }}
+                                </span>
                             </div>
                         </div>
+                        <button @click.prevent="itemVariationModalHide('item-variation-modal-' + itemIndex)"
+                                class="flex-shrink-0 self-start h-8 w-8 inline-flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200">
+                            <i class="lab-line-circle-cross text-danger"></i>
+                        </button>
                     </div>
-                </div>
 
-                <div class="mb-4" v-if="item.extras.length > 0">
-                    <h3 class="text-sm font-medium capitalize mb-2">{{ $t('label.extras') }}:</h3>
-                    <Swiper :dir="displayMode" :speed="1000" :spaceBetween="16" slidesPerView="auto">
-                        <SwiperSlide v-for="extra in item.extras" :key="extra"
-                                     :class="extraCheckClass(extra.id) ? 'border-primary/50 bg-primary/10' : 'border-gray-100 bg-gray-100'"
-                                     class="!flex !w-fit !h-12 rounded-lg border">
-                            <label :for="extra.id + '-' + extra.name"
-                                   class="!flex items-center gap-2 !w-fit !h-12 px-2.5 rounded-lg cursor-pointer ">
-                                <input type="checkbox" class="cs-custom-checkbox"
-                                       @change="changeExtra($event, extra.id, extra.name)"
-                                       :id="extra.id + '-' + extra.name" :value="extra.id">
-                                <dl class="flex-auto overflow-hidden">
-                                    <dt class="text-xs capitalize whitespace-nowrap">{{
-                                            textShortener(extra.name, 15)
-                                        }}
-                                    </dt>
-                                    <dd class="text-xs font-medium mt-0.5">
-                                        +{{ extra.currency_price }}
-                                    </dd>
-                                </dl>
-                            </label>
-                        </SwiperSlide>
-                    </Swiper>
-                </div>
+                    <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-5 py-4">
+                        <div class="flex items-center gap-2 mb-4">
+                            <h3 class="text-sm font-medium capitalize">{{ $t('label.quantity') }}:</h3>
+                            <div class="flex items-center w-24 h-8 gap-1 p-1 rounded-lg bg-gray-100">
+                                <button @click.prevent="quantityDecrement"
+                                        class="flex-shrink-0 lab-line-minus-circle font-medium hover:text-primary"></button>
+                                <input v-model="temp.quantity" v-on:keypress="onlyNumber($event)" v-on:keyup="quantityUp"
+                                       type="number" class="appearance-none w-full h-full text-center text-sm">
+                                <button @click.prevent="quantityIncrement"
+                                        class="flex-shrink-0 lab-line-add-circle font-medium hover:text-primary"></button>
+                            </div>
+                        </div>
 
-                <div class="mb-4" v-if="item.addons.length > 0">
-                    <h3 class="text-sm font-medium capitalize mb-2">{{ $t('label.addons') }}:</h3>
-                    <Swiper :dir="displayMode" :speed="1000" :spaceBetween="10" slidesPerView="auto">
-                        <SwiperSlide v-for="addon in item.addons" :key="addon" class="!w-fit">
-                            <div
-                                :class="addons[addon.id] ? 'border-primary/50 bg-primary/10' : 'border-gray-100 bg-gray-100'"
-                                class="!flex !w-fit rounded-lg overflow-hidden cursor-pointer border border-gray-100 bg-gray-100">
-                                <img class="w-[72px] h-[72px] object-cover flex-shrink-0" :src="addon.thumb"
-                                     @click.prevent="changeAddon(addon)" alt="addon">
-                                <div class="flex-auto flex flex-col justify-between p-2">
-                                    <div class="flex items-center gap-1">
-                                        <h5 class="text-xs capitalize whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">
-                                            {{ addon.addon_item_name }}
-                                        </h5>
-                                        <button v-if="addon.caution"
-                                                @click.prevent="itemInfoModalShow('item-info-modal-' + itemIndex, addon.addon_item_name, addon.caution)"
-                                                class="lab-fill-info text-sm leading-none text-paragraph"></button>
+                        <div class="mb-4" v-if="item.item_attributes.length === 1">
+                            <h3 class="text-sm font-medium capitalize mb-2">{{ item.item_attributes[0].name }}:</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button"
+                                     v-for="variation in item.variations[item.item_attributes[0].id]" :key="variation.id"
+                                     @click="changeVariation(variation.item_attribute_id, variation.id, variation.name)"
+                                     :class="temp.item_variations.variations[variation.item_attribute_id] === variation.id ? 'border-primary bg-primary/10' : 'border-gray-200 bg-gray-50'"
+                                     class="inline-flex items-center gap-2 min-h-12 px-3 rounded-xl cursor-pointer border transition">
+                                    <input type="radio" :id="'var-' + itemIndex + '-' + variation.id"
+                                           :value="variation.id"
+                                           v-model="temp.item_variations.variations[variation.item_attribute_id]"
+                                           class="cs-custom-radio">
+                                    <span class="text-left">
+                                        <span class="block text-xs capitalize font-medium text-heading">{{ variation.name }}</span>
+                                        <span class="block text-xs font-semibold mt-0.5 text-heading">+{{ variation.currency_price }}</span>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-4" v-else-if="item.item_attributes.length > 1">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div v-for="item_attribute in item.item_attributes" :key="item_attribute.id">
+                                    <label class="text-sm leading-6 block font-medium capitalize mb-1.5 text-heading">
+                                        {{ item_attribute.name }}:
+                                    </label>
+                                    <div class="relative">
+                                        <i class="lab lab-line-chevron-down text-sm absolute top-1/2 ltr:right-2.5 rtl:left-2.5 -translate-y-1/2"></i>
+                                        <select
+                                            @change.prevent="changeVariationAdjust(item_attribute.id, temp.item_variations.variations[item_attribute.id])"
+                                            v-model="temp.item_variations.variations[item_attribute.id]"
+                                            class="text-xs capitalize rounded-xl h-11 w-full py-1.5 px-2.5 appearance-none transition border border-[#EFF0F6] text-heading hover:border-primary/30">
+                                            <option :value="variation.id"
+                                                    v-for="variation in item.variations[item_attribute.id]" :key="variation.id">
+                                                {{ variation.name }} +{{ variation.currency_price }}
+                                            </option>
+                                        </select>
                                     </div>
-                                    <p v-if="addon.variation_names.length > 0" class="inline-flex gap-0.5 mt-1">
-                                        <span v-for="(variation, key) in addon.variation_names"
-                                              class="text-[10px] leading-none capitalize text-paragraph">
-                                            {{
-                                                textShortener(variation.name, 8)
-                                            }}{{ addon.variation_names.length !== key + 1 ? ', ' : '' }}
-                                        </span>
-                                    </p>
+                                </div>
+                            </div>
+                        </div>
 
-                                    <div class="flex items-center justify-between gap-2 mt-2">
-                                        <h6 v-if="Object.keys(offer).length > 0" class="text-xs font-medium">
-                                            {{
-                                                currencyFormat(((addon.addon_item_convert_price + addon.variation_total_convert_price) - ((addon.addon_item_convert_price / 100) * offer.amount)), setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position)
-                                            }}
-                                        </h6>
-                                        <h6 v-else class="text-xs font-medium">
-                                            {{ addon.total_currency_price }}
-                                        </h6>
-                                        <button v-if="!addons[addon.id]" @click.prevent="changeAddon(addon)"
-                                                class="w-fit flex items-center gap-1 h-[18px] px-1.5 rounded-3xl shadow-filter text-primary bg-white">
-                                            <i class="lab-fill-bag text-xs"></i>
-                                            <span class="text-[10px] leading-none capitalize">
-                                                {{ $t('button.add') }}
+                        <div class="mb-4" v-if="item.extras.length > 0">
+                            <h3 class="text-sm font-medium capitalize mb-2">{{ $t('label.extras') }}:</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <label v-for="extra in item.extras" :key="extra.id"
+                                     :for="'extra-' + itemIndex + '-' + extra.id"
+                                     :class="extraCheckClass(extra.id) ? 'border-primary bg-primary/10' : 'border-gray-200 bg-gray-50'"
+                                     class="inline-flex items-center gap-2 min-h-12 px-3 rounded-xl cursor-pointer border transition">
+                                    <input type="checkbox" class="cs-custom-checkbox"
+                                           @change="changeExtra($event, extra.id, extra.name)"
+                                           :id="'extra-' + itemIndex + '-' + extra.id" :value="extra.id">
+                                    <span class="text-left">
+                                        <span class="block text-xs capitalize font-medium">{{ extra.name }}</span>
+                                        <span class="block text-xs font-semibold mt-0.5">+{{ extra.currency_price }}</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-4" v-if="item.addons.length > 0">
+                            <h3 class="text-sm font-medium capitalize mb-2">{{ $t('label.addons') }}:</h3>
+                            <div class="flex flex-col gap-2">
+                                <div v-for="addon in item.addons" :key="addon.id"
+                                    :class="addons[addon.id] ? 'border-primary bg-primary/10' : 'border-gray-200 bg-gray-50'"
+                                    class="flex rounded-xl overflow-hidden border">
+                                    <img class="w-[72px] h-[72px] object-cover flex-shrink-0" :src="addon.thumb"
+                                         @click.prevent="changeAddon(addon)" alt="addon">
+                                    <div class="flex-auto flex flex-col justify-between p-2.5 min-w-0">
+                                        <div class="flex items-center gap-1">
+                                            <h5 class="text-xs capitalize font-medium truncate">{{ addon.addon_item_name }}</h5>
+                                            <button v-if="addon.caution"
+                                                    @click.prevent="itemInfoModalShow('item-info-modal-' + itemIndex, addon.addon_item_name, addon.caution)"
+                                                    class="lab-fill-info text-sm leading-none text-paragraph"></button>
+                                        </div>
+                                        <p v-if="addon.variation_names.length > 0" class="inline-flex flex-wrap gap-0.5 mt-1">
+                                            <span v-for="(variation, key) in addon.variation_names" :key="key"
+                                                  class="text-[10px] leading-none capitalize text-paragraph">
+                                                {{ textShortener(variation.name, 8) }}{{ addon.variation_names.length !== key + 1 ? ', ' : '' }}
                                             </span>
-                                        </button>
-                                        <div v-if="addons[addon.id]" class="flex items-center w-12 h-3 gap-0.5">
-                                            <button @click.prevent="addonQuantityDecrement(addon.id)"
-                                                    :class="addonQuantity[addon.id] === 1 ? 'lab-line-trash text-danger' : 'lab-line-minus-circle'"
-                                                    class="flex-shrink-0 text-xs leading-none font-medium hover:text-primary"></button>
-                                            <input v-on:keypress="onlyNumber($event)"
-                                                   v-on:keyup="addonQuantityUp(addon.id)"
-                                                   v-model="addonQuantity[addon.id]"
-                                                   type="number"
-                                                   class="appearance-none w-full h-full text-center text-xs leading-none">
-                                            <button @click.prevent="addonQuantityIncrement(addon.id)"
-                                                    class="flex-shrink-0 lab-line-add-circle text-xs leading-none font-medium hover:text-primary"></button>
+                                        </p>
+                                        <div class="flex items-center justify-between gap-2 mt-2">
+                                            <h6 v-if="Object.keys(offer).length > 0" class="text-xs font-semibold">
+                                                {{
+                                                    currencyFormat(((addon.addon_item_convert_price + addon.variation_total_convert_price) - ((addon.addon_item_convert_price / 100) * offer.amount)), setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position)
+                                                }}
+                                            </h6>
+                                            <h6 v-else class="text-xs font-semibold">{{ addon.total_currency_price }}</h6>
+                                            <button v-if="!addons[addon.id]" @click.prevent="changeAddon(addon)"
+                                                    class="inline-flex items-center gap-1 h-7 px-2 rounded-lg text-white bg-primary">
+                                                <i class="lab-fill-bag text-xs"></i>
+                                                <span class="text-[10px] leading-none capitalize">{{ $t('button.add') }}</span>
+                                            </button>
+                                            <div v-if="addons[addon.id]" class="flex items-center w-16 h-6 gap-0.5">
+                                                <button @click.prevent="addonQuantityDecrement(addon.id)"
+                                                        :class="addonQuantity[addon.id] === 1 ? 'lab-line-trash text-danger' : 'lab-line-minus-circle'"
+                                                        class="flex-shrink-0 text-xs leading-none font-medium hover:text-primary"></button>
+                                                <input v-on:keypress="onlyNumber($event)"
+                                                       v-on:keyup="addonQuantityUp(addon.id)"
+                                                       v-model="addonQuantity[addon.id]"
+                                                       type="number"
+                                                       class="appearance-none w-full h-full text-center text-xs leading-none">
+                                                <button @click.prevent="addonQuantityIncrement(addon.id)"
+                                                        class="flex-shrink-0 lab-line-add-circle text-xs leading-none font-medium hover:text-primary"></button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </SwiperSlide>
-                    </Swiper>
-                </div>
+                        </div>
 
-                <h3 class="text-sm font-medium capitalize mb-2">{{ $t('label.special_instructions') }}:</h3>
-                <textarea v-model="temp.instruction" :placeholder="$t('message.add_note')" class="w-full h-14 p-2 mb-4 rounded-lg resize-none  placeholder:text-xs border border-gray-200"></textarea>
-                <button :disabled="temp.total_price <= 0" @click.prevent="addToCart('item-variation-modal-' + itemIndex)" class="w-full h-12 rounded-3xl text-center flex items-center justify-center gap-3 bg-primary text-white">
-                    <i class="lab-fill-bag-check text-lg leading-none"></i>
-                    <span>
-                        {{ $t('button.add_to_cart') }} - {{ currencyFormat(temp.total_price, setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position) }}
-                    </span>
-                </button>
+                        <h3 class="text-sm font-medium capitalize mb-2">{{ $t('label.special_instructions') }}:</h3>
+                        <textarea v-model="temp.instruction" :placeholder="$t('message.add_note')"
+                                  class="w-full h-16 p-3 mb-1 rounded-xl resize-none placeholder:text-xs border border-gray-200 focus:border-primary/40 outline-none"></textarea>
+                    </div>
+
+                    <div class="shrink-0 border-t border-gray-100 p-3 sm:p-4 bg-white">
+                        <button :disabled="temp.total_price <= 0"
+                                @click.prevent="addToCart('item-variation-modal-' + itemIndex)"
+                                class="w-full h-12 rounded-xl text-center flex items-center justify-center gap-3 bg-primary text-white font-semibold disabled:opacity-50">
+                            <i class="lab-fill-bag-check text-lg leading-none"></i>
+                            <span>
+                                {{ $t('button.add_to_cart') }} - {{ currencyFormat(temp.total_price, setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position) }}
+                            </span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    </Teleport>
 </template>
 <script>
 import {useModal} from "../../../composables/modal";
@@ -768,3 +755,65 @@ export default {
     }
 }
 </script>
+
+<style scoped>
+.restaurant-item {
+    border: 1px solid rgb(10 61 40 / 0.08);
+    border-radius: 1rem;
+    box-shadow: 0 1px 0 rgb(10 61 40 / 0.03);
+    align-items: stretch;
+}
+.restaurant-item:hover {
+    border-color: rgb(var(--primary) / 0.22);
+    box-shadow: 0 12px 28px rgb(10 61 40 / 0.08);
+}
+.restaurant-item__media {
+    width: 7.25rem;
+    min-width: 7.25rem;
+    align-self: stretch;
+    min-height: 8.5rem;
+    border-radius: 1rem 0 0 1rem;
+    background: #f3f4f6;
+}
+.restaurant-item__image {
+    width: 100%;
+    height: 100%;
+    min-height: 8.5rem;
+    display: block;
+}
+.restaurant-item__halal {
+    left: 0.4rem;
+    bottom: 0.4rem;
+    padding: 0.15rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.92);
+}
+.restaurant-item__desc :deep(p),
+.restaurant-item__desc :deep(*) {
+    display: inline;
+    margin: 0;
+    padding: 0;
+}
+.restaurant-item button.bg-primary {
+    border-radius: 0.55rem;
+}
+@media (min-width: 640px) {
+    .restaurant-item__media {
+        width: 8rem;
+        min-width: 8rem;
+    }
+}
+</style>
+
+<style>
+.item-customize-modal {
+    max-height: min(92dvh, 920px);
+    border-radius: 1.25rem 1.25rem 0 0;
+    box-shadow: 0 24px 64px rgb(10 61 40 / 0.28);
+}
+@media (min-width: 640px) {
+    .item-customize-modal {
+        border-radius: 1.25rem;
+    }
+}
+</style>

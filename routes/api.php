@@ -137,6 +137,7 @@ use App\Http\Controllers\Frontend\AutoLocalizationController as FrontendAutoLoca
 use App\Http\Controllers\Frontend\RestaurantReviewController as FrontendRestaurantReviewController;
 use App\Http\Controllers\Frontend\DeliveryBoyReviewController as FrontendDeliveryBoyReviewController;
 use App\Http\Controllers\Admin\StorageController;
+use App\Http\Controllers\Admin\CacheController;
 
 Route::match(['get', 'post'], '/login', function () {
     return response()->json(['errors' => 'unauthenticated'], 401);
@@ -860,6 +861,10 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::prefix('storage')->name('storage.')->group(function () {
             Route::get('/', [StorageController::class, 'index']);
             Route::post('update/', [StorageController::class, 'update']);
+        });
+
+        Route::prefix('cache')->name('cache.')->group(function () {
+            Route::post('flush/', [CacheController::class, 'flush']);
         });
 
         Route::prefix('ai-agent')->name('ai-agent.')->group(function () {

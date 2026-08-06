@@ -95,6 +95,17 @@ class SettingMenuTableSeeder extends Seeder
                 'updated_at' => now()
             ],
             [
+                'name'       => 'Cache',
+                'language'   => 'cache',
+                'url'        => 'cache',
+                'icon'       => 'lab lab-line-reset',
+                'type'       => SettingMenuType::SYSTEM,
+                'priority'   => 968,
+                'status'     => 1,
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
                 'name'       => 'Delivery Setup',
                 'language'   => 'delivery_setup',
                 'url'        => 'delivery-setup',

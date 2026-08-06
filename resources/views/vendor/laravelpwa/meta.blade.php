@@ -1,7 +1,8 @@
 @php
     // Always same-origin relative URLs. Absolute APP_URL (e.g. :8002) breaks install when browsing :8000.
-    $pwaIcon192 = '/images/default/pwa/icons/icon-192x192.png';
-    $pwaIcon512 = '/images/default/pwa/icons/icon-512x512.png';
+    $pwaCacheVersion = (int) (\App\Models\Pwa::query()->value('cache_version') ?: 1);
+    $pwaIcon192 = '/images/default/pwa/icons/icon-192x192.png?v=' . $pwaCacheVersion;
+    $pwaIcon512 = '/images/default/pwa/icons/icon-512x512.png?v=' . $pwaCacheVersion;
 @endphp
 <!-- Web Application Manifest (relative = same origin as current port) -->
 <link rel="manifest" href="/manifest.json">

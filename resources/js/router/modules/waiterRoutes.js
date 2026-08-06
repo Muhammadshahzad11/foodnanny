@@ -9,7 +9,7 @@ export default [
         path: "/admin/waiter",
         component: WaiterComponent,
         name: "admin.waiter",
-        redirect: {name: "admin.waiter.dashboard"},
+        redirect: {name: "admin.waiter.tables"},
         meta: {
             template: "admin",
             auth: true,
