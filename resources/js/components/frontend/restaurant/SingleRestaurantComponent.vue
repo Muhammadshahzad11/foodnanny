@@ -94,6 +94,27 @@
                 </nav>
             </div>
 
+            <div
+                class="mb-5 overflow-hidden rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 shadow-[0_8px_24px_rgba(245,158,11,0.18)]"
+            >
+                <div class="flex gap-3 p-4 sm:p-5">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-500 text-lg shadow-md">
+                        ⚠️
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-bold tracking-wide text-amber-900 sm:text-base">
+                            {{ $t('label.important_notice') }}
+                        </p>
+                        <p class="mt-1.5 text-sm leading-6 text-amber-950">
+                            {{ $t('message.restaurant_platform_disclaimer') }}
+                        </p>
+                        <p class="mt-2 text-sm font-medium leading-6 text-amber-900">
+                            {{ $t('message.restaurant_contact_disclaimer') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <div v-if="coupons.length > 0" class="pt-3 sm:pt-4 pb-4 sm:pb-6 border-t border-gray-100">
                 <h3 class="sm:text-xl font-medium capitalize mb-2.5">{{ $t('label.available_deals') }}</h3>
                 <Swiper :dir="displayMode" :loop="false" :speed="1000" :navigation="true" :modules="modules" :breakpoints="couponBreakPoints" class="middle-navigate">
