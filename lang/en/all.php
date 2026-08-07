@@ -168,7 +168,7 @@ return [
         'token_is_expired'                                           => 'The token is expired.',
         'token_is_invalid'                                           => 'The token is invalid.',
         'order_accept'                                               => 'The order already accepted.',
-        'order_cancel_window_expired'                                => 'The 10-minute cancel window has ended. You can no longer cancel this order.',
+        'order_cancel_window_expired'                                => 'The 2-minute cancel window has ended. You can no longer cancel this order.',
         'feature_disable'                                            => 'This feature is disabled for the demo.',
         'time_slot_exist'                                            => 'Time slots already exist.',
         'default_time_slots_generated'                               => 'Default time slots generated successfully.',

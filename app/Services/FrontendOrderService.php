@@ -219,13 +219,10 @@ class FrontendOrderService
                         throw new Exception(trans('all.message.order_accept'), 422);
                     }
 
-                    // Scan-menu (dine-in table) orders: cancel only within 10 minutes of placement.
-                    if (
-                        (int) $frontendOrder->order_type === \App\Enums\OrderType::DINING_TABLE
-                        && (int) $frontendOrder->table_id > 0
-                        && $frontendOrder->order_datetime
-                    ) {
-                        $expiresAt = \Carbon\Carbon::parse($frontendOrder->order_datetime)->addMinutes(10);
+                    // Scan-menu (dine-in table) orders: cancel only within the short guest window.
+                    if ($frontendOrder->isScanMenuOrder() && $frontendOrder->order_datetime) {
+                        $expiresAt = \Carbon\Carbon::parse($frontendOrder->order_datetime)
+                            ->addMinutes(FrontendOrder::SCAN_MENU_CANCEL_MINUTES);
                         if (\Carbon\Carbon::now()->gt($expiresAt)) {
                             throw new Exception(trans('all.message.order_cancel_window_expired'), 422);
                         }

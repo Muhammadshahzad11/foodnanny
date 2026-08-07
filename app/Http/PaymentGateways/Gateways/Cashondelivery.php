@@ -82,9 +82,10 @@ class Cashondelivery extends PaymentAbstract
 
             if ($this->response) {
                 try {
-                    $fresh = $frontendOrder->fresh();
-                    if ($fresh) {
-                        app(\App\Services\KitchenOrderService::class)->publishIfEligible($fresh);
+                    // Kitchen service is typed to Order (same orders table as FrontendOrder).
+                    $order = \App\Models\Order::query()->find($frontendOrder->id);
+                    if ($order) {
+                        app(\App\Services\KitchenOrderService::class)->publishIfEligible($order);
                     }
                 } catch (\Throwable $e) {
                     Log::info('COD kitchen notify: ' . $e->getMessage());

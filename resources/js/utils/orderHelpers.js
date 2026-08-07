@@ -1,6 +1,10 @@
 import orderTypeEnum from "../enums/modules/orderTypeEnum.js";
 import paymentTypeEnum from "../enums/modules/paymentTypeEnum.js";
 
+/** Must match backend DetectsScanMenuOrder::SCAN_MENU_CANCEL_MINUTES */
+export const SCAN_MENU_CANCEL_MINUTES = 2;
+export const SCAN_MENU_CANCEL_MS = SCAN_MENU_CANCEL_MINUTES * 60 * 1000;
+
 /**
  * Restaurant table QR / scan-menu dine-in order.
  * Matches backend Order::isScanMenuOrder() / is_scan_menu_order.

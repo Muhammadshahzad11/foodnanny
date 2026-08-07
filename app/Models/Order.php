@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Models\Scopes\RestaurantScope;
+use App\Traits\DetectsScanMenuOrder;
 use App\Traits\HasModelMeta;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,6 +16,7 @@ class Order extends Model implements HasMedia
     use HasFactory;
     use HasModelMeta;
     use InteractsWithMedia;
+    use DetectsScanMenuOrder;
 
 
     protected $table = "orders";
@@ -223,14 +224,6 @@ class Order extends Model implements HasMedia
         return $this->hasOne(Transaction::class);
     }
 
-    /**
-     * Customer table-QR / scan-menu dine-in order (not waiter/POS-only heuristics).
-     */
-    public function isScanMenuOrder(): bool
-    {
-        return (int) $this->order_type === OrderType::DINING_TABLE && (int) $this->table_id > 0;
-    }
- 
     public function posDetail(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(OrderPosDetail::class);

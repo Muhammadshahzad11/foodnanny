@@ -1046,10 +1046,15 @@ export default {
                 }
             }).catch((err) => {
                 this.loading.isActive = false;
-                if (typeof err.response.data.errors === 'object') {
-                    _.forEach(err.response.data.errors, (error) => {
+                const data = err?.response?.data;
+                if (data?.errors && typeof data.errors === 'object') {
+                    _.forEach(data.errors, (error) => {
                         alertService.error(error[0]);
                     });
+                } else if (data?.message) {
+                    alertService.error(data.message);
+                } else {
+                    alertService.error(this.$t('message.something_wrong'));
                 }
             })
         }

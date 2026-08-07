@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
+use App\Traits\DetectsScanMenuOrder;
 use App\Traits\HasModelMeta;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +12,7 @@ class FrontendOrder extends Model
 {
     use HasFactory;
     use HasModelMeta;
+    use DetectsScanMenuOrder;
 
     protected $table = "orders";
     protected $fillable = [

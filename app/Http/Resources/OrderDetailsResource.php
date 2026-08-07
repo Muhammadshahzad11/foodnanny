@@ -72,7 +72,9 @@ class OrderDetailsResource extends JsonResource
             'status_name'                 => trans('order_status.' . $this->status),
             'reason'                      => $this->reason,
             'is_scan_menu_order'          => $this->resource->isScanMenuOrder(),
-            'cancel_window_seconds'       => $this->resource->isScanMenuOrder() ? 600 : null,
+            'cancel_window_seconds'       => $this->resource->isScanMenuOrder()
+                ? ($this->resource::SCAN_MENU_CANCEL_MINUTES * 60)
+                : null,
             'cancel_expires_at'           => $this->cancelExpiresAt(),
             'can_cancel'                  => $this->customerCanCancel(),
             'updated_at'                  => AppLibrary::datetime($this->updated_at),
@@ -116,7 +118,9 @@ class OrderDetailsResource extends JsonResource
             return null;
         }
 
-        return Carbon::parse($this->order_datetime)->addMinutes(10)->toIso8601String();
+        return Carbon::parse($this->order_datetime)
+            ->addMinutes($this->resource::SCAN_MENU_CANCEL_MINUTES)
+            ->toIso8601String();
     }
 
     private function customerCanCancel(): bool
@@ -133,7 +137,9 @@ class OrderDetailsResource extends JsonResource
             return false;
         }
 
-        return Carbon::now()->lte(Carbon::parse($this->order_datetime)->addMinutes(10));
+        return Carbon::now()->lte(
+            Carbon::parse($this->order_datetime)->addMinutes($this->resource::SCAN_MENU_CANCEL_MINUTES)
+        );
     }
 
     private function restaurantReviewStatus(): bool
