@@ -45,16 +45,16 @@ export function setSilentPrintReady(ready) {
     }
 }
 
-/** Default ON so first-time users can still print via the dialog. */
+/** Default OFF — never open browser print dialog unless user explicitly turns Preview ON. */
 export function isPrintPreviewOn() {
     try {
         const v = localStorage.getItem(PREVIEW_KEY);
         if (v === null || v === undefined || v === '') {
-            return true;
+            return false;
         }
-        return v !== '0';
+        return v === '1';
     } catch (e) {
-        return true;
+        return false;
     }
 }
 

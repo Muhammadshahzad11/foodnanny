@@ -1,6 +1,11 @@
 <template>
     <LoadingComponent :props="loading"/>
     <div class="w-full md:w-[calc(100%-366px)]">
+        <PrinterConnectionBar
+            class="mb-4"
+            endpoint="admin/pos/printers"
+            :title="$t('label.connected_printers') + ' (KOT & POS)'"
+        />
         <form @submit.prevent="search"
               class="flex items-center w-full h-10 mb-4 rounded-lg overflow-hidden border border-[#EFF0F6] bg-white">
             <input v-model="props.search.name" type="text" :placeholder="$t('label.search_by_menu_item')"
@@ -171,6 +176,9 @@
                 </p>
                 <p v-else-if="!printPreviewOn && silentPrintReady" class="mt-1.5 text-[11px] leading-4 text-emerald-700">
                     {{ $t('message.direct_print_ready') }}
+                    <button type="button" class="underline font-semibold ml-1" @click.prevent="resetSilentPrint">
+                        {{ $t('button.reset') }}
+                    </button>
                 </p>
             </div>
         </div>
@@ -333,6 +341,7 @@
 
 <script>
 import LoadingComponent from "../../common/LoadingComponent.vue";
+import PrinterConnectionBar from "../components/PrinterConnectionBar.vue";
 import statusEnum from "../../../enums/modules/statusEnum.js";
 import {useItemStore} from "../../../stores/item.js";
 import {usePosCategoryStore} from "../../../stores/posCategory.js";
@@ -358,6 +367,7 @@ import {
     isPrintPreviewOn,
     isSilentPrintReady,
     setPrintPreviewOn,
+    setSilentPrintReady,
     syncSilentPrintFromUrl,
 } from "../../../services/printPreference.js";
 
@@ -366,6 +376,7 @@ export default {
     components: {
         PaymentComponent,
         LoadingComponent,
+        PrinterConnectionBar,
         ItemComponent,
         Swiper,
         SwiperSlide,
@@ -520,6 +531,13 @@ export default {
             if (!on && !this.silentPrintReady) {
                 alertService.warning(this.$t('message.direct_print_setup_needed'));
             }
+        },
+        resetSilentPrint() {
+            setSilentPrintReady(false);
+            this.silentPrintReady = false;
+            setPrintPreviewOn(false);
+            this.printPreviewOn = false;
+            alertService.success(this.$t('message.direct_print_reset'));
         },
         onlyNumber: function (e) {
             return appService.onlyNumber(e);

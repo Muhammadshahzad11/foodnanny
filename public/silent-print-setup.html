@@ -88,10 +88,16 @@
             <li>In POS, set <strong>Print Preview → OFF</strong>.</li>
             <li>Print KOT / Customer receipt — it goes straight to the printer (no dialog).</li>
         </ol>
+        <div class="note">
+            Do <strong>not</strong> leave “AnyDesk Printer” or “Save as PDF” as the Windows default —
+            set your <strong>TVS / thermal</strong> printer as default. Prefer the
+            <a href="/local-print-agent/">Local Print Agent</a> for network Direct Print without a popup.
+        </div>
         <div class="actions">
             <button class="primary" type="button" onclick="downloadBat('pos')">Download POS Silent Print (.bat)</button>
             <button class="ghost" type="button" onclick="downloadBat('waiter')">Download Waiter Silent Print (.bat)</button>
             <a class="btn ghost" id="openPos" href="#">Open POS with silent flag</a>
+            <a class="btn ghost" href="/local-print-agent/">Local Print Agent (network IP)</a>
         </div>
         <p class="note" id="status">
             Silent print is not marked ready on this browser yet. Use the .bat launcher once.

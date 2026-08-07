@@ -9,6 +9,10 @@ const ItemAttributeComponent      = () => import("../../components/admin/restaur
 const ItemAttributeListComponent  = () => import("../../components/admin/restaurantSetting/ItemAttribute/ItemAttributeListComponent.vue");
 const TaxComponent                = () => import("../../components/admin/restaurantSetting/Tax/TaxComponent.vue");
 const TaxListComponent            = () => import("../../components/admin/restaurantSetting/Tax/TaxListComponent.vue");
+const PrinterComponent            = () => import("../../components/admin/restaurantSetting/Printer/PrinterComponent.vue");
+const PrinterListComponent        = () => import("../../components/admin/restaurantSetting/Printer/PrinterListComponent.vue");
+const KitchenStationComponent     = () => import("../../components/admin/restaurantSetting/KitchenStation/KitchenStationComponent.vue");
+const KitchenStationListComponent = () => import("../../components/admin/restaurantSetting/KitchenStation/KitchenStationListComponent.vue");
 
 export default [
     {
@@ -55,7 +59,7 @@ export default [
                     permissionUrl: "restaurant-settings",
                     breadcrumb: "time_slots"
                 }
-            }, 
+            },
             {
                 path: "item-categories",
                 component: ItemCategoryComponent,
@@ -133,6 +137,56 @@ export default [
                         path: "list",
                         component: TaxListComponent,
                         name: "admin.restaurantSettings.tax.list",
+                        meta: {
+                            template: "admin",
+                            auth: true,
+                            permissionUrl: "restaurant-settings",
+                            breadcrumb: ""
+                        },
+                    },
+                ],
+            },
+            {
+                path: "printer-settings",
+                component: PrinterComponent,
+                name: "admin.restaurantSettings.printer",
+                redirect: { name: "admin.restaurantSettings.printer.list" },
+                meta: {
+                    template: "admin",
+                    auth: true,
+                    permissionUrl: "restaurant-settings",
+                    breadcrumb: "printer_settings"
+                },
+                children: [
+                    {
+                        path: "list",
+                        component: PrinterListComponent,
+                        name: "admin.restaurantSettings.printer.list",
+                        meta: {
+                            template: "admin",
+                            auth: true,
+                            permissionUrl: "restaurant-settings",
+                            breadcrumb: ""
+                        },
+                    },
+                ],
+            },
+            {
+                path: "kitchen-settings",
+                component: KitchenStationComponent,
+                name: "admin.restaurantSettings.kitchenStation",
+                redirect: { name: "admin.restaurantSettings.kitchenStation.list" },
+                meta: {
+                    template: "admin",
+                    auth: true,
+                    permissionUrl: "restaurant-settings",
+                    breadcrumb: "kitchen_settings"
+                },
+                children: [
+                    {
+                        path: "list",
+                        component: KitchenStationListComponent,
+                        name: "admin.restaurantSettings.kitchenStation.list",
                         meta: {
                             template: "admin",
                             auth: true,

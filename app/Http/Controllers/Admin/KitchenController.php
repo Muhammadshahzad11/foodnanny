@@ -31,8 +31,23 @@ class KitchenController extends AdminController implements HasMiddleware
             new Middleware('permission:kitchen_reject', only: ['reject']),
             new Middleware('permission:kitchen_cancel', only: ['cancel']),
             new Middleware('permission:kitchen_print', only: ['printData']),
+            new Middleware('permission:kitchen|kitchen_view|kitchen_print|pos', only: ['printers']),
             new Middleware('permission:kitchen_accept|kitchen_prepare', only: ['priority']),
         ];
+    }
+
+    /**
+     * Auto-fetch KOT printers with live IP connection status.
+     */
+    public function printers(Request $request): \Illuminate\Http\Response|\Illuminate\Http\Resources\Json\AnonymousResourceCollection|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            return \App\Http\Resources\PrinterResource::collection(
+                app(\App\Services\PrinterService::class)->fetchConnected('kot')
+            );
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
     }
 
     public function dashboard(): \Illuminate\Http\Response|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\JsonResponse

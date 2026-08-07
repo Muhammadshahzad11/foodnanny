@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\PwaController;
 use App\Http\Controllers\Frontend\ManifestController;
 use App\Http\Controllers\Admin\TaxController;
+use App\Http\Controllers\Admin\PrinterController;
+use App\Http\Controllers\Admin\KitchenStationController;
 use App\Http\Controllers\Admin\ItemController;
 use App\Http\Controllers\Admin\AiController;
 use App\Http\Controllers\Admin\MailController;
@@ -374,6 +376,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::post('/orders/{order}/cancel', [KitchenController::class, 'cancel']);
         Route::post('/orders/{order}/priority', [KitchenController::class, 'priority']);
         Route::post('/orders/{order}/print-data', [KitchenController::class, 'printData']);
+        Route::get('/printers', [KitchenController::class, 'printers']);
     });
 
     Route::prefix('table-qr')->name('table-qr.')->group(function () {
@@ -496,6 +499,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
     Route::prefix('pos')->name('pos.')->group(function () {
         Route::post('/', [PosController::class, 'store']);
         Route::get('/tables', [PosController::class, 'tables']);
+        Route::get('/printers', [PosController::class, 'printers']);
     });
 
     Route::prefix('pos-order')->name('posOrder.')->group(function () {
@@ -931,6 +935,22 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
             Route::post('/', [TaxController::class, 'store']);
             Route::post('/update/{tax}', [TaxController::class, 'update']);
             Route::delete('/{tax}', [TaxController::class, 'destroy']);
+        });
+
+        Route::prefix('printer')->name('printer.')->group(function () {
+            Route::get('/', [PrinterController::class, 'index']);
+            Route::get('/fetch-status', [PrinterController::class, 'fetchStatus']);
+            Route::post('/', [PrinterController::class, 'store']);
+            Route::post('/update/{printer}', [PrinterController::class, 'update']);
+            Route::delete('/{printer}', [PrinterController::class, 'destroy']);
+            Route::post('/{printer}/test-print', [PrinterController::class, 'testPrint']);
+        });
+
+        Route::prefix('kitchen-station')->name('kitchen-station.')->group(function () {
+            Route::get('/', [KitchenStationController::class, 'index']);
+            Route::post('/', [KitchenStationController::class, 'store']);
+            Route::post('/update/{kitchenStation}', [KitchenStationController::class, 'update']);
+            Route::delete('/{kitchenStation}', [KitchenStationController::class, 'destroy']);
         });
 
         Route::prefix('menu')->name('menu')->group(function () {

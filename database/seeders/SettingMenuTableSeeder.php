@@ -381,6 +381,28 @@ class SettingMenuTableSeeder extends Seeder
                 'updated_at' => now()
             ],
             [
+                'name'       => 'Printer Settings',
+                'language'   => 'printer_settings',
+                'url'        => 'printer-settings',
+                'icon'       => 'lab lab-line-printer',
+                'type'       => SettingMenuType::RESTAURANT,
+                'priority'   => 838,
+                'status'     => 1,
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
+                'name'       => 'Kitchen Settings',
+                'language'   => 'kitchen_settings',
+                'url'        => 'kitchen-settings',
+                'icon'       => 'lab lab-line-kitchen',
+                'type'       => SettingMenuType::RESTAURANT,
+                'priority'   => 836,
+                'status'     => 1,
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
                 'name'       => 'Delivery Location Setup',
                 'language'   => 'delivery_location_setup',
                 'url'        => 'delivery-location-setup',

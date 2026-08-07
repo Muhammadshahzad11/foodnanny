@@ -24,6 +24,13 @@
                 </div>
             </div>
 
+            <div class="px-4 pb-2">
+                <PrinterConnectionBar
+                    endpoint="admin/kitchen/printers"
+                    :title="$t('label.connected_printers') + ' (KOT)'"
+                />
+            </div>
+
             <div class="px-4 pb-3 flex flex-wrap gap-2">
                 <button
                     v-for="tab in statusTabs"
@@ -248,6 +255,7 @@
 
 <script>
 import LoadingComponent from "../../common/LoadingComponent.vue";
+import PrinterConnectionBar from "../components/PrinterConnectionBar.vue";
 import {useKitchenOrderStore} from "../../../stores/kitchenOrder.js";
 import {useCommonStore} from "../../../stores/common.js";
 import {useAuthStore} from "../../../stores/auth.js";
@@ -263,7 +271,7 @@ import orderTypeEnum from "../../../enums/modules/orderTypeEnum.js";
 
 export default {
     name: "KitchenQueueComponent",
-    components: {LoadingComponent},
+    components: {LoadingComponent, PrinterConnectionBar},
     setup() {
         return {
             kitchenOrderStore: useKitchenOrderStore(),

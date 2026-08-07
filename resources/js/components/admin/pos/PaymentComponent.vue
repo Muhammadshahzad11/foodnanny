@@ -168,95 +168,6 @@
         :table-label="tableLabel"
     />
     <KitchenTicketPrintSheet :payload="kotPayload"/>
-
-    <!-- POS thank-you popup: KOT Print + Customer Print -->
-    <teleport to="body">
-        <div
-            v-if="showThankYou"
-            class="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/45"
-            @click.self="closeThankYou"
-        >
-            <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" @click.stop>
-                <div class="p-6 text-center border-b border-[#EFF0F6]">
-                    <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#1AB759]/10">
-                        <span class="text-2xl text-[#1AB759]">✓</span>
-                    </div>
-                    <h3 class="text-xl font-semibold text-heading mb-1">{{ $t('label.thank_you') }}</h3>
-                    <p class="text-base font-medium text-heading mb-1">{{ $t('label.order_placed') }}</p>
-                    <p class="text-sm text-[#6E7191]" v-if="order.order_serial_no">
-                        #{{ order.order_serial_no }}
-                        <span v-if="tableLabel"> · {{ $t('label.table') }} {{ tableLabel }}</span>
-                        <span v-if="orderTypeLabel"> · {{ orderTypeLabel }}</span>
-                    </p>
-                </div>
-
-                <div class="px-6 py-4 overflow-y-auto text-left flex-1" v-if="receiptItems.length">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-[#6E7191] mb-2">
-                        {{ $t('label.order_details') }}
-                    </p>
-                    <ul class="space-y-2 mb-4">
-                        <li
-                            v-for="(item, idx) in receiptItems"
-                            :key="idx"
-                            class="flex items-start justify-between gap-3 text-sm"
-                        >
-                            <p class="font-medium text-heading min-w-0">
-                                {{ item.quantity }} × {{ item.item_name || item.name }}
-                            </p>
-                            <span class="shrink-0 text-heading">{{ item.total_currency_price }}</span>
-                        </li>
-                    </ul>
-                    <div class="flex justify-between font-semibold text-heading text-sm border-t border-[#EFF0F6] pt-3">
-                        <span>{{ $t('label.total') }}</span>
-                        <span>{{ order.total_currency_price }}</span>
-                    </div>
-                </div>
-
-                <div class="p-6 pt-2 flex flex-col gap-2 border-t border-[#EFF0F6]">
-                    <div class="flex items-center justify-between gap-2 mb-1 px-1">
-                        <span class="text-xs font-medium text-[#6E7191]">{{ $t('label.print_preview') }}</span>
-                        <nav class="w-fit flex items-center justify-center p-0.5 rounded-md bg-[#FFF8F2]">
-                            <button
-                                type="button"
-                                class="text-xs font-medium uppercase px-2 py-1 rounded"
-                                :class="!printPreviewOn ? 'text-white bg-[#6E7191]' : 'text-[#6E7191]'"
-                                @click.prevent="setPrintPreview(false)"
-                            >{{ $t('label.off') }}</button>
-                            <button
-                                type="button"
-                                class="text-xs font-medium uppercase px-2 py-1 rounded"
-                                :class="printPreviewOn ? 'text-white bg-primary' : 'text-[#6E7191]'"
-                                @click.prevent="setPrintPreview(true)"
-                            >{{ $t('label.on') }}</button>
-                        </nav>
-                    </div>
-                    <button
-                        type="button"
-                        class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2.5 text-white bg-amber-600"
-                        :disabled="printingKot || printingReceipt"
-                        @click.prevent="printKotOnly"
-                    >
-                        {{ printingKot ? 'Printing…' : $t('button.print_kot') }}
-                    </button>
-                    <button
-                        type="button"
-                        class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2.5 text-white bg-[#1AB759]"
-                        :disabled="printingKot || printingReceipt"
-                        @click.prevent="printCustomerOnly"
-                    >
-                        {{ printingReceipt ? 'Printing…' : $t('button.customer_print') }}
-                    </button>
-                    <button
-                        type="button"
-                        class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2.5 border border-[#EFF0F6] text-heading"
-                        @click.prevent="closeThankYou"
-                    >
-                        {{ $t('button.done') }}
-                    </button>
-                </div>
-            </div>
-        </div>
-    </teleport>
 </template>
 <script>
 import {useModal} from "../../../composables/modal.js";
@@ -277,10 +188,9 @@ import CustomerReceiptPrintSheet from "../components/order/CustomerReceiptPrintS
 import KitchenTicketPrintSheet from "../kitchen/KitchenTicketPrintSheet.vue";
 import {printKot, printReceipt, PrintUnavailableError} from "../../../services/printService.js";
 import {
-    isPrintPreviewOn,
     isSilentPrintReady,
-    setPrintPreviewOn,
 } from "../../../services/printPreference.js";
+import {localAgentSetupUrl, sendViaLocalBridge} from "../../../services/localPrintBridge.js";
 import {useAuthStore} from "../../../stores/auth.js";
 import orderTypeEnum from "../../../enums/modules/orderTypeEnum.js";
 
@@ -334,11 +244,7 @@ export default {
             offer: {},
             order: {},
             kotPayload: null,
-            showThankYou: false,
             placedOrderId: null,
-            printingKot: false,
-            printingReceipt: false,
-            printPreviewOn: true,
         }
     },
     computed: {
@@ -364,9 +270,10 @@ export default {
             return map[method] || '';
         },
         tableLabel() {
-            const t = this.order?.table;
-            if (!t) return '';
-            return t.table_number || t.name || '';
+            return this.order?.dining_table?.table_number
+                || this.order?.dining_table?.name
+                || this.order?.table_name
+                || '';
         },
         orderTypeLabel() {
             const t = Number(this.order?.order_type);
@@ -376,24 +283,13 @@ export default {
             return '';
         },
     },
-    watch: {
-        showThankYou(val) {
-            if (val) {
-                this.printPreviewOn = isPrintPreviewOn();
-            }
-        },
-    },
     methods: {
-        setPrintPreview(on) {
-            setPrintPreviewOn(!!on);
-            this.printPreviewOn = !!on;
-            if (!on && !isSilentPrintReady()) {
-                alertService.warning(this.$t('message.direct_print_setup_needed'));
-            }
-        },
         printErrorMessage(err, fallbackKey) {
             if (err instanceof PrintUnavailableError || err?.code === 'PRINT_UNAVAILABLE') {
                 return this.$t('message.printer_not_connected');
+            }
+            if (err?.code === 'LOCAL_BRIDGE_UNAVAILABLE') {
+                return this.$t('message.printer_not_connected_direct');
             }
             return err?.response?.data?.message || err?.message || this.$t(fallbackKey);
         },
@@ -442,7 +338,6 @@ export default {
             this.$refs.paymentMethodMobileBankingInput.value = "";
             this.$refs.paymentMethodOtherInput.value         = "";
 
-            // Exact cash amount by default — cashier can still overwrite via keypad
             if (method === posPaymentMethodEnum.CASH) {
                 this.prefillCashAmount();
             }
@@ -461,36 +356,110 @@ export default {
                 v.value += val;
             }
         },
-        closeThankYou() {
-            this.showThankYou = false;
-            this.kotPayload = null;
-            this.closeModal('receipt-modal');
-        },
-        async printCustomerOnly() {
-            if (!this.placedOrderId) return;
-            try {
-                this.printingReceipt = true;
-                await this.$nextTick();
-                await printReceipt();
-            } catch (err) {
-                alertService.error(this.printErrorMessage(err, 'message.receipt_print_failed'));
-            } finally {
-                this.printingReceipt = false;
+        /**
+         * Silent HTML print only — never opens Chrome print dialog.
+         */
+        async silentHtmlPrint(kind) {
+            if (!isSilentPrintReady()) {
+                throw new PrintUnavailableError(this.$t('message.printer_not_connected'));
             }
-        },
-        async printKotOnly() {
-            if (!this.placedOrderId) return;
-            try {
-                this.printingKot = true;
-                const res = await this.posOrderStore.printKot(this.placedOrderId);
-                this.kotPayload = res.data.data.payload;
-                await this.$nextTick();
+            if (kind === 'kot') {
                 await printKot();
-            } catch (err) {
-                alertService.error(this.printErrorMessage(err, 'message.kot_print_failed'));
-            } finally {
-                this.printingKot = false;
+            } else {
+                await printReceipt();
             }
+        },
+        async ensureKotPayload(printJobs = []) {
+            const fromJob = printJobs.find((j) => j.type === 'kot' && j.payload);
+            if (fromJob?.payload) {
+                this.kotPayload = fromJob.payload;
+                return this.kotPayload;
+            }
+            if (this.kotPayload) {
+                return this.kotPayload;
+            }
+            if (!this.placedOrderId) {
+                return null;
+            }
+            const res = await this.posOrderStore.printKot(this.placedOrderId);
+            this.kotPayload = res.data?.data?.payload || null;
+            return this.kotPayload;
+        },
+        /**
+         * Direct print only after place order. No thank-you modal. No browser print preview.
+         * Error toast if printer / local agent / silent print is not ready.
+         */
+        async runAutoPrintJobs(printJobs = []) {
+            const jobs = Array.isArray(printJobs) ? printJobs : [];
+            const done = { kot: false, invoice: false };
+            let bridgeAttempted = false;
+            let bridgeFailed = false;
+
+            // Server already sent to printer
+            jobs.forEach((job) => {
+                if (job.status === 'printed') {
+                    if (job.type === 'invoice') done.invoice = true;
+                    if (job.type === 'kot') done.kot = true;
+                }
+            });
+
+            // Local print agent (ESC/POS) — no Chrome dialog
+            const directJobs = jobs.filter((job) =>
+                (job.mode === 'local_bridge' || job.mode === 'direct_print')
+                && job.status === 'pending_local'
+                && job.raw_base64
+            );
+            for (const job of directJobs) {
+                bridgeAttempted = true;
+                try {
+                    await sendViaLocalBridge(job);
+                    if (job.type === 'invoice') done.invoice = true;
+                    else done.kot = true;
+                    await new Promise((r) => setTimeout(r, 200));
+                } catch (err) {
+                    bridgeFailed = true;
+                    console.warn('Local bridge print failed', job?.type, err);
+                }
+            }
+
+            // Silent Chrome kiosk only (never forcePreview / never dialog)
+            if ((!done.kot || !done.invoice) && isSilentPrintReady()) {
+                if (!done.kot) {
+                    try {
+                        await this.ensureKotPayload(jobs);
+                        await this.$nextTick();
+                        await this.silentHtmlPrint('kot');
+                        done.kot = true;
+                        await new Promise((r) => setTimeout(r, 350));
+                    } catch (err) {
+                        console.warn('Silent KOT print failed', err);
+                    }
+                }
+                if (!done.invoice) {
+                    try {
+                        await this.$nextTick();
+                        await this.silentHtmlPrint('invoice');
+                        done.invoice = true;
+                    } catch (err) {
+                        console.warn('Silent customer print failed', err);
+                    }
+                }
+            }
+
+            if (done.kot && done.invoice) {
+                return;
+            }
+
+            // Printer not connected — error only, never open print preview
+            const missing = [];
+            if (!done.kot) missing.push('KOT');
+            if (!done.invoice) missing.push(this.$t('button.customer_print'));
+
+            let msg = this.$t('message.printer_not_connected_direct');
+            if (bridgeAttempted && bridgeFailed) {
+                msg = this.$t('message.local_print_agent_needed') + ' ' + localAgentSetupUrl();
+            }
+            alertService.error(msg + (missing.length ? ` (${missing.join(', ')})` : ''));
         },
         confirmOrder: function () {
             try {
@@ -513,7 +482,9 @@ export default {
                 this.loading.isActive = true;
                 this.posOrderStore.save(this.$props.props.form).then(async orderResponse => {
                     const orderId = orderResponse.data.data.id;
+                    const orderSerial = orderResponse.data.data.order_serial_no;
                     this.placedOrderId = orderId;
+                    const printJobs = orderResponse.data.print_jobs || [];
 
                     this.$props.props.form.token                     = "";
                     this.$props.props.form.subtotal                  = 0;
@@ -551,13 +522,18 @@ export default {
                         const res = await this.posOrderStore.view(orderId);
                         this.order = res.data.data;
                     } catch (error) {
-                        alertService.error(error.response?.data?.message || this.$t('message.something_wrong'));
+                        // Order already saved — print can still proceed with payload from jobs
                     }
 
                     this.loading.isActive = false;
                     this.closeModal('order-payment-modal');
-                    // Thank-you with explicit KOT + Customer print buttons (no auto-print)
-                    this.showThankYou = true;
+
+                    // No thank-you modal — short success toast only
+                    const serial = orderSerial || this.order?.order_serial_no || orderId;
+                    alertService.success(this.$t('message.order_placed_success', { serial: '#' + serial }));
+
+                    await this.$nextTick();
+                    await this.runAutoPrintJobs(printJobs);
                 }).catch((err) => {
                     this.loading.isActive = false;
                     if (typeof err.response?.data?.errors === 'object') {
@@ -572,7 +548,7 @@ export default {
                 this.loading.isActive = false;
                 alertService.error(err);
             }
-        }
+        },
     }
 }
 </script>
