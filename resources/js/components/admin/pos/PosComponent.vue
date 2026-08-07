@@ -170,9 +170,9 @@
                 </div>
                 <p v-if="!printPreviewOn && !silentPrintReady" class="mt-1.5 text-[11px] leading-4 text-amber-700">
                     {{ $t('message.direct_print_setup_needed') }}
-                    <a href="/silent-print-setup.html" target="_blank" class="underline font-semibold">
-                        {{ $t('label.setup_silent_print') }}
-                    </a>
+                    <button type="button" class="underline font-semibold" @click.prevent="openSimplePrintSetup">
+                        {{ $t('button.enable_printing') }}
+                    </button>
                 </p>
                 <p v-else-if="!printPreviewOn && silentPrintReady" class="mt-1.5 text-[11px] leading-4 text-emerald-700">
                     {{ $t('message.direct_print_ready') }}
@@ -182,6 +182,8 @@
                 </p>
             </div>
         </div>
+
+        <SimplePrintSetupModal v-model="showSimplePrintSetup" @ready="onSimplePrintReady"/>
 
         <table class="w-full">
             <thead class="bg-primary/10">
@@ -359,6 +361,7 @@ import {usePosCartStore} from "../../../stores/posCart.js";
 import discountTypeEnum from "../../../enums/modules/discountTypeEnum.js";
 import _ from "lodash";
 import PaymentComponent from "./PaymentComponent.vue";
+import SimplePrintSetupModal from "./SimplePrintSetupModal.vue";
 import posPaymentMethodEnum from "../../../enums/modules/posPaymentMethodEnum.js";
 import orderTypeEnum from "../../../enums/modules/orderTypeEnum.js";
 import {usePosOrderStore} from "../../../stores/posOrder.js";
@@ -380,6 +383,7 @@ export default {
         ItemComponent,
         Swiper,
         SwiperSlide,
+        SimplePrintSetupModal,
     },
     setup() {
         const {openModal, closeModal} = useModal();
@@ -411,8 +415,9 @@ export default {
                 isActive: false,
             },
             posOpen: false,
-            printPreviewOn: true,
+            printPreviewOn: false,
             silentPrintReady: false,
+            showSimplePrintSetup: false,
             offerStatus: switchEnum.ON,
             mainOffer: {},
             offer: {},
@@ -529,8 +534,15 @@ export default {
             this.printPreviewOn = !!on;
             this.silentPrintReady = isSilentPrintReady();
             if (!on && !this.silentPrintReady) {
-                alertService.warning(this.$t('message.direct_print_setup_needed'));
+                this.openSimplePrintSetup();
             }
+        },
+        openSimplePrintSetup() {
+            this.showSimplePrintSetup = true;
+        },
+        onSimplePrintReady() {
+            this.silentPrintReady = isSilentPrintReady();
+            this.printPreviewOn = false;
         },
         resetSilentPrint() {
             setSilentPrintReady(false);

@@ -98,6 +98,9 @@ export default {
             if (printer.connection_status === "connected") {
                 return this.$t("label.ip_connected");
             }
+            if (printer.connection_status === "local_agent") {
+                return this.$t("label.local_agent_ready");
+            }
             if (printer.connection_status === "browser") {
                 return this.$t("label.browser_popup");
             }
@@ -107,7 +110,7 @@ export default {
             return this.$t("label.unknown");
         },
         badgeClass(printer) {
-            if (printer.connection_status === "connected") {
+            if (printer.connection_status === "connected" || printer.connection_status === "local_agent") {
                 return "text-emerald-700 bg-emerald-100";
             }
             if (printer.connection_status === "browser") {

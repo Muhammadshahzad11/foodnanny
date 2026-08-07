@@ -204,12 +204,15 @@ export default {
         },
         connectionText(printer) {
             if (printer.connection_status === 'connected') return this.$t('label.ip_connected');
+            if (printer.connection_status === 'local_agent') return this.$t('label.local_agent_ready');
             if (printer.connection_status === 'browser') return this.$t('label.browser_popup');
             if (printer.connection_status === 'offline') return this.$t('label.ip_offline');
             return '—';
         },
         connectionBadge(printer) {
-            if (printer.connection_status === 'connected') return 'text-emerald-700 bg-emerald-100';
+            if (printer.connection_status === 'connected' || printer.connection_status === 'local_agent') {
+                return 'text-emerald-700 bg-emerald-100';
+            }
             if (printer.connection_status === 'browser') return 'text-sky-700 bg-sky-100';
             if (printer.connection_status === 'offline') return 'text-rose-700 bg-rose-100';
             return 'text-slate-600 bg-slate-100';

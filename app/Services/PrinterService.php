@@ -77,6 +77,11 @@ class PrinterService
                 $printer->setAttribute('connection_status', 'offline');
                 $printer->setAttribute('is_connected', false);
                 $printer->setAttribute('connection_label', 'ip_missing');
+            } elseif ($this->isLanOrLocalAgentTarget($printer)) {
+                // Cloud server cannot TCP-probe restaurant LAN IPs — Local Print Agent does.
+                $printer->setAttribute('connection_status', 'local_agent');
+                $printer->setAttribute('is_connected', true);
+                $printer->setAttribute('connection_label', 'local_agent_ready');
             } else {
                 $ok = $escPos->isReachable($printer->printer_ip, (int) ($printer->printer_port ?: 9100));
                 $printer->setAttribute('connection_status', $ok ? 'connected' : 'offline');
@@ -273,5 +278,32 @@ class PrinterService
         $data['status']              = (int) ($data['status'] ?? Status::ACTIVE);
 
         return $data;
+    }
+
+    /**
+     * Private / restaurant LAN targets are only reachable from the POS PC local agent.
+     */
+    protected function isLanOrLocalAgentTarget(Printer $printer): bool
+    {
+        if (filled($printer->computer_ipv4)) {
+            return true;
+        }
+
+        $ip = trim((string) $printer->printer_ip);
+
+        return $this->isPrivateIp($ip);
+    }
+
+    protected function isPrivateIp(string $ip): bool
+    {
+        if ($ip === '' || filter_var($ip, FILTER_VALIDATE_IP) === false) {
+            return false;
+        }
+
+        return !filter_var(
+            $ip,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        );
     }
 }

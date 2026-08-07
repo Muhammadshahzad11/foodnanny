@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Enable Printing — Cost to Cost Foods</title>
+    <style>
+        :root { --bg:#f6f7fb; --card:#fff; --text:#1f1f39; --muted:#6e7191; --primary:#0b8f4d; --border:#e5e7eb; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            background: linear-gradient(160deg, #eef8f1, var(--bg) 45%, #f3efe8);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 28px 16px;
+        }
+        .wrap { max-width: 560px; margin: 0 auto; }
+        h1 { font-size: 1.65rem; margin: 0 0 8px; }
+        p { color: var(--muted); line-height: 1.5; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 22px;
+            margin-top: 16px;
+            box-shadow: 0 8px 24px rgba(31,31,57,.06);
+        }
+        ol { margin: 0; padding-left: 1.2rem; }
+        li { margin: 10px 0; line-height: 1.45; }
+        .big {
+            display: block;
+            width: 100%;
+            border: 0;
+            border-radius: 999px;
+            padding: 16px 18px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            background: var(--primary);
+            color: #fff;
+            margin-top: 16px;
+        }
+        .ghost {
+            display: inline-block;
+            margin-top: 12px;
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .note {
+            margin-top: 14px;
+            padding: 12px;
+            border-radius: 12px;
+            background: #fff8e8;
+            color: #8a5a00;
+            font-size: 0.92rem;
+        }
+        .ok { background: #e8f8ef; color: var(--primary); }
+        .os { font-weight: 700; color: var(--text); }
+        .alt { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .alt button {
+            border: 1px solid var(--border);
+            background: #f3f4f8;
+            border-radius: 999px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Enable printing (easy)</h1>
+    <p>Works on <strong>Windows, Mac, and Linux</strong>. One file starts the print helper and opens POS without the Chrome popup.</p>
+
+    <div class="card">
+        <p>Detected: <span class="os" id="osLabel">…</span></p>
+        <ol id="steps"></ol>
+
+        <button class="big" type="button" id="downloadBtn">Download &amp; Enable Printing</button>
+        <div class="alt">
+            <button type="button" data-os="windows">Windows .bat</button>
+            <button type="button" data-os="mac">Mac .command</button>
+            <button type="button" data-os="linux">Linux .sh</button>
+        </div>
+        <a class="ghost" href="/admin/pos" id="openPos">Open POS</a>
+        <p class="note" id="status">When printer is not ready, this is the only step cashiers need.</p>
+    </div>
+</div>
+<script>
+(function () {
+    const origin = window.location.origin;
+    const posUrl = origin + '/admin/pos?silent_print=1';
+    const agentUrl = origin + '/local-print-agent/print_agent.py';
+    const psAgentUrl = origin + '/local-print-agent/Start-LocalPrintAgent.ps1';
+    document.getElementById('openPos').href = posUrl;
+
+    function detectOs() {
+        const ua = (navigator.userAgent || '').toLowerCase();
+        const platform = (navigator.platform || '').toLowerCase();
+        if (platform.indexOf('win') >= 0 || ua.indexOf('windows') >= 0) return 'windows';
+        if (platform.indexOf('mac') >= 0 || ua.indexOf('mac os') >= 0 || ua.indexOf('macintosh') >= 0) return 'mac';
+        if (platform.indexOf('linux') >= 0 || ua.indexOf('linux') >= 0) return 'linux';
+        return 'windows';
+    }
+
+    function label(os) {
+        return ({ windows: 'Windows', mac: 'Mac', linux: 'Linux' })[os] || os;
+    }
+
+    function stepsFor(os) {
+        if (os === 'mac') {
+            return [
+                'Set your thermal printer as the <strong>Mac default</strong> (System Settings → Printers & Scanners).',
+                'Click the green button — <code>Enable-POS-Printing.command</code> downloads.',
+                '<strong>Double‑click</strong> it (if blocked: Right‑click → Open). Needs <strong>Python 3</strong> and <strong>Chrome</strong>.',
+            ];
+        }
+        if (os === 'linux') {
+            return [
+                'Set your thermal printer as the system default.',
+                'Click the green button — <code>Enable-POS-Printing.sh</code> downloads.',
+                'Run <code>chmod +x Enable-POS-Printing.sh && ./Enable-POS-Printing.sh</code> (Python 3 + Chrome).',
+            ];
+        }
+        return [
+            'Set your thermal printer as the <strong>Windows default</strong> (not Save as PDF / AnyDesk).',
+            'Click the green button — <code>Enable-POS-Printing.bat</code> downloads.',
+            '<strong>Double‑click</strong> the file and allow it if Windows asks.',
+        ];
+    }
+
+    function windowsBat() {
+        return [
+            '@echo off',
+            'title Cost to Cost Foods - Enable Printing',
+            'set "AGENT_PS=%TEMP%\\fn-local-print-agent.ps1"',
+            'powershell -NoProfile -ExecutionPolicy Bypass -Command "try { Invoke-WebRequest -Uri \'' + psAgentUrl + '\' -OutFile \'%AGENT_PS%\' -UseBasicParsing } catch { exit 1 }"',
+            'if errorlevel 1 ( echo Download failed. & pause & exit /b 1 )',
+            'start "FN Local Print Agent" /MIN powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Minimized -File "%AGENT_PS%"',
+            'timeout /t 2 /nobreak >nul',
+            'set "CHROME="',
+            'if exist "%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe" set "CHROME=%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe"',
+            'if exist "%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe" set "CHROME=%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe"',
+            'if exist "%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe" set "CHROME=%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe"',
+            'if "%CHROME%"=="" ( start "" "' + posUrl + '" & echo Install Chrome. & pause & exit /b 1 )',
+            'start "" "%CHROME%" --kiosk-printing --disable-print-preview --new-window "' + posUrl + '"',
+            'echo Done. Always open POS with this file.',
+            'timeout /t 3 >nul',
+        ].join('\r\n');
+    }
+
+    function unixScript(mac) {
+        const lines = [
+            '#!/bin/bash',
+            'set +e',
+            'echo "Cost to Cost Foods - Enable Printing"',
+            'AGENT="${TMPDIR:-/tmp}/fn-print-agent.py"',
+            'curl -fsSL "' + agentUrl + '" -o "$AGENT" || wget -q -O "$AGENT" "' + agentUrl + '"',
+            'PYTHON=$(command -v python3 || command -v python)',
+            'if [ -z "$PYTHON" ]; then echo "Install Python 3"; read -r; exit 1; fi',
+            'if command -v lsof >/dev/null 2>&1; then kill $(lsof -tiTCP:1811 -sTCP:LISTEN) 2>/dev/null; sleep 1; fi',
+            'nohup "$PYTHON" "$AGENT" --port 1811 >/tmp/fn-print-agent.log 2>&1 &',
+            'sleep 2',
+            'CHROME=""',
+        ];
+        if (mac) {
+            lines.push('if [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]; then CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"; fi');
+            lines.push('if [ -z "$CHROME" ] && [ -x "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" ]; then CHROME="/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"; fi');
+            lines.push('if [ -z "$CHROME" ]; then open "' + posUrl + '"; echo "Install Chrome"; read -r; exit 1; fi');
+        } else {
+            lines.push('for c in google-chrome google-chrome-stable chromium-browser chromium; do command -v "$c" >/dev/null 2>&1 && CHROME="$c" && break; done');
+            lines.push('if [ -z "$CHROME" ]; then xdg-open "' + posUrl + '" >/dev/null 2>&1; echo "Install Chrome"; read -r; exit 1; fi');
+        }
+        lines.push('"$CHROME" --kiosk-printing --disable-print-preview --new-window "' + posUrl + '" >/dev/null 2>&1 &');
+        lines.push('echo Done. Always open POS with this file.');
+        lines.push('sleep 3');
+        return lines.join('\n');
+    }
+
+    function pack(os) {
+        if (os === 'mac') return { name: 'Enable-POS-Printing.command', body: unixScript(true) };
+        if (os === 'linux') return { name: 'Enable-POS-Printing.sh', body: unixScript(false) };
+        return { name: 'Enable-POS-Printing.bat', body: windowsBat() };
+    }
+
+    function render(os) {
+        document.getElementById('osLabel').textContent = label(os);
+        document.getElementById('steps').innerHTML = stepsFor(os).map(function (s) { return '<li>' + s + '</li>'; }).join('');
+        window.__fnPrintOs = os;
+    }
+
+    function download(os) {
+        const file = pack(os);
+        const blob = new Blob([file.body], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        a.click();
+        URL.revokeObjectURL(url);
+        const status = document.getElementById('status');
+        status.className = 'note ok';
+        status.textContent = 'Downloaded ' + file.name + ' — open/run that file, then place an order.';
+        try { localStorage.setItem('fn_print_preview', '0'); } catch (e) {}
+    }
+
+    const detected = detectOs();
+    render(detected);
+
+    document.getElementById('downloadBtn').addEventListener('click', function () {
+        download(window.__fnPrintOs || detected);
+    });
+    document.querySelectorAll('.alt button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const os = btn.getAttribute('data-os');
+            render(os);
+            download(os);
+        });
+    });
+})();
+</script>
+</body>
+</html>

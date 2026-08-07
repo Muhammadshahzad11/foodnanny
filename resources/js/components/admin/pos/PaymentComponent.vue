@@ -168,6 +168,7 @@
         :table-label="tableLabel"
     />
     <KitchenTicketPrintSheet :payload="kotPayload"/>
+    <SimplePrintSetupModal v-model="showSimplePrintSetup"/>
 </template>
 <script>
 import {useModal} from "../../../composables/modal.js";
@@ -186,11 +187,13 @@ import {usePosOfferStore} from "../../../stores/posOffer.js";
 import PosReceiptComponent from "../components/order/PosReceiptComponent.vue";
 import CustomerReceiptPrintSheet from "../components/order/CustomerReceiptPrintSheet.vue";
 import KitchenTicketPrintSheet from "../kitchen/KitchenTicketPrintSheet.vue";
+import SimplePrintSetupModal from "./SimplePrintSetupModal.vue";
 import {printKot, printReceipt, PrintUnavailableError} from "../../../services/printService.js";
 import {
     isSilentPrintReady,
 } from "../../../services/printPreference.js";
-import {localAgentSetupUrl, sendViaLocalBridge} from "../../../services/localPrintBridge.js";
+import {sendViaLocalBridge} from "../../../services/localPrintBridge.js";
+import {downloadSimplePrintHelper} from "../../../services/simplePrintSetup.js";
 import {useAuthStore} from "../../../stores/auth.js";
 import orderTypeEnum from "../../../enums/modules/orderTypeEnum.js";
 
@@ -200,6 +203,7 @@ export default {
         PosReceiptComponent,
         CustomerReceiptPrintSheet,
         KitchenTicketPrintSheet,
+        SimplePrintSetupModal,
         LoadingComponent
     },
     props: {
@@ -245,6 +249,7 @@ export default {
             order: {},
             kotPayload: null,
             placedOrderId: null,
+            showSimplePrintSetup: false,
         }
     },
     computed: {
@@ -391,9 +396,11 @@ export default {
          */
         async runAutoPrintJobs(printJobs = []) {
             const jobs = Array.isArray(printJobs) ? printJobs : [];
+            const expected = {
+                kot: jobs.some((j) => j.type === 'kot'),
+                invoice: jobs.some((j) => j.type === 'invoice'),
+            };
             const done = { kot: false, invoice: false };
-            let bridgeAttempted = false;
-            let bridgeFailed = false;
 
             // Server already sent to printer
             jobs.forEach((job) => {
@@ -410,21 +417,19 @@ export default {
                 && job.raw_base64
             );
             for (const job of directJobs) {
-                bridgeAttempted = true;
                 try {
                     await sendViaLocalBridge(job);
                     if (job.type === 'invoice') done.invoice = true;
                     else done.kot = true;
                     await new Promise((r) => setTimeout(r, 200));
                 } catch (err) {
-                    bridgeFailed = true;
                     console.warn('Local bridge print failed', job?.type, err);
                 }
             }
 
             // Silent Chrome kiosk only (never forcePreview / never dialog)
-            if ((!done.kot || !done.invoice) && isSilentPrintReady()) {
-                if (!done.kot) {
+            if (((expected.kot && !done.kot) || (expected.invoice && !done.invoice)) && isSilentPrintReady()) {
+                if (expected.kot && !done.kot) {
                     try {
                         await this.ensureKotPayload(jobs);
                         await this.$nextTick();
@@ -435,7 +440,7 @@ export default {
                         console.warn('Silent KOT print failed', err);
                     }
                 }
-                if (!done.invoice) {
+                if (expected.invoice && !done.invoice) {
                     try {
                         await this.$nextTick();
                         await this.silentHtmlPrint('invoice');
@@ -446,20 +451,20 @@ export default {
                 }
             }
 
-            if (done.kot && done.invoice) {
+            const kotOk = !expected.kot || done.kot;
+            const invoiceOk = !expected.invoice || done.invoice;
+            if (kotOk && invoiceOk) {
                 return;
             }
 
-            // Printer not connected — error only, never open print preview
-            const missing = [];
-            if (!done.kot) missing.push('KOT');
-            if (!done.invoice) missing.push(this.$t('button.customer_print'));
-
-            let msg = this.$t('message.printer_not_connected_direct');
-            if (bridgeAttempted && bridgeFailed) {
-                msg = this.$t('message.local_print_agent_needed') + ' ' + localAgentSetupUrl();
+            // Printer not connected — auto-download helper + simple setup for cashiers
+            alertService.error(this.$t('message.printer_not_connected_simple'));
+            try {
+                downloadSimplePrintHelper();
+            } catch (e) {
+                // ignore download failures
             }
-            alertService.error(msg + (missing.length ? ` (${missing.join(', ')})` : ''));
+            this.showSimplePrintSetup = true;
         },
         confirmOrder: function () {
             try {

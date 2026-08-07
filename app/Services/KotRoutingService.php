@@ -58,17 +58,14 @@ class KotRoutingService
                 continue;
             }
 
-            $printer = $station?->printer;
-            if ($printer && $printer->skipsAutoKot()) {
+            // Kitchen explicitly set to "No Auto KOT" — skip kitchen slip
+            if ($station?->printer && $station->printer->skipsAutoKot()) {
                 continue;
             }
 
-            // No printer / browser / direct with KOT format (or missing printer → browser fallback)
-            if ($printer && !$printer->isKotFormat() && !$printer->skipsAutoKot()) {
-                // Invoice-only printers are not used for kitchen KOTs
-                if ($printer->isInvoiceFormat()) {
-                    continue;
-                }
+            $printer = $this->resolveKotPrinter($order, $station);
+            if ($printer && $printer->skipsAutoKot()) {
+                continue;
             }
 
             $payload = $this->buildKotPayload($order, $items, $station);
@@ -221,19 +218,57 @@ class KotRoutingService
 
     protected function processInvoice(Order $order): ?array
     {
-        $printer = Printer::query()
+        $printer = $this->resolveInvoicePrinter($order);
+        $payload = $this->buildInvoicePayload($order, $printer);
+
+        return $this->dispatchPrintJob('invoice', $printer, $payload, null);
+    }
+
+    /**
+     * Prefer kitchen-station printer; otherwise any active restaurant KOT printer.
+     */
+    protected function resolveKotPrinter(Order $order, ?KitchenStation $station): ?Printer
+    {
+        $linked = $station?->printer;
+        if ($linked && $linked->isActive() && $linked->isKotFormat()) {
+            return $linked;
+        }
+
+        return Printer::query()
+            ->where('restaurant_id', $order->restaurant_id)
+            ->where('status', Status::ACTIVE)
+            ->where('print_format', PrintFormat::KOT)
+            ->orderBy('id')
+            ->first();
+    }
+
+    /**
+     * Prefer dedicated invoice/POS printer; fall back to any direct-print printer
+     * (same thermal often prints both KOT and bill).
+     */
+    protected function resolveInvoicePrinter(Order $order): ?Printer
+    {
+        $invoice = Printer::query()
             ->where('restaurant_id', $order->restaurant_id)
             ->where('status', Status::ACTIVE)
             ->where('print_format', PrintFormat::INVOICE)
             ->orderBy('id')
             ->first();
 
-        $payload = $this->buildInvoicePayload($order);
+        if ($invoice) {
+            return $invoice;
+        }
 
-        return $this->dispatchPrintJob('invoice', $printer, $payload, null);
+        return Printer::query()
+            ->where('restaurant_id', $order->restaurant_id)
+            ->where('status', Status::ACTIVE)
+            ->where('printing_choice', PrintingChoice::DIRECT_PRINT)
+            ->where('print_format', '!=', PrintFormat::NO_AUTO_KOT)
+            ->orderBy('id')
+            ->first();
     }
 
-    protected function buildInvoicePayload(Order $order): array
+    protected function buildInvoicePayload(Order $order, ?Printer $printer = null): array
     {
         $orderTypeLabel = match ((int) $order->order_type) {
             OrderType::DINING_TABLE => 'Dine In',
@@ -262,7 +297,7 @@ class KotRoutingService
             'subtotal'         => AppLibrary::currencyAmountFormat($order->subtotal),
             'tax'              => AppLibrary::currencyAmountFormat($order->total_tax),
             'total'            => AppLibrary::currencyAmountFormat($order->total),
-            'invoice_qr'       => false,
+            'invoice_qr'       => $printer ? ((int) $printer->invoice_qr_status === Ask::YES) : false,
         ];
     }
 

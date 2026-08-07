@@ -27,10 +27,31 @@ return new class extends Migration {
                 $table->string('printer_ip', 45)->nullable();
                 $table->unsignedSmallInteger('printer_port')->nullable()->default(9100);
                 $table->tinyInteger('status')->default(Status::ACTIVE);
+                $table->string('creator_type')->nullable();
+                $table->bigInteger('creator_id')->nullable();
+                $table->string('editor_type')->nullable();
+                $table->bigInteger('editor_id')->nullable();
                 $table->timestamps();
 
                 $table->index(['restaurant_id', 'status']);
                 $table->index(['restaurant_id', 'print_format']);
+                $table->index(['creator_id']);
+                $table->index(['editor_id']);
+            });
+        } elseif (Schema::hasTable('printers')) {
+            Schema::table('printers', function (Blueprint $table) {
+                if (!Schema::hasColumn('printers', 'creator_type')) {
+                    $table->string('creator_type')->nullable()->after('status');
+                }
+                if (!Schema::hasColumn('printers', 'creator_id')) {
+                    $table->bigInteger('creator_id')->nullable()->after('creator_type');
+                }
+                if (!Schema::hasColumn('printers', 'editor_type')) {
+                    $table->string('editor_type')->nullable()->after('creator_id');
+                }
+                if (!Schema::hasColumn('printers', 'editor_id')) {
+                    $table->bigInteger('editor_id')->nullable()->after('editor_type');
+                }
             });
         }
 
