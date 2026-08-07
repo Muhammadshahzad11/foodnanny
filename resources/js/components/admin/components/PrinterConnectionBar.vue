@@ -49,6 +49,7 @@
 <script>
 import axios from "axios";
 import printFormatEnum from "../../../enums/modules/printFormatEnum.js";
+import {probeLocalAgent} from "../../../services/localPrintBridge.js";
 
 export default {
     name: "PrinterConnectionBar",
@@ -62,6 +63,7 @@ export default {
         return {
             loading: false,
             printers: [],
+            agentOnline: false,
         };
     },
     mounted() {
@@ -76,13 +78,16 @@ export default {
             if (this.format) {
                 url += (url.includes("?") ? "&" : "?") + "format=" + encodeURIComponent(this.format);
             }
-            axios.get(url).then((res) => {
+            axios.get(url).then(async (res) => {
                 this.printers = res.data.data || [];
+                await this.checkLocalAgent();
                 this.loading = false;
                 this.$emit("loaded", this.printers);
             }).catch(() => {
                 this.printers = [];
+                this.agentOnline = false;
                 this.loading = false;
+                this.$emit("loaded", []);
             });
         },
         formatLabel(printer) {
@@ -99,7 +104,9 @@ export default {
                 return this.$t("label.ip_connected");
             }
             if (printer.connection_status === "local_agent") {
-                return this.$t("label.local_agent_ready");
+                return this.agentOnline
+                    ? this.$t("label.local_agent_ready")
+                    : this.$t("label.local_agent_offline");
             }
             if (printer.connection_status === "browser") {
                 return this.$t("label.browser_popup");
@@ -110,13 +117,25 @@ export default {
             return this.$t("label.unknown");
         },
         badgeClass(printer) {
-            if (printer.connection_status === "connected" || printer.connection_status === "local_agent") {
+            if (printer.connection_status === "connected") {
                 return "text-emerald-700 bg-emerald-100";
+            }
+            if (printer.connection_status === "local_agent") {
+                return this.agentOnline
+                    ? "text-emerald-700 bg-emerald-100"
+                    : "text-amber-800 bg-amber-100";
             }
             if (printer.connection_status === "browser") {
                 return "text-sky-700 bg-sky-100";
             }
             return "text-rose-700 bg-rose-100";
+        },
+        async checkLocalAgent() {
+            try {
+                this.agentOnline = await probeLocalAgent();
+            } catch (e) {
+                this.agentOnline = false;
+            }
         },
     },
 };

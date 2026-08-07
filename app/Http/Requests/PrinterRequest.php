@@ -23,7 +23,8 @@ class PrinterRequest extends FormRequest
     public function rules(): array
     {
         $choice = (int) $this->input('printing_choice', PrintingChoice::BROWSER_POPUP);
-        $direct = $choice === PrintingChoice::DIRECT_PRINT;
+        $type   = (int) $this->input('printer_type', PrinterType::NETWORK);
+        $directNetwork = $choice === PrintingChoice::DIRECT_PRINT && $type === PrinterType::NETWORK;
 
         return [
             'name'                => ['required', 'string', 'max:190'],
@@ -33,9 +34,9 @@ class PrinterRequest extends FormRequest
             'characters_per_line' => ['required', 'integer', 'min:24', 'max:80'],
             'open_cash_drawer'    => ['required', 'numeric', Rule::in([Ask::YES, Ask::NO])],
             'invoice_qr_status'   => ['required', 'numeric', Rule::in([Ask::YES, Ask::NO])],
-            'computer_ipv4'       => [$direct ? 'required' : 'nullable', 'ip'],
-            'printer_ip'          => [$direct ? 'required' : 'nullable', 'ip'],
-            'printer_port'        => [$direct ? 'required' : 'nullable', 'integer', 'min:1', 'max:65535'],
+            'computer_ipv4'       => [$directNetwork ? 'required' : 'nullable', 'ip'],
+            'printer_ip'          => [$directNetwork ? 'required' : 'nullable', 'ip'],
+            'printer_port'        => [$directNetwork ? 'required' : 'nullable', 'integer', 'min:1', 'max:65535'],
             'status'              => ['required', 'numeric', Rule::in([Status::ACTIVE, Status::INACTIVE])],
         ];
     }
@@ -43,14 +44,14 @@ class PrinterRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'printing_choice'   => strtolower(trans('all.label.printing_choice') ?: 'printing choice'),
-            'print_format'      => strtolower(trans('all.label.print_format') ?: 'print format'),
-            'printer_type'      => strtolower(trans('all.label.printer_type') ?: 'printer type'),
-            'computer_ipv4'     => strtolower(trans('all.label.computer_ipv4') ?: 'computer ipv4'),
-            'printer_ip'        => strtolower(trans('all.label.printer_ip') ?: 'printer ip'),
-            'printer_port'      => strtolower(trans('all.label.printer_port') ?: 'printer port'),
-            'open_cash_drawer'  => strtolower(trans('all.label.open_cash_drawer') ?: 'open cash drawer'),
-            'invoice_qr_status' => strtolower(trans('all.label.invoice_qr_status') ?: 'invoice qr status'),
+            'printing_choice'   => 'printing choice',
+            'print_format'      => 'print format',
+            'printer_type'      => 'printer type',
+            'computer_ipv4'     => 'computer ipv4',
+            'printer_ip'        => 'printer ip',
+            'printer_port'      => 'printer port',
+            'open_cash_drawer'  => 'open cash drawer',
+            'invoice_qr_status' => 'invoice qr status',
         ];
     }
 }

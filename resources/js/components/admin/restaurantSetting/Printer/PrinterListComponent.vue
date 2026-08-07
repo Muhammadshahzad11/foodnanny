@@ -13,6 +13,16 @@
             </div>
         </div>
 
+        <div
+            v-if="needsLocalAgent && !agentOnline"
+            class="mx-4 mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 leading-relaxed"
+        >
+            {{ $t('message.local_print_agent_list_hint') }}
+            <a class="underline font-semibold ml-1" :href="agentSetupUrl" target="_blank" rel="noopener">
+                {{ $t('label.setup_local_print_agent') }}
+            </a>
+        </div>
+
         <div class="db-table-responsive">
             <table class="db-table stripe">
                 <thead class="db-table-head">
@@ -94,7 +104,11 @@ import {useModal} from "../../../../composables/modal.js";
 import {usePrinterStore} from "../../../../stores/printer.js";
 import {useFrontendSettingStore} from "../../../../stores/frontendSetting.js";
 import VueSimpleAlert from "vue3-simple-alert";
-import {localAgentSetupUrl, sendViaLocalBridge} from "../../../../services/localPrintBridge.js";
+import {
+    localAgentSetupUrl,
+    probeLocalAgent,
+    sendViaLocalBridge,
+} from "../../../../services/localPrintBridge.js";
 
 export default {
     name: "PrinterListComponent",
@@ -116,6 +130,7 @@ export default {
     data() {
         return {
             loading: {isActive: false},
+            agentOnline: false,
             enums: {
                 statusEnum,
                 statusEnumArray: {
@@ -176,16 +191,33 @@ export default {
         paginationPage() {
             return this.printerStore.page;
         },
+        needsLocalAgent() {
+            return (this.printers || []).some((p) =>
+                Number(p.printing_choice) === printingChoiceEnum.DIRECT_PRINT
+                && !!(p.printer_ip || '').trim()
+            );
+        },
+        agentSetupUrl() {
+            return localAgentSetupUrl();
+        },
     },
     methods: {
         statusClass(status) {
             return appService.statusClass(status);
         },
+        async refreshAgentStatus() {
+            try {
+                this.agentOnline = await probeLocalAgent();
+            } catch (e) {
+                this.agentOnline = false;
+            }
+        },
         list(page = 1) {
             this.loading.isActive = true;
             this.props.search.page = page;
             this.props.search.with_connection = 1;
-            this.printerStore.fetch(this.props.search).then(() => {
+            this.printerStore.fetch(this.props.search).then(async () => {
+                await this.refreshAgentStatus();
                 this.loading.isActive = false;
             }).catch(() => {
                 this.loading.isActive = false;
@@ -193,8 +225,9 @@ export default {
         },
         fetchStatus() {
             this.loading.isActive = true;
-            this.printerStore.fetchStatus().then((res) => {
+            this.printerStore.fetchStatus().then(async (res) => {
                 this.printerStore.lists = res.data.data || [];
+                await this.refreshAgentStatus();
                 this.loading.isActive = false;
                 alertService.success(this.$t('message.printers_fetched'));
             }).catch((err) => {
@@ -204,14 +237,21 @@ export default {
         },
         connectionText(printer) {
             if (printer.connection_status === 'connected') return this.$t('label.ip_connected');
-            if (printer.connection_status === 'local_agent') return this.$t('label.local_agent_ready');
+            if (printer.connection_status === 'local_agent') {
+                return this.agentOnline
+                    ? this.$t('label.local_agent_ready')
+                    : this.$t('label.local_agent_offline');
+            }
             if (printer.connection_status === 'browser') return this.$t('label.browser_popup');
             if (printer.connection_status === 'offline') return this.$t('label.ip_offline');
             return '—';
         },
         connectionBadge(printer) {
-            if (printer.connection_status === 'connected' || printer.connection_status === 'local_agent') {
-                return 'text-emerald-700 bg-emerald-100';
+            if (printer.connection_status === 'connected') return 'text-emerald-700 bg-emerald-100';
+            if (printer.connection_status === 'local_agent') {
+                return this.agentOnline
+                    ? 'text-emerald-700 bg-emerald-100'
+                    : 'text-amber-800 bg-amber-100';
             }
             if (printer.connection_status === 'browser') return 'text-sky-700 bg-sky-100';
             if (printer.connection_status === 'offline') return 'text-rose-700 bg-rose-100';
@@ -237,6 +277,7 @@ export default {
         async testPrint(printer) {
             this.loading.isActive = true;
             try {
+                await this.refreshAgentStatus();
                 const res = await this.printerStore.testPrint(printer.id);
                 const data = res.data?.data || {};
 
@@ -260,18 +301,28 @@ export default {
                     return;
                 }
 
-                // Cloud unreachable → print via Local Print Agent on this PC (no popup)
+                // Cloud unreachable → print via Local Print Agent on THIS browser's PC
                 if (data.raw_base64) {
+                    if (!this.agentOnline) {
+                        this.loading.isActive = false;
+                        alertService.error(this.$t('message.local_print_agent_required'));
+                        try {
+                            window.open(localAgentSetupUrl(), '_blank', 'noopener');
+                        } catch (e) {}
+                        return;
+                    }
                     try {
                         await sendViaLocalBridge(data);
                         this.loading.isActive = false;
                         alertService.success(this.$t('message.printer_test_sent'));
                         return;
                     } catch (bridgeErr) {
+                        this.agentOnline = false;
                         this.loading.isActive = false;
-                        alertService.error(
-                            this.$t('message.local_print_agent_needed') + ' ' + localAgentSetupUrl()
-                        );
+                        alertService.error(this.$t('message.local_print_agent_required'));
+                        try {
+                            window.open(localAgentSetupUrl(), '_blank', 'noopener');
+                        } catch (e) {}
                         return;
                     }
                 }

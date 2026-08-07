@@ -410,24 +410,47 @@ export default {
                 }
             });
 
-            // Local print agent (ESC/POS) — no Chrome dialog
+            // Network Direct Print → Local Print Agent only.
+            // Never fall back to window.print() (blank Chrome popup on thermal / remote PCs).
             const directJobs = jobs.filter((job) =>
                 (job.mode === 'local_bridge' || job.mode === 'direct_print')
-                && job.status === 'pending_local'
                 && job.raw_base64
+                && job.status !== 'printed'
             );
-            for (const job of directJobs) {
-                try {
-                    await sendViaLocalBridge(job);
-                    if (job.type === 'invoice') done.invoice = true;
-                    else done.kot = true;
-                    await new Promise((r) => setTimeout(r, 200));
-                } catch (err) {
-                    console.warn('Local bridge print failed', job?.type, err);
+
+            if (directJobs.length > 0) {
+                let bridgeFailed = false;
+                for (const job of directJobs) {
+                    try {
+                        await sendViaLocalBridge(job);
+                        if (job.type === 'invoice') done.invoice = true;
+                        else done.kot = true;
+                        await new Promise((r) => setTimeout(r, 200));
+                    } catch (err) {
+                        bridgeFailed = true;
+                        console.warn('Local bridge print failed', job?.type, err);
+                    }
                 }
+
+                const kotOk = !expected.kot || done.kot;
+                const invoiceOk = !expected.invoice || done.invoice;
+                if (kotOk && invoiceOk) {
+                    return;
+                }
+
+                alertService.error(this.$t('message.local_print_agent_required'));
+                try {
+                    window.open('/local-print-agent/', '_blank', 'noopener');
+                } catch (e) {
+                    // ignore popup blockers
+                }
+                if (bridgeFailed) {
+                    return;
+                }
+                return;
             }
 
-            // Silent Chrome kiosk only (never forcePreview / never dialog)
+            // Browser-popup printers only: Silent Print (still no preview dialog unless enabled)
             if (((expected.kot && !done.kot) || (expected.invoice && !done.invoice)) && isSilentPrintReady()) {
                 if (expected.kot && !done.kot) {
                     try {
@@ -457,7 +480,6 @@ export default {
                 return;
             }
 
-            // Printer not connected — auto-download helper + simple setup for cashiers
             alertService.error(this.$t('message.printer_not_connected_simple'));
             try {
                 downloadSimplePrintHelper();

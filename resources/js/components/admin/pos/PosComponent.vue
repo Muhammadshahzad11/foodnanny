@@ -5,6 +5,7 @@
             class="mb-4"
             endpoint="admin/pos/printers"
             :title="$t('label.connected_printers') + ' (KOT & POS)'"
+            @loaded="onPrintersLoaded"
         />
         <form @submit.prevent="search"
               class="flex items-center w-full h-10 mb-4 rounded-lg overflow-hidden border border-[#EFF0F6] bg-white">
@@ -168,7 +169,13 @@
                         </button>
                     </nav>
                 </div>
-                <p v-if="!printPreviewOn && !silentPrintReady" class="mt-1.5 text-[11px] leading-4 text-amber-700">
+                <p v-if="hasDirectNetworkPrinter" class="mt-1.5 text-[11px] leading-4 text-amber-700">
+                    {{ $t('message.local_print_agent_pos_hint') }}
+                    <a class="underline font-semibold" href="/local-print-agent/" target="_blank" rel="noopener">
+                        {{ $t('label.setup_local_print_agent') }}
+                    </a>
+                </p>
+                <p v-else-if="!printPreviewOn && !silentPrintReady" class="mt-1.5 text-[11px] leading-4 text-amber-700">
                     {{ $t('message.direct_print_setup_needed') }}
                     <button type="button" class="underline font-semibold" @click.prevent="openSimplePrintSetup">
                         {{ $t('button.enable_printing') }}
@@ -418,6 +425,7 @@ export default {
             printPreviewOn: false,
             silentPrintReady: false,
             showSimplePrintSetup: false,
+            hasDirectNetworkPrinter: false,
             offerStatus: switchEnum.ON,
             mainOffer: {},
             offer: {},
@@ -533,9 +541,16 @@ export default {
             setPrintPreviewOn(!!on);
             this.printPreviewOn = !!on;
             this.silentPrintReady = isSilentPrintReady();
-            if (!on && !this.silentPrintReady) {
+            // Network Direct Print uses Local Print Agent — don't push Silent Print setup
+            if (!on && !this.silentPrintReady && !this.hasDirectNetworkPrinter) {
                 this.openSimplePrintSetup();
             }
+        },
+        onPrintersLoaded(printers) {
+            const list = Array.isArray(printers) ? printers : [];
+            this.hasDirectNetworkPrinter = list.some((p) =>
+                Number(p.printing_choice) === 10 && !!(p.printer_ip || '').trim()
+            );
         },
         openSimplePrintSetup() {
             this.showSimplePrintSetup = true;

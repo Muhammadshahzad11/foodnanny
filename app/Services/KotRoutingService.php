@@ -303,7 +303,7 @@ class KotRoutingService
 
     protected function dispatchPrintJob(string $type, ?Printer $printer, array $payload, ?KitchenTicket $ticket): array
     {
-        $mode = (!$printer || $printer->isBrowserPopup())
+        $mode = (!$printer || $printer->isBrowserPopup() || !$printer->isNetwork() || blank($printer->printer_ip))
             ? 'browser_popup'
             : 'direct_print';
 

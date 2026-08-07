@@ -79,11 +79,33 @@ export async function sendViaLocalBridge(job = {}) {
     throw err;
 }
 
+/**
+ * Quick health check for the Local Print Agent on this machine.
+ */
+export async function probeLocalAgent(bridgePort = DEFAULT_BRIDGE_PORT) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2500);
+    try {
+        const res = await fetch(`http://127.0.0.1:${bridgePort}/health`, {
+            method: 'GET',
+            signal: controller.signal,
+            mode: 'cors',
+        });
+        const data = await res.json().catch(() => ({}));
+        return !!(res.ok && data.ok);
+    } catch (e) {
+        return false;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 export function localAgentSetupUrl() {
     return `${window.location.origin}/local-print-agent/`;
 }
 
 export default {
     sendViaLocalBridge,
+    probeLocalAgent,
     localAgentSetupUrl,
 };

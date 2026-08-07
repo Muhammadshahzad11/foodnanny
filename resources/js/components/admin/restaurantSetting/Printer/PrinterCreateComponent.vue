@@ -95,7 +95,7 @@
                             </div>
                         </div>
 
-                        <template v-if="props.form.printing_choice === enums.printingChoiceEnum.DIRECT_PRINT">
+                        <template v-if="showNetworkIpFields">
                             <div class="form-col-12">
                                 <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 leading-relaxed">
                                     {{ $t('message.direct_print_cloud_help') }}
@@ -122,6 +122,16 @@
                                 <small class="db-field-alert" v-if="errors.printer_port">{{ errors.printer_port[0] }}</small>
                             </div>
                         </template>
+
+                        <div
+                            v-else-if="props.form.printing_choice === enums.printingChoiceEnum.DIRECT_PRINT
+                                && props.form.printer_type === enums.printerTypeEnum.WINDOWS_SHARED"
+                            class="form-col-12"
+                        >
+                            <div class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900 leading-relaxed">
+                                {{ $t('message.usb_windows_shared_help') }}
+                            </div>
+                        </div>
 
                         <div class="form-col-12 sm:form-col-6">
                             <label class="db-field-title required">{{ $t('label.status') }}</label>
@@ -217,6 +227,10 @@ export default {
             return this.authStore.info?.restaurant_name
                 || this.authStore.info?.restaurant?.name
                 || this.$t('label.outlet');
+        },
+        showNetworkIpFields() {
+            return this.props.form.printing_choice === this.enums.printingChoiceEnum.DIRECT_PRINT
+                && this.props.form.printer_type === this.enums.printerTypeEnum.NETWORK;
         },
     },
     methods: {

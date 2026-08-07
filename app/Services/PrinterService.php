@@ -262,13 +262,13 @@ class PrinterService
     {
         $choice = (int) ($data['printing_choice'] ?? PrintingChoice::BROWSER_POPUP);
 
-        if ($choice !== PrintingChoice::DIRECT_PRINT) {
+        if ($choice !== PrintingChoice::DIRECT_PRINT || (int) ($data['printer_type'] ?? 0) !== PrinterType::NETWORK) {
             $data['computer_ipv4'] = null;
             $data['printer_ip']    = null;
             $data['printer_port']  = null;
         } else {
             $data['printer_port'] = (int) ($data['printer_port'] ?? 9100);
-            $data['printer_type'] = (int) ($data['printer_type'] ?? PrinterType::NETWORK);
+            $data['printer_type'] = PrinterType::NETWORK;
         }
 
         $data['characters_per_line'] = (int) ($data['characters_per_line'] ?? 42);
