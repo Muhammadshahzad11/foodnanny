@@ -269,7 +269,23 @@ class DashboardService
                 $endDate   = Carbon::today()->format('Y-m-d');
             }
 
-            $restaurantOwnerOverviewArray['total_sales']                   = $order->where(['active' => Status::ACTIVE])->where(['payment_status' => PaymentStatus::PAID, 'status' => OrderStatus::DELIVERED])->sum('total');
+            // POS orders are PAID at counter but stay ACCEPT until kitchen completes.
+            // Sales must count all paid orders except canceled/rejected/returned.
+            $salesQuery = $order->where(['active' => Status::ACTIVE])
+                ->where('payment_status', PaymentStatus::PAID)
+                ->whereNotIn('status', [
+                    OrderStatus::CANCELED,
+                    OrderStatus::REJECTED,
+                    OrderStatus::RETURNED,
+                ]);
+
+            $restaurantOwnerOverviewArray['total_sales'] = AppLibrary::currencyAmountFormat((clone $salesQuery)->sum('total'));
+            $restaurantOwnerOverviewArray['filter_total_sales'] = AppLibrary::currencyAmountFormat(
+                (clone $salesQuery)
+                    ->whereDate('order_datetime', '>=', $startDate)
+                    ->whereDate('order_datetime', '<=', $endDate)
+                    ->sum('total')
+            );
             $restaurantOwnerOverviewArray['total_orders']                  = $order->where(['active' => Status::ACTIVE])->count();
             $restaurantOwnerOverviewArray['available_balance']             = Restaurant::find($this->restaurant());
             $restaurantOwnerOverviewArray['total_menu_items']              = Item::count();
@@ -281,6 +297,9 @@ class DashboardService
             $restaurantOwnerOverviewArray['filter_total_canceled']         = $order->canceled()->where(['active' => Status::ACTIVE])->whereDate('order_datetime', '>=', $startDate)->whereDate('order_datetime', '<=', $endDate)->count();
             $restaurantOwnerOverviewArray['filter_total_returned']         = $order->returned()->where(['active' => Status::ACTIVE])->whereDate('order_datetime', '>=', $startDate)->whereDate('order_datetime', '<=', $endDate)->count();
             $restaurantOwnerOverviewArray['filter_total_rejected']         = $order->rejected()->where(['active' => Status::ACTIVE])->whereDate('order_datetime', '>=', $startDate)->whereDate('order_datetime', '<=', $endDate)->count();
+            // POS accepted/prepared counts (kitchen pipeline)
+            $restaurantOwnerOverviewArray['filter_total_accepted']         = $order->where(['active' => Status::ACTIVE, 'status' => OrderStatus::ACCEPT])->whereDate('order_datetime', '>=', $startDate)->whereDate('order_datetime', '<=', $endDate)->count();
+            $restaurantOwnerOverviewArray['filter_total_prepared']         = $order->where(['active' => Status::ACTIVE, 'status' => OrderStatus::PREPARED])->whereDate('order_datetime', '>=', $startDate)->whereDate('order_datetime', '<=', $endDate)->count();
 
             return $restaurantOwnerOverviewArray;
         } catch (Exception $exception) {

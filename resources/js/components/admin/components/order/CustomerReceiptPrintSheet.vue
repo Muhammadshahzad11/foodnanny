@@ -1,6 +1,6 @@
 <template>
     <!-- Always in DOM for reliable thermal print (not inside a closed modal) -->
-    <div class="pos-receipt-print-root customer-receipt-sheet" aria-hidden="true">
+    <div class="customer-bill-print-root" aria-hidden="true">
         <div v-if="hasData" class="receipt-body bill-sheet" :dir="displayMode">
             <div class="bill-center">
                 <img v-if="restaurant?.logo" :src="restaurant.logo" alt="" class="bill-logo"/>
@@ -230,7 +230,7 @@ export default {
 </script>
 
 <style>
-.customer-receipt-sheet {
+.customer-bill-print-root {
     /* Keep off-screen until print — must not appear inside the POS UI */
     position: fixed !important;
     left: -100vw !important;
@@ -318,12 +318,11 @@ export default {
     body.printing-receipt * {
         visibility: hidden !important;
     }
-    body.printing-receipt .pos-receipt-print-root,
-    body.printing-receipt .pos-receipt-print-root * {
+    body.printing-receipt .customer-bill-print-root,
+    body.printing-receipt .customer-bill-print-root * {
         visibility: visible !important;
     }
-    /* Full page width like KOT root, then center the slip */
-    body.printing-receipt .pos-receipt-print-root {
+    body.printing-receipt .customer-bill-print-root {
         display: block !important;
         position: absolute !important;
         left: 0 !important;
@@ -340,7 +339,7 @@ export default {
         color: #000 !important;
         text-align: center;
     }
-    body.printing-receipt .pos-receipt-print-root .bill-sheet {
+    body.printing-receipt .customer-bill-print-root .bill-sheet {
         display: inline-block !important;
         width: 72mm !important;
         max-width: 100% !important;
@@ -349,7 +348,7 @@ export default {
         vertical-align: top;
     }
     @page {
-        margin: 2mm;
+        margin: 0;
         size: 80mm auto;
     }
 }

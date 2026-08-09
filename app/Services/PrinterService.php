@@ -73,15 +73,15 @@ class PrinterService
                 $printer->setAttribute('connection_status', 'browser');
                 $printer->setAttribute('is_connected', true);
                 $printer->setAttribute('connection_label', 'browser_popup');
-            } elseif (blank($printer->printer_ip)) {
-                $printer->setAttribute('connection_status', 'offline');
-                $printer->setAttribute('is_connected', false);
-                $printer->setAttribute('connection_label', 'ip_missing');
             } elseif ($this->isLanOrLocalAgentTarget($printer)) {
-                // Cloud server cannot TCP-probe restaurant LAN IPs — Local Print Agent does.
+                // Network LAN IP or Windows USB name — Local Print Agent handles both
                 $printer->setAttribute('connection_status', 'local_agent');
                 $printer->setAttribute('is_connected', true);
                 $printer->setAttribute('connection_label', 'local_agent_ready');
+            } elseif (blank($printer->printer_ip) && blank($printer->windows_printer_name)) {
+                $printer->setAttribute('connection_status', 'offline');
+                $printer->setAttribute('is_connected', false);
+                $printer->setAttribute('connection_label', 'ip_missing');
             } else {
                 $ok = $escPos->isReachable($printer->printer_ip, (int) ($printer->printer_port ?: 9100));
                 $printer->setAttribute('connection_status', $ok ? 'connected' : 'offline');
@@ -261,14 +261,22 @@ class PrinterService
     protected function normalizePayload(array $data): array
     {
         $choice = (int) ($data['printing_choice'] ?? PrintingChoice::BROWSER_POPUP);
+        $type   = (int) ($data['printer_type'] ?? PrinterType::NETWORK);
 
-        if ($choice !== PrintingChoice::DIRECT_PRINT || (int) ($data['printer_type'] ?? 0) !== PrinterType::NETWORK) {
-            $data['computer_ipv4'] = null;
-            $data['printer_ip']    = null;
-            $data['printer_port']  = null;
+        if ($choice !== PrintingChoice::DIRECT_PRINT) {
+            $data['computer_ipv4']        = null;
+            $data['printer_ip']           = null;
+            $data['printer_port']         = null;
+            $data['windows_printer_name'] = null;
+        } elseif ($type === PrinterType::NETWORK) {
+            $data['printer_port']         = (int) ($data['printer_port'] ?? 9100);
+            $data['windows_printer_name'] = null;
         } else {
-            $data['printer_port'] = (int) ($data['printer_port'] ?? 9100);
-            $data['printer_type'] = PrinterType::NETWORK;
+            // USB / Windows Shared Direct Print — routed by Local Agent to Windows queue name
+            $data['printer_ip']           = null;
+            $data['printer_port']         = null;
+            $data['windows_printer_name'] = trim((string) ($data['windows_printer_name'] ?? '')) ?: null;
+            $data['computer_ipv4']        = filled($data['computer_ipv4'] ?? null) ? $data['computer_ipv4'] : null;
         }
 
         $data['characters_per_line'] = (int) ($data['characters_per_line'] ?? 42);
@@ -285,6 +293,9 @@ class PrinterService
      */
     protected function isLanOrLocalAgentTarget(Printer $printer): bool
     {
+        if (filled($printer->windows_printer_name)) {
+            return true;
+        }
         if (filled($printer->computer_ipv4)) {
             return true;
         }

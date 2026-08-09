@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Enums\Ask;
 use App\Enums\OrderType;
 use App\Enums\PrintFormat;
-use App\Enums\PrintingChoice;
 use App\Enums\Source;
 use App\Enums\Status;
 use App\Libraries\AppLibrary;
@@ -14,6 +13,7 @@ use App\Models\KitchenTicket;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Printer;
+use Dipokhalder\Settings\Facades\Settings;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -186,6 +186,10 @@ class KotRoutingService
             'ticket_no'        => 'KOT - ' . $order->id . ($station ? ' / ' . $station->name : ''),
             'kot_no'           => (string) $order->id,
             'restaurant'       => $order->restaurant?->name,
+            'logo_url'         => $order->restaurant?->logo,
+            'tagline'          => $this->restaurantTagline($order),
+            'phone'            => $this->restaurantPhone($order),
+            'powered_by'       => $this->poweredByName(),
             'order_serial_no'  => $order->order_serial_no,
             'order_type'       => $order->order_type,
             'order_type_label' => $orderTypeLabel,
@@ -216,6 +220,53 @@ class KotRoutingService
         ];
     }
 
+    protected function restaurantTagline(Order $order): ?string
+    {
+        $restaurant = $order->restaurant;
+        $address = trim((string) ($restaurant?->address ?? ''));
+        if ($address !== '') {
+            return $address;
+        }
+        try {
+            $companyAddress = trim((string) (Settings::group('company')->get('company_address') ?? ''));
+            if ($companyAddress !== '') {
+                return $companyAddress;
+            }
+        } catch (\Throwable $e) {
+        }
+
+        return null;
+    }
+
+    protected function restaurantPhone(Order $order): ?string
+    {
+        $restaurant = $order->restaurant;
+        $phone = trim((string) (($restaurant?->country_code ?? '') . ($restaurant?->phone ?? '')));
+        if ($phone !== '') {
+            return $phone;
+        }
+        try {
+            $companyPhone = trim((string) (Settings::group('company')->get('company_phone') ?? ''));
+
+            return $companyPhone !== '' ? $companyPhone : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    protected function poweredByName(): string
+    {
+        try {
+            $name = trim((string) (Settings::group('company')->get('company_name') ?? ''));
+            if ($name !== '') {
+                return $name;
+            }
+        } catch (\Throwable $e) {
+        }
+
+        return 'FoodNanny';
+    }
+
     protected function processInvoice(Order $order): ?array
     {
         $printer = $this->resolveInvoicePrinter($order);
@@ -243,27 +294,14 @@ class KotRoutingService
     }
 
     /**
-     * Prefer dedicated invoice/POS printer; fall back to any direct-print printer
-     * (same thermal often prints both KOT and bill).
+     * Bill/invoice must use a dedicated Invoice printer — never the KOT machine.
      */
     protected function resolveInvoicePrinter(Order $order): ?Printer
     {
-        $invoice = Printer::query()
-            ->where('restaurant_id', $order->restaurant_id)
-            ->where('status', Status::ACTIVE)
-            ->where('print_format', PrintFormat::INVOICE)
-            ->orderBy('id')
-            ->first();
-
-        if ($invoice) {
-            return $invoice;
-        }
-
         return Printer::query()
             ->where('restaurant_id', $order->restaurant_id)
             ->where('status', Status::ACTIVE)
-            ->where('printing_choice', PrintingChoice::DIRECT_PRINT)
-            ->where('print_format', '!=', PrintFormat::NO_AUTO_KOT)
+            ->where('print_format', PrintFormat::INVOICE)
             ->orderBy('id')
             ->first();
     }
@@ -281,51 +319,63 @@ class KotRoutingService
             return [
                 'name'        => $item->orderItem?->name,
                 'quantity'    => $item->quantity,
-                'price'       => AppLibrary::currencyAmountFormat($item->price),
-                'total_price' => AppLibrary::currencyAmountFormat($item->total_price),
+                'price'       => (float) $item->price,
+                'total_price' => (float) $item->total_price,
             ];
         })->values()->all();
 
         return [
             'restaurant'       => $order->restaurant?->name,
+            'logo_url'         => $order->restaurant?->logo,
+            'tagline'          => $this->restaurantTagline($order),
+            'phone'            => $this->restaurantPhone($order),
+            'powered_by'       => $this->poweredByName(),
             'order_serial_no'  => $order->order_serial_no,
             'order_type_label' => $orderTypeLabel,
             'table_no'         => $order->diningTable?->table_number,
             'biller'           => Auth::user()?->name ?: 'Cashier',
             'order_datetime'   => AppLibrary::datetime($order->order_datetime),
             'items'            => $items,
-            'subtotal'         => AppLibrary::currencyAmountFormat($order->subtotal),
-            'tax'              => AppLibrary::currencyAmountFormat($order->total_tax),
-            'total'            => AppLibrary::currencyAmountFormat($order->total),
+            'subtotal'         => (float) $order->subtotal,
+            'tax'              => (float) $order->total_tax,
+            'discount'         => (float) $order->discount,
+            'total'            => (float) $order->total,
             'invoice_qr'       => $printer ? ((int) $printer->invoice_qr_status === Ask::YES) : false,
         ];
     }
 
     protected function dispatchPrintJob(string $type, ?Printer $printer, array $payload, ?KitchenTicket $ticket): array
     {
-        $mode = (!$printer || $printer->isBrowserPopup() || !$printer->isNetwork() || blank($printer->printer_ip))
-            ? 'browser_popup'
-            : 'direct_print';
+        $hasNetworkTarget = $printer && $printer->isNetwork() && filled($printer->printer_ip);
+        $hasWindowsTarget = $printer && filled($printer->windows_printer_name);
+        $wantsDirect      = $printer && $printer->isDirectPrint() && ($hasNetworkTarget || $hasWindowsTarget);
+
+        // Direct Print (network IP or Windows USB name) → Local Agent automatic path (no Chrome popup)
+        $mode = $wantsDirect ? 'direct_print' : 'browser_popup';
 
         $job = [
-            'type'           => $type,
-            'mode'           => $mode,
-            'status'         => $mode === 'browser_popup' ? 'pending_browser' : 'pending_local',
-            'printer_id'     => $printer?->id,
-            'printer'        => $printer?->name,
-            'ticket_id'      => $ticket?->id,
-            'payload'        => $payload,
-            'message'        => null,
-            'raw_base64'     => null,
-            'computer_ipv4'  => $printer?->computer_ipv4,
-            'printer_ip'     => $printer?->printer_ip,
-            'printer_port'   => (int) ($printer?->printer_port ?: 9100),
-            'bridge_port'    => 1811,
+            'type'                 => $type,
+            'mode'                 => $mode,
+            'status'               => $mode === 'browser_popup' ? 'pending_browser' : 'pending_local',
+            'printer_id'           => $printer?->id,
+            'printer'              => $printer?->name,
+            'print_format'         => $printer?->print_format,
+            'ticket_id'            => $ticket?->id,
+            'payload'              => $payload,
+            'message'              => $printer
+                ? null
+                : ($type === 'invoice'
+                    ? 'No Invoice/Bill printer configured.'
+                    : 'No KOT printer configured.'),
+            'raw_base64'           => null,
+            'computer_ipv4'        => $printer?->computer_ipv4,
+            'printer_ip'           => $printer?->printer_ip,
+            'printer_port'         => (int) ($printer?->printer_port ?: 9100),
+            'windows_printer_name' => $printer?->windows_printer_name,
+            'bridge_port'          => 1811,
         ];
 
         if ($mode === 'direct_print' && $printer) {
-            // Always prepare raw bytes so the POS PC can print via local agent
-            // when the cloud server cannot reach the restaurant LAN.
             try {
                 $job['raw_base64'] = $type === 'invoice'
                     ? $this->escPosPrintService->invoiceRawBase64($printer, $payload)
@@ -335,26 +385,28 @@ class KotRoutingService
                 $job['message'] = $exception->getMessage();
             }
 
-            try {
-                $result = $type === 'invoice'
-                    ? $this->escPosPrintService->printInvoice($printer, $payload)
-                    : $this->escPosPrintService->printKot($printer, $payload);
+            // Network IP: try cloud TCP first; USB Windows name can only print via Local Agent
+            if ($hasNetworkTarget) {
+                try {
+                    $result = $type === 'invoice'
+                        ? $this->escPosPrintService->printInvoice($printer, $payload)
+                        : $this->escPosPrintService->printKot($printer, $payload);
 
-                if ($result['success'] ?? false) {
-                    $job['status']  = 'printed';
-                    $job['message'] = $result['message'] ?? null;
-                } else {
-                    // Keep local_bridge path — never open Chrome print dialog for Direct Print
-                    $job['mode']    = 'local_bridge';
-                    $job['status']  = 'pending_local';
-                    $job['message'] = $result['message'] ?? null;
+                    if ($result['success'] ?? false) {
+                        $job['status']  = 'printed';
+                        $job['message'] = $result['message'] ?? null;
+
+                        return $job;
+                    }
+                } catch (Exception $exception) {
+                    Log::info('Direct network print failed (local agent next): ' . $exception->getMessage());
+                    $job['message'] = $exception->getMessage();
                 }
-            } catch (Exception $exception) {
-                Log::info('Direct print failed (will try local agent): ' . $exception->getMessage());
-                $job['mode']    = 'local_bridge';
-                $job['status']  = 'pending_local';
-                $job['message'] = $exception->getMessage();
             }
+
+            // Always keep local_bridge for POS browser → Local Agent (no Chrome popup)
+            $job['mode']   = 'local_bridge';
+            $job['status'] = 'pending_local';
         }
 
         return $job;

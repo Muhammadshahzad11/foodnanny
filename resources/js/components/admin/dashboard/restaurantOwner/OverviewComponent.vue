@@ -19,6 +19,19 @@
                     </dl>
                 </div>
             </div>
+            <div class="col-12 sm:col-6 xl:col-3" v-if="overview.filter_total_sales">
+                <div class="p-4 rounded-lg flex items-center gap-4 bg-admin-orange/90">
+                    <div class="w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center bg-white">
+                        <i class="lab-fill-dollar text-admin-orange text-2xl"></i>
+                    </div>
+                    <dl class="flex-auto overflow-hidden">
+                        <dt class="font-medium tracking-wide capitalize whitespace-nowrap text-ellipsis overflow-hidden text-white">
+                            {{ $t('label.sales') || 'Period sales' }}
+                        </dt>
+                        <dd class="font-semibold text-[22px] leading-[34px] text-white">{{ overview.filter_total_sales }}</dd>
+                    </dl>
+                </div>
+            </div>
             <div class="col-12 sm:col-6 xl:col-3">
                 <div class="p-4 rounded-lg flex items-center gap-4 bg-admin-indigo">
                     <div class="w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center bg-white">

@@ -175,17 +175,8 @@
                         {{ $t('label.setup_local_print_agent') }}
                     </a>
                 </p>
-                <p v-else-if="!printPreviewOn && !silentPrintReady" class="mt-1.5 text-[11px] leading-4 text-amber-700">
-                    {{ $t('message.direct_print_setup_needed') }}
-                    <button type="button" class="underline font-semibold" @click.prevent="openSimplePrintSetup">
-                        {{ $t('button.enable_printing') }}
-                    </button>
-                </p>
-                <p v-else-if="!printPreviewOn && silentPrintReady" class="mt-1.5 text-[11px] leading-4 text-emerald-700">
-                    {{ $t('message.direct_print_ready') }}
-                    <button type="button" class="underline font-semibold ml-1" @click.prevent="resetSilentPrint">
-                        {{ $t('button.reset') }}
-                    </button>
+                <p v-else class="mt-1.5 text-[11px] leading-4 text-sky-800">
+                    {{ $t('message.browser_popup_pos_hint') }}
                 </p>
             </div>
         </div>

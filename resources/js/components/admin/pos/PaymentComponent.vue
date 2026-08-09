@@ -192,8 +192,8 @@ import {printKot, printReceipt, PrintUnavailableError} from "../../../services/p
 import {
     isSilentPrintReady,
 } from "../../../services/printPreference.js";
-import {sendViaLocalBridge} from "../../../services/localPrintBridge.js";
-import {downloadSimplePrintHelper} from "../../../services/simplePrintSetup.js";
+import {sendViaLocalBridge, probeLocalAgentInfo, localAgentSetupUrl} from "../../../services/localPrintBridge.js";
+import {printBillIframe, printKotIframe} from "../../../services/thermalIframePrint.js";
 import {useAuthStore} from "../../../stores/auth.js";
 import orderTypeEnum from "../../../enums/modules/orderTypeEnum.js";
 
@@ -391,8 +391,8 @@ export default {
             return this.kotPayload;
         },
         /**
-         * Direct print only after place order. No thank-you modal. No browser print preview.
-         * Error toast if printer / local agent / silent print is not ready.
+         * Automatic Direct Print via Local Agent (no Chrome popup).
+         * KOT → network IP, Bill → Windows USB name — both through agent.
          */
         async runAutoPrintJobs(printJobs = []) {
             const jobs = Array.isArray(printJobs) ? printJobs : [];
@@ -402,7 +402,6 @@ export default {
             };
             const done = { kot: false, invoice: false };
 
-            // Server already sent to printer
             jobs.forEach((job) => {
                 if (job.status === 'printed') {
                     if (job.type === 'invoice') done.invoice = true;
@@ -410,25 +409,45 @@ export default {
                 }
             });
 
-            // Network Direct Print → Local Print Agent only.
-            // Never fall back to window.print() (blank Chrome popup on thermal / remote PCs).
             const directJobs = jobs.filter((job) =>
                 (job.mode === 'local_bridge' || job.mode === 'direct_print')
                 && job.raw_base64
                 && job.status !== 'printed'
             );
 
+            // Prefer automatic Local Agent path (no popup)
             if (directJobs.length > 0) {
-                let bridgeFailed = false;
+                const needsWindows = directJobs.some((j) => !!(j.windows_printer_name || '').trim());
+                const agentInfo = await probeLocalAgentInfo(directJobs[0]?.bridge_port || 1811);
+                if (!agentInfo.ok) {
+                    alertService.error(this.$t('message.local_agent_required_auto_print'));
+                    try {
+                        window.open(localAgentSetupUrl(), '_blank', 'noopener');
+                    } catch (e) {}
+                    return;
+                }
+                if (needsWindows && (agentInfo.version < 3 || !agentInfo.features.includes('windows'))) {
+                    alertService.error(this.$t('message.local_agent_outdated_usb'));
+                    try {
+                        window.open(localAgentSetupUrl(), '_blank', 'noopener');
+                    } catch (e) {}
+                    return;
+                }
+
                 for (const job of directJobs) {
                     try {
                         await sendViaLocalBridge(job);
                         if (job.type === 'invoice') done.invoice = true;
                         else done.kot = true;
-                        await new Promise((r) => setTimeout(r, 200));
+                        await new Promise((r) => setTimeout(r, 250));
                     } catch (err) {
-                        bridgeFailed = true;
-                        console.warn('Local bridge print failed', job?.type, err);
+                        console.warn('Auto print failed', job?.type, err);
+                        alertService.error(
+                            (job.type === 'invoice'
+                                ? this.$t('message.bill_auto_print_failed')
+                                : this.$t('message.kot_auto_print_failed'))
+                            + ' ' + (err?.message || '')
+                        );
                     }
                 }
 
@@ -437,61 +456,65 @@ export default {
                 if (kotOk && invoiceOk) {
                     return;
                 }
-
-                alertService.error(this.$t('message.local_print_agent_required'));
-                try {
-                    window.open('/local-print-agent/', '_blank', 'noopener');
-                } catch (e) {
-                    // ignore popup blockers
-                }
-                if (bridgeFailed) {
-                    return;
-                }
                 return;
             }
 
-            // Browser-popup printers only: Silent Print (still no preview dialog unless enabled)
-            if (((expected.kot && !done.kot) || (expected.invoice && !done.invoice)) && isSilentPrintReady()) {
+            // Legacy Browser Popup jobs only (manual select) — not used for Direct Print auto mode
+            const browserJobs = jobs.filter((j) => j.mode === 'browser_popup' || j.status === 'pending_browser');
+            if (browserJobs.length > 0) {
                 if (expected.kot && !done.kot) {
                     try {
+                        const kotJob = browserJobs.find((j) => j.type === 'kot') || {};
                         await this.ensureKotPayload(jobs);
                         await this.$nextTick();
-                        await this.silentHtmlPrint('kot');
+                        await printKotIframe(this.kotPayload || kotJob.payload || {}, kotJob.printer || '');
                         done.kot = true;
-                        await new Promise((r) => setTimeout(r, 350));
+                        await new Promise((r) => setTimeout(r, 400));
                     } catch (err) {
-                        console.warn('Silent KOT print failed', err);
+                        console.warn('KOT browser print failed', err);
                     }
                 }
                 if (expected.invoice && !done.invoice) {
                     try {
+                        const invJob = browserJobs.find((j) => j.type === 'invoice') || {};
                         await this.$nextTick();
-                        await this.silentHtmlPrint('invoice');
+                        if (!this.order?.id && this.placedOrderId) {
+                            try {
+                                const res = await this.posOrderStore.view(this.placedOrderId);
+                                this.order = res.data.data;
+                            } catch (e) {}
+                        }
+                        await printBillIframe(this.order || {}, {
+                            restaurant: this.posOrderStore.restaurant || {},
+                            items: this.receiptItems,
+                            cashierName: this.cashierName,
+                            paymentLabel: this.paymentLabel,
+                            tableLabel: this.tableLabel,
+                            printerHint: invJob.printer || '',
+                        });
                         done.invoice = true;
                     } catch (err) {
-                        console.warn('Silent customer print failed', err);
+                        console.warn('Bill browser print failed', err);
                     }
                 }
             }
 
             const kotOk = !expected.kot || done.kot;
             const invoiceOk = !expected.invoice || done.invoice;
-            if (kotOk && invoiceOk) {
-                return;
+            if (!kotOk || !invoiceOk) {
+                alertService.error(this.$t('message.print_jobs_incomplete'));
             }
-
-            alertService.error(this.$t('message.printer_not_connected_simple'));
-            try {
-                downloadSimplePrintHelper();
-            } catch (e) {
-                // ignore download failures
-            }
-            this.showSimplePrintSetup = true;
         },
         confirmOrder: function () {
             try {
                 if (this.$props.props.form.payment_method === posPaymentMethodEnum.CASH && this.$refs.paymentMethodCashInput.value) {
-                    this.$props.props.form.received_amount = this.$refs.paymentMethodCashInput.value;
+                    // Round to 2 decimals so 1967.86 is never rejected as "less than total"
+                    const raw = parseFloat(this.$refs.paymentMethodCashInput.value);
+                    const tot = parseFloat(this.$props.props.form.total);
+                    this.$props.props.form.received_amount = Number.isFinite(raw) ? Math.round(raw * 100) / 100 : 0;
+                    if (Number.isFinite(tot)) {
+                        this.$props.props.form.total = Math.round(tot * 100) / 100;
+                    }
                 } else {
                     this.$props.props.form.received_amount = null;
                 }

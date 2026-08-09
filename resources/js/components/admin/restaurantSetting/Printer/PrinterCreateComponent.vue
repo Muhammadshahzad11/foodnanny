@@ -99,9 +99,6 @@
                             <div class="form-col-12">
                                 <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 leading-relaxed">
                                     {{ $t('message.direct_print_cloud_help') }}
-                                    <a class="underline font-semibold ml-1" href="/local-print-agent/" target="_blank" rel="noopener">
-                                        {{ $t('label.setup_local_print_agent') }}
-                                    </a>
                                 </div>
                             </div>
                             <div class="form-col-12 sm:form-col-4">
@@ -124,12 +121,30 @@
                         </template>
 
                         <div
-                            v-else-if="props.form.printing_choice === enums.printingChoiceEnum.DIRECT_PRINT
-                                && props.form.printer_type === enums.printerTypeEnum.WINDOWS_SHARED"
+                            v-if="showWindowsUsbDirectFields"
+                            class="form-col-12"
+                        >
+                            <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900 leading-relaxed mb-3">
+                                {{ $t('message.usb_direct_auto_help') }}
+                            </div>
+                            <label class="db-field-title required">{{ $t("label.windows_printer_name") }}</label>
+                            <input
+                                v-model="props.form.windows_printer_name"
+                                type="text"
+                                class="db-field-control"
+                                :class="errors.windows_printer_name ? 'invalid' : ''"
+                                placeholder="RP3200 lite bill"
+                            />
+                            <small class="text-[11px] text-[#6E7191]">{{ $t('message.windows_printer_name_hint') }}</small>
+                            <small class="db-field-alert" v-if="errors.windows_printer_name">{{ errors.windows_printer_name[0] }}</small>
+                        </div>
+
+                        <div
+                            v-else-if="Number(props.form.printing_choice) === enums.printingChoiceEnum.BROWSER_POPUP"
                             class="form-col-12"
                         >
                             <div class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900 leading-relaxed">
-                                {{ $t('message.usb_windows_shared_help') }}
+                                {{ $t('message.dual_printer_browser_help') }}
                             </div>
                         </div>
 
@@ -196,6 +211,7 @@ const defaultForm = () => ({
     computer_ipv4: "",
     printer_ip: "",
     printer_port: 9100,
+    windows_printer_name: "",
     status: statusEnum.ACTIVE,
 });
 
@@ -229,8 +245,12 @@ export default {
                 || this.$t('label.outlet');
         },
         showNetworkIpFields() {
-            return this.props.form.printing_choice === this.enums.printingChoiceEnum.DIRECT_PRINT
-                && this.props.form.printer_type === this.enums.printerTypeEnum.NETWORK;
+            return Number(this.props.form.printing_choice) === this.enums.printingChoiceEnum.DIRECT_PRINT
+                && Number(this.props.form.printer_type) === this.enums.printerTypeEnum.NETWORK;
+        },
+        showWindowsUsbDirectFields() {
+            return Number(this.props.form.printing_choice) === this.enums.printingChoiceEnum.DIRECT_PRINT
+                && Number(this.props.form.printer_type) === this.enums.printerTypeEnum.WINDOWS_SHARED;
         },
     },
     methods: {

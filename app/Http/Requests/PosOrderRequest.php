@@ -57,8 +57,13 @@ class PosOrderRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            if (request('payment_method') == PosPaymentMethod::CASH && ((float)request('total') > (float)request('received_amount'))) {
-                $validator->errors()->add('received_amount', trans('all.message.received_amount_can_not_less'));
+            if (request('payment_method') == PosPaymentMethod::CASH) {
+                // Compare in paise/cents to avoid float false negatives (e.g. 1967.86 == 1967.86)
+                $totalCents    = (int) round(((float) request('total')) * 100);
+                $receivedCents = (int) round(((float) request('received_amount')) * 100);
+                if ($receivedCents < $totalCents) {
+                    $validator->errors()->add('received_amount', trans('all.message.received_amount_can_not_less'));
+                }
             }
             // Dine-in requires a table
             if ((int) request('order_type') === \App\Enums\OrderType::DINING_TABLE && (int) request('table_id') <= 0) {

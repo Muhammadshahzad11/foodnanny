@@ -63,7 +63,13 @@ class PrintHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         path = self.path.split("?", 1)[0].rstrip("/") or "/"
         if path in ("/", "/health"):
-            self._json(200, {"ok": True, "service": "local-print-agent", "port": self.server.server_port})
+            self._json(200, {
+                "ok": True,
+                "service": "local-print-agent",
+                "port": self.server.server_port,
+                "version": 2,
+                "features": ["network"],
+            })
             return
         self._json(404, {"ok": False, "message": "Not found. POST /print"})
 
@@ -84,9 +90,21 @@ class PrintHandler(BaseHTTPRequestHandler):
         ip = str(body.get("ip") or "").strip()
         port = int(body.get("port") or 9100)
         data = str(body.get("data") or "")
+        windows = str(body.get("windows_printer") or "").strip()
 
-        if not ip or not data:
-            self._json(400, {"ok": False, "message": "ip and data are required"})
+        if not data:
+            self._json(400, {"ok": False, "message": "data (base64) is required"})
+            return
+
+        if windows and not ip:
+            self._json(400, {
+                "ok": False,
+                "message": "USB Windows printer needs Start-LocalPrintAgent.ps1. Close this Python agent and run the PowerShell agent instead.",
+            })
+            return
+
+        if not ip:
+            self._json(400, {"ok": False, "message": "windows_printer or ip is required"})
             return
 
         try:

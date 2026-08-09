@@ -17,10 +17,7 @@
             v-if="needsLocalAgent && !agentOnline"
             class="mx-4 mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 leading-relaxed"
         >
-            {{ $t('message.local_print_agent_list_hint') }}
-            <a class="underline font-semibold ml-1" :href="agentSetupUrl" target="_blank" rel="noopener">
-                {{ $t('label.setup_local_print_agent') }}
-            </a>
+            {{ $t('message.network_direct_optional_hint') }}
         </div>
 
         <div class="db-table-responsive">
@@ -105,10 +102,10 @@ import {usePrinterStore} from "../../../../stores/printer.js";
 import {useFrontendSettingStore} from "../../../../stores/frontendSetting.js";
 import VueSimpleAlert from "vue3-simple-alert";
 import {
-    localAgentSetupUrl,
     probeLocalAgent,
     sendViaLocalBridge,
 } from "../../../../services/localPrintBridge.js";
+import {printKotIframe} from "../../../../services/thermalIframePrint.js";
 
 export default {
     name: "PrinterListComponent",
@@ -163,6 +160,7 @@ export default {
                     computer_ipv4: "",
                     printer_ip: "",
                     printer_port: 9100,
+                    windows_printer_name: "",
                     status: statusEnum.ACTIVE,
                 },
                 search: {
@@ -194,11 +192,9 @@ export default {
         needsLocalAgent() {
             return (this.printers || []).some((p) =>
                 Number(p.printing_choice) === printingChoiceEnum.DIRECT_PRINT
+                && Number(p.printer_type) === printerTypeEnum.NETWORK
                 && !!(p.printer_ip || '').trim()
             );
-        },
-        agentSetupUrl() {
-            return localAgentSetupUrl();
         },
     },
     methods: {
@@ -271,29 +267,37 @@ export default {
                 computer_ipv4: printer.computer_ipv4 || "",
                 printer_ip: printer.printer_ip || "",
                 printer_port: printer.printer_port || 9100,
+                windows_printer_name: printer.windows_printer_name || "",
                 status: printer.status,
             };
         },
         async testPrint(printer) {
             this.loading.isActive = true;
             try {
+                // Browser Popup / Windows Shared → thermal iframe (no Local Agent page)
+                const isBrowserPath = Number(printer.printing_choice) === printingChoiceEnum.BROWSER_POPUP
+                    || Number(printer.printer_type) === printerTypeEnum.WINDOWS_SHARED
+                    || !(printer.printer_ip || '').trim();
+
+                if (isBrowserPath) {
+                    this.loading.isActive = false;
+                    alertService.success(this.$t('message.printer_test_pick_windows'));
+                    await printKotIframe({
+                        copy: 'TEST PRINT',
+                        ticket_no: 'TEST - ' + (printer.name || 'TVS'),
+                        order_date: new Date().toLocaleDateString(),
+                        order_time: new Date().toLocaleTimeString(),
+                        order_type_label: 'TEST',
+                        biller: 'Cashier',
+                        items: [{ name: 'Printer configuration OK', quantity: 1 }],
+                        total_qty: 1,
+                    }, printer.name || 'TVS');
+                    return;
+                }
+
                 await this.refreshAgentStatus();
                 const res = await this.printerStore.testPrint(printer.id);
                 const data = res.data?.data || {};
-
-                if (data.mode === 'browser_popup' && data.payload) {
-                    this.loading.isActive = false;
-                    alertService.success(data.message || this.$t('message.printer_test_browser_ready'));
-                    const w = window.open('', '_blank', 'width=420,height=600');
-                    if (w) {
-                        const lines = (data.payload.lines || []).map((l) => `<div>${l}</div>`).join('');
-                        w.document.write(`<pre style="font-family:monospace;padding:16px"><h3>${data.payload.copy || 'TEST'}</h3>${lines}</pre>`);
-                        w.document.close();
-                        w.focus();
-                        w.print();
-                    }
-                    return;
-                }
 
                 if (data.mode === 'direct_print' && data.success) {
                     this.loading.isActive = false;
@@ -301,16 +305,8 @@ export default {
                     return;
                 }
 
-                // Cloud unreachable → print via Local Print Agent on THIS browser's PC
-                if (data.raw_base64) {
-                    if (!this.agentOnline) {
-                        this.loading.isActive = false;
-                        alertService.error(this.$t('message.local_print_agent_required'));
-                        try {
-                            window.open(localAgentSetupUrl(), '_blank', 'noopener');
-                        } catch (e) {}
-                        return;
-                    }
+                // Network Direct Print with agent if available; else browser fallback (no agent page)
+                if (data.raw_base64 && this.agentOnline) {
                     try {
                         await sendViaLocalBridge(data);
                         this.loading.isActive = false;
@@ -318,17 +314,21 @@ export default {
                         return;
                     } catch (bridgeErr) {
                         this.agentOnline = false;
-                        this.loading.isActive = false;
-                        alertService.error(this.$t('message.local_print_agent_required'));
-                        try {
-                            window.open(localAgentSetupUrl(), '_blank', 'noopener');
-                        } catch (e) {}
-                        return;
                     }
                 }
 
                 this.loading.isActive = false;
-                alertService.error(data.message || this.$t('message.something_wrong'));
+                alertService.success(this.$t('message.printer_test_pick_windows'));
+                await printKotIframe({
+                    copy: 'TEST PRINT',
+                    ticket_no: 'TEST - ' + (printer.name || 'TVS'),
+                    order_date: new Date().toLocaleDateString(),
+                    order_time: new Date().toLocaleTimeString(),
+                    order_type_label: 'TEST',
+                    biller: 'Cashier',
+                    items: [{ name: 'Printer configuration OK', quantity: 1 }],
+                    total_qty: 1,
+                }, printer.name || 'TVS');
             } catch (err) {
                 this.loading.isActive = false;
                 alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));

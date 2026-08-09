@@ -214,14 +214,14 @@
                 <h3 class="text-sm font-medium capitalize mb-2">{{ $t('label.special_instructions') }}:</h3>
                 <textarea v-model="temp.instruction" :placeholder="$t('message.add_note')"
                           class="w-full h-14 p-2 mb-4 rounded-lg resize-none  placeholder:text-xs border border-gray-200"></textarea>
-                <button :disabled="temp.total_price <= 0" @click.prevent="addToCart"
-                        class="w-full h-12 rounded-3xl text-center flex items-center justify-center gap-3 bg-primary text-white">
+                <button :disabled="!canAddToCart" @click.prevent="addToCart"
+                        class="w-full h-12 rounded-3xl text-center flex items-center justify-center gap-3 bg-primary text-white disabled:opacity-50">
                     <i class="lab-fill-bag-check text-lg leading-none"></i>
                     <span>
                         {{
                             $t('button.add_to_cart')
                         }} - {{
-                            currencyFormat(temp.total_price, setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position)
+                            currencyFormat(temp.total_price || 0, setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position)
                         }}
                     </span>
                 </button>
@@ -309,6 +309,9 @@ export default {
         },
         displayMode: function () {
             return this.commonStore.display_mode === DisplayModeEnum.LTR ? 'ltr' : 'rtl';
+        },
+        canAddToCart: function () {
+            return !!(this.temp.item_id && this.temp.quantity > 0 && !Number.isNaN(Number(this.temp.total_price)));
         }
     },
     methods: {
@@ -320,6 +323,13 @@ export default {
         },
         currencyFormat: function (amount, decimal, currency, position) {
             return appService.currencyFormat(amount, decimal, currency, position);
+        },
+        safeOfferAmount: function () {
+            const offer = this.$props.offer;
+            if (!offer || typeof offer !== 'object') {
+                return 0;
+            }
+            return Number(offer.amount) || 0;
         },
         infoModalShow: function (name, caution) {
             this.itemInfo = {
@@ -334,8 +344,18 @@ export default {
         },
         variationModalShow: function (item) {
             this.itemStore.view(item.id).then((res) => {
-                this.item          = res.data.data;
-                this.mainItemPrice = Object.keys(this.$props.offer).length > 0 ? (item.convert_price - parseFloat((item.convert_price / 100) * this.$props.offer.amount).toFixed(this.setting.site_digit_after_decimal_point)) : (item.discount > 0 ? item.convert_discounted_price : item.convert_price);
+                this.item = res.data.data;
+                const offerAmount = this.safeOfferAmount();
+                if (offerAmount > 0) {
+                    this.mainItemPrice = item.convert_price - parseFloat(((item.convert_price / 100) * offerAmount).toFixed(this.setting.site_digit_after_decimal_point || 2));
+                } else {
+                    this.mainItemPrice = item.discount > 0 ? item.convert_discounted_price : item.convert_price;
+                }
+                this.mainItemPrice = Number(this.mainItemPrice) || 0;
+
+                this.temp.item_variation_total = 0;
+                this.temp.item_variations = {variations: {}, names: {}};
+                this.temp.item_extras = {extras: [], names: []};
 
                 if (this.item.item_attributes.length > 0) {
                     _.forEach(this.item.item_attributes, (element) => {
@@ -362,10 +382,12 @@ export default {
                 this.temp.maximum_purchase_quantity = this.item.maximum_purchase_quantity;
                 this.temp.convert_price             = this.mainItemPrice;
                 this.temp.currency_price            = this.currencyFormat(this.mainItemPrice, this.setting.site_digit_after_decimal_point, this.setting.site_default_currency_symbol, this.setting.site_currency_position);
-                this.temp.total_price               = this.mainItemPrice + this.temp.item_variation_total;
+                this.totalPriceSetup();
 
                 this.openModal('variation-modal');
             }).catch((err) => {
+                console.warn('POS item open failed', err);
+                alertService.error(err?.response?.data?.message || 'Unable to open item. Try again.');
             });
         },
         variationModalHide: function () {
@@ -464,7 +486,8 @@ export default {
 
             this.temp.item_variation_total = item_variation_total;
             this.temp.item_extra_total     = item_extra_total;
-            this.temp.total_price          = parseFloat((((this.mainItemPrice) + this.temp.item_variation_total + this.temp.item_extra_total) * this.temp.quantity) + item_addon_total);
+            const total = parseFloat((((this.mainItemPrice) + this.temp.item_variation_total + this.temp.item_extra_total) * this.temp.quantity) + item_addon_total);
+            this.temp.total_price = Number.isFinite(total) ? total : 0;
         },
         quantityUp: function () {
             if (this.temp.quantity === 0) {

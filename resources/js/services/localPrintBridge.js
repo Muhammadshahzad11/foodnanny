@@ -1,11 +1,12 @@
 /**
- * Send ESC/POS bytes to the Local Print Agent running on the POS PC.
- * Cloud servers cannot reach restaurant LAN printers (192.168.x.x);
- * the agent on the POS machine forwards TCP to printer_ip:9100.
+ * Send ESC/POS bytes to the Local Print Agent on the POS PC.
+ * Supports:
+ *  - Network: { ip, port, data }
+ *  - USB Windows: { windows_printer, data }
  */
 
 const DEFAULT_BRIDGE_PORT = 1811;
-const REQUEST_TIMEOUT_MS = 8000;
+const REQUEST_TIMEOUT_MS = 10000;
 
 function bridgeUrls(job = {}) {
     const port = Number(job.bridge_port || DEFAULT_BRIDGE_PORT);
@@ -42,22 +43,32 @@ async function postPrint(url, body) {
 }
 
 /**
- * @param {{ raw_base64?: string, printer_ip?: string, printer_port?: number, computer_ipv4?: string, bridge_port?: number }} job
- * @returns {Promise<{ok: boolean, via?: string}>}
+ * @param {{ raw_base64?: string, printer_ip?: string, printer_port?: number, windows_printer_name?: string, computer_ipv4?: string, bridge_port?: number }} job
  */
 export async function sendViaLocalBridge(job = {}) {
     const raw = job.raw_base64;
     const ip = (job.printer_ip || '').trim();
+    const windowsPrinter = (job.windows_printer_name || job.windows_printer || '').trim();
     const port = Number(job.printer_port || 9100);
 
     if (!raw) {
         throw new Error('Missing print data for local agent.');
     }
-    if (!ip) {
-        throw new Error('Printer IP is missing.');
+    if (!ip && !windowsPrinter) {
+        throw new Error('Printer IP or Windows printer name is missing.');
     }
 
-    const body = { ip, port, data: raw };
+    const body = {
+        data: raw,
+        ...(windowsPrinter
+            ? {
+                windows_printer: windowsPrinter,
+                windows_printer_name: windowsPrinter,
+            }
+            : {}),
+        ...(ip ? { ip, port } : {}),
+    };
+
     const urls = bridgeUrls(job);
     let lastError = null;
 
@@ -70,19 +81,29 @@ export async function sendViaLocalBridge(job = {}) {
         }
     }
 
+    const msg = lastError?.message || 'Local Print Agent is not running on this PC.';
+    // Old agent returns this when USB windows_printer is sent without ip
+    if (/ip and data are required/i.test(msg)) {
+        const err = new Error(
+            'Old Print Agent is running. Close it, download Local Print Agent v2, run the new .ps1 (must say v2), then try again.'
+        );
+        err.code = 'LOCAL_AGENT_OUTDATED';
+        throw err;
+    }
+
     const err = new Error(
         lastError?.name === 'AbortError'
             ? 'Local Print Agent timed out. Start the agent on this PC.'
-            : (lastError?.message || 'Local Print Agent is not running on this PC.')
+            : msg
     );
     err.code = 'LOCAL_BRIDGE_UNAVAILABLE';
     throw err;
 }
 
 /**
- * Quick health check for the Local Print Agent on this machine.
+ * @returns {Promise<{ok: boolean, version?: number, features?: string[]}>}
  */
-export async function probeLocalAgent(bridgePort = DEFAULT_BRIDGE_PORT) {
+export async function probeLocalAgentInfo(bridgePort = DEFAULT_BRIDGE_PORT) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 2500);
     try {
@@ -92,20 +113,30 @@ export async function probeLocalAgent(bridgePort = DEFAULT_BRIDGE_PORT) {
             mode: 'cors',
         });
         const data = await res.json().catch(() => ({}));
-        return !!(res.ok && data.ok);
+        return {
+            ok: !!(res.ok && data.ok),
+            version: Number(data.version || 1),
+            features: Array.isArray(data.features) ? data.features : [],
+        };
     } catch (e) {
-        return false;
+        return { ok: false, version: 0, features: [] };
     } finally {
         clearTimeout(timer);
     }
 }
 
+export async function probeLocalAgent(bridgePort = DEFAULT_BRIDGE_PORT) {
+    const info = await probeLocalAgentInfo(bridgePort);
+    return info.ok;
+}
+
 export function localAgentSetupUrl() {
-    return `${window.location.origin}/local-print-agent/`;
+    return `${window.location.origin}/local-print-agent/?v=2`;
 }
 
 export default {
     sendViaLocalBridge,
     probeLocalAgent,
+    probeLocalAgentInfo,
     localAgentSetupUrl,
 };

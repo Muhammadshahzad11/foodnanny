@@ -28,9 +28,10 @@ class PrinterResource extends JsonResource
             'computer_ipv4'        => $this->computer_ipv4,
             'printer_ip'           => $this->printer_ip,
             'printer_port'         => $this->printer_port,
+            'windows_printer_name' => $this->windows_printer_name,
             'ip_display'           => $this->printer_ip
                 ? ($this->printer_ip . ':' . ($this->printer_port ?: 9100))
-                : null,
+                : ($this->windows_printer_name ?: null),
             'connection_status'    => $this->connection_status ?? null,
             'connection_label'     => $this->connection_label ?? null,
             'is_connected'         => $this->is_connected ?? null,
