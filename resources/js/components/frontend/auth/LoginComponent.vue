@@ -231,10 +231,9 @@ export default {
         finishLogin: async function (res) {
             await this.defaultAccessStore.fetch();
             await this.myRestaurantStore.resetDefaultRestaurant();
+            // Apply route access BEFORE redirect — otherwise /admin/* hits 403 (access undefined/false)
+            appService.recursiveRouter(router.options.routes, this.authStore.permission);
             alertService.success(res.data.message);
-            setTimeout(() => {
-                appService.recursiveRouter(router.options.routes, this.authStore.permission)
-            }, 1000);
 
             this.form = {
                 country_code: this.form.country_code,

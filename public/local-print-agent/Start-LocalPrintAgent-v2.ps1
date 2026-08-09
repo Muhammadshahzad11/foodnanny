@@ -1,4 +1,4 @@
-# Local Print Agent v3 - FoodNanny (TcpListener - no URL ACL / HttpListener conflicts)
+# Local Print Agent v3 - buildwithnexclass (TcpListener - no URL ACL / HttpListener conflicts)
 # Silent print: network IP:9100 + USB Windows printer name
 
 param(
@@ -11,7 +11,7 @@ $AgentVersion = 3
 
 if ($InstallStartup) {
     $startup = [Environment]::GetFolderPath('Startup')
-    $target = Join-Path $startup 'FoodNanny-LocalPrintAgent.cmd'
+    $target = Join-Path $startup 'buildwithnexclass-LocalPrintAgent.cmd'
     $self = $MyInvocation.MyCommand.Path
     $cmd = '@echo off' + [Environment]::NewLine + 'powershell -ExecutionPolicy Bypass -WindowStyle Minimized -File "' + $self + '"' + [Environment]::NewLine
     Set-Content -Path $target -Value $cmd -Encoding ASCII
@@ -52,7 +52,7 @@ public class RawPrinterHelper {
     }
     try {
       DOCINFOA di = new DOCINFOA();
-      di.pDocName = "FoodNanny ESC/POS";
+      di.pDocName = "buildwithnexclass ESC/POS";
       di.pDataType = "RAW";
       if (!StartDocPrinter(hPrinter, 1, di)) {
         LastError = "StartDocPrinter failed err=" + Marshal.GetLastWin32Error();

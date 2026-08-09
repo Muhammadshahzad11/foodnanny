@@ -347,6 +347,26 @@ class PosRunningOrderService
         $order->billing_requested_at = now();
         $order->save();
 
+        return $this->reprintInvoice($order);
+    }
+
+    /**
+     * On-demand invoice reprint from POS order view (open or closed).
+     *
+     * @return array{order: Order, print: array}
+     * @throws Exception
+     */
+    public function reprintInvoice(Order $order): array
+    {
+        $this->assertPosOrderAccess($order);
+
+        if ((int) $order->payment_status === PaymentStatus::UNPAID
+            && !in_array((int) $order->status, [OrderStatus::CANCELED, OrderStatus::REJECTED], true)
+        ) {
+            $order->billing_requested_at = now();
+            $order->save();
+        }
+
         $order = $order->fresh([
             'orderItems.orderItem',
             'diningTable',
@@ -405,7 +425,19 @@ class PosRunningOrderService
         ]);
 
         if ($tableId) {
-            $this->waiterOrderService->releaseTableIfIdle((int) $tableId);
+            // Always free the table after payment — do not leave OCCUPIED/RESERVED
+            $table = RestaurantTable::query()->find((int) $tableId);
+            if ($table) {
+                $previous = (int) $table->status;
+                $table->update(['status' => TableStatus::AVAILABLE]);
+                try {
+                    app(RealtimePublisher::class)->table($table->fresh(), 'status', $previous);
+                } catch (\Throwable $e) {
+                    Log::info('payAndClose table free realtime: ' . $e->getMessage());
+                }
+            } else {
+                $this->waiterOrderService->releaseTableIfIdle((int) $tableId);
+            }
         }
 
         $print = ['jobs' => [], 'kot_count' => 0];
@@ -425,6 +457,58 @@ class PosRunningOrderService
             ->where('order_id', $order->id)
             ->orderBy('id')
             ->get();
+    }
+
+    /**
+     * POS staff can set table Available / Occupied / Reserved (etc.).
+     *
+     * @throws Exception
+     */
+    public function updateTableStatus(int $tableId, int $status): RestaurantTable
+    {
+        $restaurantId = (int) $this->restaurant();
+        if ($restaurantId <= 0 && Auth::check()) {
+            $restaurantId = (int) (Auth::user()->restaurant_id ?? 0);
+        }
+
+        $allowed = [
+            TableStatus::AVAILABLE,
+            TableStatus::OCCUPIED,
+            TableStatus::RESERVED,
+            TableStatus::CLEANING,
+            TableStatus::OUT_OF_SERVICE,
+        ];
+        if (!in_array($status, $allowed, true)) {
+            throw new Exception('Invalid table status.', 422);
+        }
+
+        $table = RestaurantTable::query()
+            ->when($restaurantId > 0, fn ($q) => $q->where('restaurant_id', $restaurantId))
+            ->find($tableId);
+        if (!$table) {
+            throw new Exception(trans('all.message.permission_denied') ?: 'Table not found.', 422);
+        }
+
+        // Do not mark Available while an unpaid open dine-in order still exists
+        if ($status === TableStatus::AVAILABLE) {
+            $open = $this->openOrderForTable($tableId);
+            if ($open) {
+                throw new Exception(
+                    'This table has an open order. Pay/close the order first, or free the table after payment.',
+                    422
+                );
+            }
+        }
+
+        $previous = (int) $table->status;
+        $table->update(['status' => $status]);
+        try {
+            app(RealtimePublisher::class)->table($table->fresh(), 'status', $previous);
+        } catch (\Throwable $e) {
+            Log::info('POS updateTableStatus realtime: ' . $e->getMessage());
+        }
+
+        return $table->fresh();
     }
 
     /**

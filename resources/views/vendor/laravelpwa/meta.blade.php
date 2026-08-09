@@ -1,23 +1,69 @@
 @php
-    // Always same-origin relative URLs. Absolute APP_URL (e.g. :8002) breaks install when browsing :8000.
-    $pwaCacheVersion = (int) (\App\Models\Pwa::query()->value('cache_version') ?: 1);
+    try {
+        $manifest = app(\App\Services\PwaManifestBuilder::class)->build();
+    } catch (\Throwable $e) {
+        $manifest = [
+            'name' => config('app.name', 'Cost to Cost Foods'),
+            'short_name' => 'App',
+            'theme_color' => '#148A3C',
+            'background_color' => '#FFFFFF',
+            'display' => 'standalone',
+            'status_bar' => 'black-translucent',
+            'cache_version' => 1,
+            'icons' => [],
+        ];
+    }
+
+    $pwaCacheVersion = (int) ($manifest['cache_version'] ?? 1);
+    $themeColor = $manifest['theme_color'] ?? '#148A3C';
+    $bgColor = $manifest['background_color'] ?? '#FFFFFF';
+    $shortName = $manifest['short_name'] ?? ($manifest['name'] ?? 'App');
+    $display = $manifest['display'] ?? 'standalone';
+    $statusBar = $manifest['status_bar'] ?? 'black-translucent';
+
     $pwaIcon192 = '/images/default/pwa/icons/icon-192x192.png?v=' . $pwaCacheVersion;
     $pwaIcon512 = '/images/default/pwa/icons/icon-512x512.png?v=' . $pwaCacheVersion;
+    foreach (($manifest['icons'] ?? []) as $icon) {
+        $sizes = (string) ($icon['sizes'] ?? '');
+        $src = (string) ($icon['src'] ?? '');
+        if ($sizes === '192x192' && $src !== '') {
+            $pwaIcon192 = $src;
+        }
+        if ($sizes === '512x512' && $src !== '') {
+            $pwaIcon512 = $src;
+        }
+    }
+
+    $splashFallback = '/images/default/pwa/splashes/splash-2048x2732.png?v=' . $pwaCacheVersion;
+    try {
+        $pwaModel = \App\Models\Pwa::query()->first();
+        if ($pwaModel && !empty($pwaModel->getFirstMediaUrl('pwa_splash'))) {
+            $splashMedia = $pwaModel->getMedia('pwa_splash')->first();
+            $splashUrl = $splashMedia?->getUrl('D_2048x2732') ?: $splashMedia?->getUrl();
+            if ($splashUrl) {
+                $parts = parse_url($splashUrl);
+                if (!empty($parts['path'])) {
+                    $splashFallback = $parts['path'] . '?v=' . $pwaCacheVersion;
+                }
+            }
+        }
+    } catch (\Throwable $e) {
+    }
 @endphp
 <!-- Web Application Manifest (relative = same origin as current port) -->
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="/manifest.json?v={{ $pwaCacheVersion }}">
 <!-- Chrome for Android theme color -->
-<meta name="theme-color" content="{{ $config['theme_color'] }}">
+<meta name="theme-color" content="{{ $themeColor }}">
 
 <!-- Add to homescreen for Chrome on Android -->
-<meta name="mobile-web-app-capable" content="{{ $config['display'] == 'standalone' ? 'yes' : 'no' }}">
-<meta name="application-name" content="{{ $config['short_name'] }}">
+<meta name="mobile-web-app-capable" content="{{ $display == 'standalone' ? 'yes' : 'no' }}">
+<meta name="application-name" content="{{ $shortName }}">
 <link rel="icon" sizes="512x512" href="{{ $pwaIcon512 }}">
 
 <!-- Add to homescreen for Safari on iOS -->
-<meta name="apple-mobile-web-app-capable" content="{{ $config['display'] == 'standalone' ? 'yes' : 'no' }}">
-<meta name="apple-mobile-web-app-status-bar-style" content="{{  $config['status_bar'] }}">
-<meta name="apple-mobile-web-app-title" content="{{ $config['short_name'] }}">
+<meta name="apple-mobile-web-app-capable" content="{{ $display == 'standalone' ? 'yes' : 'no' }}">
+<meta name="apple-mobile-web-app-status-bar-style" content="{{ $statusBar }}">
+<meta name="apple-mobile-web-app-title" content="{{ $shortName }}">
 <link rel="apple-touch-icon" href="{{ $pwaIcon512 }}">
 <link rel="apple-touch-icon" sizes="192x192" href="{{ $pwaIcon192 }}">
 
@@ -48,12 +94,12 @@
 <link href="/images/default/pwa/splashes/splash-1668x2388.png"
       media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)"
       rel="apple-touch-startup-image"/>
-<link href="/images/default/pwa/splashes/splash-2048x2732.png"
+<link href="{{ $splashFallback }}"
       media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)"
       rel="apple-touch-startup-image"/>
 
 <!-- Tile for Win8 -->
-<meta name="msapplication-TileColor" content="{{ $config['background_color'] }}">
+<meta name="msapplication-TileColor" content="{{ $bgColor }}">
 <meta name="msapplication-TileImage" content="{{ $pwaIcon512 }}">
 
 <script type="text/javascript">

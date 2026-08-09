@@ -121,13 +121,71 @@
             </div>
 
             <div v-if="Number(checkoutProps.form.order_type) === enums.orderTypeEnum.DINING_TABLE" class="mb-3">
-                <label class="text-xs font-medium text-[#6E7191] mb-1.5 block">{{ $t('label.table') }}</label>
+                <label class="text-xs font-semibold uppercase tracking-wide text-[#6E7191] mb-1.5 block">
+                    {{ $t('label.table') }}
+                </label>
                 <select v-model="checkoutProps.form.table_id" class="db-field-control w-full" @change="onTableSelected">
                     <option value="">{{ $t('label.select_table') || 'Select table' }}</option>
                     <option v-for="t in diningTables" :key="t.id" :value="t.id">
-                        {{ t.table_number }} · {{ t.name }}{{ Number(t.status) === 10 ? ' (Occupied)' : '' }}
+                        {{ t.table_number }} · {{ t.name }}
+                        · {{ tableStatusLabel(t.status) }}
                     </option>
                 </select>
+
+                <div v-if="checkoutProps.form.table_id" class="mt-3 rounded-xl border border-[#EFF0F6] bg-[#FAFAFC] p-3">
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                            <p class="text-sm font-semibold text-heading">
+                                {{ $t('label.table_status') }}
+                            </p>
+                            <p class="text-[11px] leading-4 text-[#6E7191] mt-0.5">
+                                {{ $t('message.table_status_hint') }}
+                            </p>
+                        </div>
+                        <span
+                            class="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full"
+                            :class="tableStatusBadgeClass(selectedTableStatus)"
+                        >
+                            {{ tableStatusLabel(selectedTableStatus) }}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <button
+                            v-for="s in tableStatusOptions"
+                            :key="s.value"
+                            type="button"
+                            class="flex items-start gap-2 text-left rounded-xl border-2 px-2.5 py-2.5 transition active:scale-[0.98]"
+                            :class="[
+                                Number(selectedTableStatus) === s.value
+                                    ? s.activeClass
+                                    : 'bg-white border-[#EFF0F6] hover:border-primary/30',
+                                isTableStatusDisabled(s.value) ? 'opacity-50 cursor-not-allowed' : '',
+                            ]"
+                            :disabled="isTableStatusDisabled(s.value)"
+                            @click.prevent="setTableStatus(s.value)"
+                        >
+                            <span
+                                class="mt-0.5 w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0"
+                                :class="Number(selectedTableStatus) === s.value ? s.iconActiveClass : s.iconClass"
+                                aria-hidden="true"
+                            >
+                                {{ s.icon }}
+                            </span>
+                            <span class="min-w-0">
+                                <span class="block text-xs font-bold text-heading leading-tight">{{ s.label }}</span>
+                                <span class="block text-[10px] leading-3.5 text-[#6E7191] mt-0.5">{{ s.hint }}</span>
+                            </span>
+                        </button>
+                    </div>
+
+                    <p v-if="tableHasOpenOrder" class="mt-2 text-[10px] leading-3.5 text-amber-700">
+                        {{ $t('message.table_available_blocked_open_order') }}
+                    </p>
+                    <p v-else class="mt-2 text-[10px] leading-3.5 text-[#A0A3BD]">
+                        {{ $t('message.table_frees_after_payment') }}
+                    </p>
+                </div>
             </div>
 
             <div v-if="Number(checkoutProps.form.order_type) === enums.orderTypeEnum.DINING_TABLE && openOrders.length" class="mb-3">
@@ -162,6 +220,57 @@
                 <p class="text-xs font-semibold uppercase tracking-wide text-[#6E7191]">
                     {{ $t('label.customer') || 'Customer' }}
                 </p>
+                <input
+                    v-model="customerSearch"
+                    type="text"
+                    class="db-field-control w-full"
+                    :placeholder="$t('label.search_customer')"
+                    autocomplete="off"
+                    @focus="ensureCustomersLoaded"
+                />
+                <div class="max-h-44 overflow-y-auto rounded-xl border border-[#EFF0F6] bg-white divide-y divide-[#EFF0F6]">
+                    <button
+                        v-for="c in filteredDeliveryCustomers"
+                        :key="c.id"
+                        type="button"
+                        class="w-full flex items-center gap-3 text-left px-3 py-2.5 hover:bg-primary/5 transition"
+                        :class="Number(selectedCustomerId) === Number(c.id) ? 'bg-primary/10 ring-inset ring-1 ring-primary/20' : ''"
+                        @click.prevent="pickCustomer(c)"
+                    >
+                        <span
+                            class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-sm"
+                            :class="customerAvatarTone(c)"
+                            aria-hidden="true"
+                        >
+                            {{ customerInitials(c) }}
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span class="font-semibold text-sm text-heading block truncate">{{ c.name }}</span>
+                            <span class="text-[11px] text-[#6E7191] block truncate">
+                                <i class="lab-line-calling text-[10px] align-middle"></i>
+                                {{ c.phone || '—' }}
+                            </span>
+                            <span v-if="c.address" class="text-[11px] text-[#A0A3BD] block truncate mt-0.5">
+                                {{ c.address }}
+                            </span>
+                        </span>
+                        <span
+                            v-if="Number(selectedCustomerId) === Number(c.id)"
+                            class="shrink-0 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[10px]"
+                            aria-hidden="true"
+                        >
+                            ✓
+                        </span>
+                    </button>
+                    <p v-if="customersLoading" class="px-3 py-3 text-xs text-[#6E7191]">
+                        {{ $t('label.loading') || 'Loading…' }}
+                    </p>
+                    <p v-else-if="!filteredDeliveryCustomers.length" class="px-3 py-3 text-xs text-[#6E7191]">
+                        {{ customerSearch
+                            ? $t('label.no_customers_found')
+                            : ($t('message.no_data_found') || 'No customers yet') }}
+                    </p>
+                </div>
                 <input v-model="checkoutProps.form.customer_name" type="text" class="db-field-control w-full"
                        :placeholder="$t('label.name') || 'Customer name'"/>
                 <input v-model="checkoutProps.form.customer_phone" type="text" class="db-field-control w-full"
@@ -514,6 +623,11 @@ export default {
             editingOrderId: null,
             orderHistoryLines: [],
             showHistory: false,
+            deliveryCustomers: [],
+            allDeliveryCustomers: [],
+            selectedCustomerId: '',
+            customerSearch: '',
+            customersLoading: false,
             errors: {},
             enums: {
                 switchEnum: switchEnum,
@@ -579,6 +693,46 @@ export default {
         carts: function () {
             return this.posCartStore.lists;
         },
+        tableStatusOptions() {
+            return [
+                {
+                    value: 5,
+                    label: this.$t('label.available'),
+                    hint: this.$t('label.table_status_available_hint') || 'Ready for new guests',
+                    icon: '✓',
+                    activeClass: 'bg-emerald-50 border-emerald-500 shadow-sm',
+                    iconClass: 'bg-emerald-100 text-emerald-700',
+                    iconActiveClass: 'bg-emerald-500 text-white',
+                },
+                {
+                    value: 10,
+                    label: this.$t('label.occupied'),
+                    hint: this.$t('label.table_status_occupied_hint') || 'Guests seated now',
+                    icon: '●',
+                    activeClass: 'bg-rose-50 border-rose-500 shadow-sm',
+                    iconClass: 'bg-rose-100 text-rose-700',
+                    iconActiveClass: 'bg-rose-500 text-white',
+                },
+                {
+                    value: 15,
+                    label: this.$t('label.reserved'),
+                    hint: this.$t('label.table_status_reserved_hint') || 'Booked for later',
+                    icon: 'R',
+                    activeClass: 'bg-amber-50 border-amber-500 shadow-sm',
+                    iconClass: 'bg-amber-100 text-amber-700',
+                    iconActiveClass: 'bg-amber-500 text-white',
+                },
+                {
+                    value: 20,
+                    label: this.$t('label.cleaning'),
+                    hint: this.$t('label.table_status_cleaning_hint') || 'Being cleaned',
+                    icon: '✦',
+                    activeClass: 'bg-sky-50 border-sky-500 shadow-sm',
+                    iconClass: 'bg-sky-100 text-sky-700',
+                    iconActiveClass: 'bg-sky-500 text-white',
+                },
+            ];
+        },
         subtotal: function () {
             return this.posCartStore.subtotal;
         },
@@ -590,7 +744,33 @@ export default {
         },
         total: function () {
             return this.posCartStore.total;
-        }
+        },
+        selectedTableStatus: function () {
+            const t = this.diningTables.find((x) => Number(x.id) === Number(this.checkoutProps.form.table_id));
+            return t ? Number(t.status) : null;
+        },
+        tableHasOpenOrder() {
+            const tableId = Number(this.checkoutProps.form.table_id);
+            if (!tableId) return false;
+            if (this.editingOrderId && Number(this.checkoutProps.form.table_id) === tableId) {
+                return true;
+            }
+            return (this.openOrders || []).some((o) => Number(o.table_id) === tableId);
+        },
+        filteredDeliveryCustomers: function () {
+            const q = (this.customerSearch || '').toLowerCase().trim();
+            const list = this.allDeliveryCustomers || [];
+            if (!q) {
+                return list.slice(0, 50);
+            }
+            return list.filter((c) => {
+                const hay = [c.name, c.phone, c.email, c.address]
+                    .filter(Boolean)
+                    .join(' ')
+                    .toLowerCase();
+                return hay.includes(q);
+            }).slice(0, 50);
+        },
     },
     async mounted() {
         try {
@@ -763,7 +943,107 @@ export default {
                 this.checkoutProps.form.customer_phone = '';
                 this.checkoutProps.form.customer_address = '';
                 this.checkoutProps.form.delivery_note = '';
+                this.selectedCustomerId = '';
+            } else {
+                this.loadDeliveryCustomers();
             }
+        },
+        tableStatusLabel(status) {
+            const map = {
+                5: this.$t('label.available') || 'Available',
+                10: this.$t('label.occupied') || 'Occupied',
+                15: this.$t('label.reserved') || 'Reserved',
+                20: this.$t('label.cleaning') || 'Cleaning',
+                25: this.$t('label.out_of_service') || 'Out of service',
+                30: this.$t('label.inactive') || 'Inactive',
+            };
+            return map[Number(status)] || 'Unknown';
+        },
+        tableStatusBadgeClass(status) {
+            const map = {
+                5: 'bg-emerald-100 text-emerald-700',
+                10: 'bg-rose-100 text-rose-700',
+                15: 'bg-amber-100 text-amber-700',
+                20: 'bg-sky-100 text-sky-700',
+            };
+            return map[Number(status)] || 'bg-gray-100 text-gray-600';
+        },
+        isTableStatusDisabled(status) {
+            // Always show options; only block Available while an open unpaid order exists
+            return Number(status) === 5 && this.tableHasOpenOrder;
+        },
+        async setTableStatus(status) {
+            const tableId = this.checkoutProps.form.table_id;
+            if (!tableId) return;
+            if (Number(this.selectedTableStatus) === Number(status)) return;
+            if (this.isTableStatusDisabled(status)) {
+                alertService.error(this.$t('message.table_available_blocked_open_order'));
+                return;
+            }
+            try {
+                this.loading.isActive = true;
+                await this.posOrderStore.updateTableStatus(tableId, status);
+                await this.loadDiningTables();
+                alertService.success(
+                    (this.$t('message.table_status_updated') || 'Table is now')
+                    + ': '
+                    + this.tableStatusLabel(status)
+                );
+            } catch (err) {
+                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+            } finally {
+                this.loading.isActive = false;
+            }
+        },
+        async loadDeliveryCustomers() {
+            this.customersLoading = true;
+            try {
+                const res = await this.posOrderStore.fetchCustomers();
+                this.allDeliveryCustomers = res.data.data || [];
+                this.deliveryCustomers = this.allDeliveryCustomers.slice();
+            } catch (e) {
+                this.allDeliveryCustomers = [];
+                this.deliveryCustomers = [];
+                alertService.error(e.response?.data?.message || 'Could not load customers');
+            } finally {
+                this.customersLoading = false;
+            }
+        },
+        ensureCustomersLoaded() {
+            if (!this.allDeliveryCustomers.length && !this.customersLoading) {
+                this.loadDeliveryCustomers();
+            }
+        },
+        pickCustomer(c) {
+            if (!c) return;
+            this.selectedCustomerId = c.id;
+            this.checkoutProps.form.customer_name = c.name || '';
+            this.checkoutProps.form.customer_phone = c.phone || '';
+            this.checkoutProps.form.customer_address = c.address || '';
+            this.customerSearch = c.name || '';
+        },
+        customerInitials(c) {
+            const name = String(c?.name || '').trim();
+            if (!name) return '?';
+            const parts = name.split(/\s+/).filter(Boolean);
+            if (parts.length === 1) {
+                return parts[0].slice(0, 2).toUpperCase();
+            }
+            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        },
+        customerAvatarTone(c) {
+            const tones = [
+                'bg-[#1AB759]',
+                'bg-[#007AFF]',
+                'bg-[#FF8A00]',
+                'bg-[#7C5CFC]',
+                'bg-[#E93C3C]',
+                'bg-[#00B8D9]',
+                'bg-[#FF5C8A]',
+                'bg-[#6E7191]',
+            ];
+            const id = Number(c?.id) || 0;
+            return tones[Math.abs(id) % tones.length];
         },
         async loadDiningTables() {
             try {

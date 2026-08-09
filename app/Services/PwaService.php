@@ -58,6 +58,8 @@ class PwaService
                 'popup_delay_seconds' => (int) $request->input('popup_delay_seconds', $pwa->popup_delay_seconds),
                 'popup_frequency_hours' => (int) $request->input('popup_frequency_hours', $pwa->popup_frequency_hours),
             ]);
+            // Bump so browsers/manifest pick up changes without Force Update
+            $pwa->cache_version = ((int) $pwa->cache_version) + 1;
             $pwa->save();
 
             if ($request->hasFile('pwa_splash')) {
@@ -69,9 +71,9 @@ class PwaService
                 $pwa->addMedia($request->file('pwa_icon'))->toMediaCollection('pwa_icon');
             }
 
+            // Do NOT rewrite APP_NAME here — EnvEditor can corrupt .env and blank the admin app.
             $this->syncEnvIcons($pwa);
             $this->syncEnvSplashes($pwa);
-            $this->syncConfigDefaults($pwa);
 
             return $pwa->fresh();
         } catch (Exception $exception) {
@@ -132,12 +134,23 @@ class PwaService
             return;
         }
 
-        $icons = $pwa->getMedia('pwa_icon')->first();
-        foreach (['72x72', '96x96', '128x128', '144x144', '152x152', '192x192', '384x384', '512x512'] as $size) {
-            $key = 'D_' . $size;
-            if ($url = $icons->getUrl($key)) {
-                $this->envService->addData([$key => $url]);
+        try {
+            $icons = $pwa->getMedia('pwa_icon')->first();
+            if (!$icons) {
+                return;
             }
+            foreach (['72x72', '96x96', '128x128', '144x144', '152x152', '192x192', '384x384', '512x512'] as $size) {
+                $key = 'D_' . $size;
+                $url = $icons->getUrl($key);
+                if ($url) {
+                    // Prefer relative path to avoid host/port lock-in
+                    $parts = parse_url($url);
+                    $path = $parts['path'] ?? $url;
+                    $this->envService->addData([$key => $path]);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::info('PWA syncEnvIcons: ' . $e->getMessage());
         }
     }
 
@@ -147,22 +160,25 @@ class PwaService
             return;
         }
 
-        $splash = $pwa->getMedia('pwa_splash')->first();
-        foreach ([
-            '640x1136', '750x1334', '828x1792', '1125x2436', '1242x2208',
-            '1242x2688', '1536x2048', '1668x2224', '1668x2388', '2048x2732',
-        ] as $size) {
-            $key = 'D_' . $size;
-            if ($url = $splash->getUrl($key)) {
-                $this->envService->addData([$key => $url]);
+        try {
+            $splash = $pwa->getMedia('pwa_splash')->first();
+            if (!$splash) {
+                return;
             }
-        }
-    }
-
-    private function syncConfigDefaults(Pwa $pwa): void
-    {
-        if ($pwa->name) {
-            $this->envService->addData(['APP_NAME' => $pwa->name]);
+            foreach ([
+                '640x1136', '750x1334', '828x1792', '1125x2436', '1242x2208',
+                '1242x2688', '1536x2048', '1668x2224', '1668x2388', '2048x2732',
+            ] as $size) {
+                $key = 'D_' . $size;
+                $url = $splash->getUrl($key);
+                if ($url) {
+                    $parts = parse_url($url);
+                    $path = $parts['path'] ?? $url;
+                    $this->envService->addData([$key => $path]);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::info('PWA syncEnvSplashes: ' . $e->getMessage());
         }
     }
 }

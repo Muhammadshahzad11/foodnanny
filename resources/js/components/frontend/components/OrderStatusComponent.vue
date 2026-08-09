@@ -165,7 +165,7 @@ export default {
             return this.orderTypeNum === orderTypeEnum.DINING_TABLE;
         },
         showScanMenuCancelNotice() {
-            return this.statusNum === orderStatusEnum.PENDING && isScanMenuOrder(this.props);
+            return this.statusNum === orderStatusEnum.PENDING;
         },
         isDelivered() {
             return this.statusNum === orderStatusEnum.DELIVERED;

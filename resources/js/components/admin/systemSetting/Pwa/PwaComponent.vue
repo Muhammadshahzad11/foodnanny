@@ -249,10 +249,12 @@ export default {
                 alertService.successFlip(1, this.$t('button.force_update'));
                 if ('serviceWorker' in navigator) {
                     navigator.serviceWorker.ready.then((reg) => {
-                        reg.active?.postMessage({type: 'CLEAR_CACHES'});
-                        reg.active?.postMessage({type: 'SET_CACHE_VERSION', version: this.pwa.cache_version});
-                        reg.update();
-                    });
+                        const version = this.pwa.cache_version;
+                        // Safe clear: only CTC/PWA caches, then set version (no full wipe)
+                        reg.active?.postMessage({type: 'CLEAR_CACHES', version});
+                        reg.active?.postMessage({type: 'SET_CACHE_VERSION', version});
+                        reg.update().catch(() => {});
+                    }).catch(() => {});
                 }
             }).catch((err) => {
                 this.loading.isActive = false;

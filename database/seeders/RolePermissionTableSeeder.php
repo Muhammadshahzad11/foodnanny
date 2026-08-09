@@ -178,6 +178,7 @@ class RolePermissionTableSeeder extends Seeder
                 ['name' => 'kitchen_print'],
                 ['name' => 'kitchen_reject'],
                 ['name' => 'kitchen_cancel'],
+                ['name' => 'restaurant-settings'],
             ];
             $manager->givePermissionTo(
                 Permission::whereIn('name', collect($managerPermissions)->pluck('name'))->get()

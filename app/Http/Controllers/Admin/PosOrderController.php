@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Exports\OrderExport;
 use App\Services\OrderService;
 use App\Services\KitchenOrderService;
+use App\Services\PosRunningOrderService;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Http\Resources\OrderResource;
 use App\Http\Requests\PaginateRequest;
@@ -23,7 +24,8 @@ class PosOrderController extends AdminController implements HasMiddleware
 
     public function __construct(
         OrderService $order,
-        protected KitchenOrderService $kitchenOrderService
+        protected KitchenOrderService $kitchenOrderService,
+        protected PosRunningOrderService $posRunningOrderService
     ) {
         parent::__construct();
         $this->orderService = $order;
@@ -36,7 +38,7 @@ class PosOrderController extends AdminController implements HasMiddleware
             new Middleware('permission:pos-orders_delete', only: ['destroy']),
             new Middleware('permission:pos-orders_show', only: ['show', 'changeStatus']),
             // Cashiers with POS access can print KOT after checkout; order show users can reprint.
-            new Middleware('permission:pos|pos-orders_show', only: ['printKot']),
+            new Middleware('permission:pos|pos-orders_show', only: ['printKot', 'printInvoice']),
         ];
     }
 
@@ -102,6 +104,25 @@ class PosOrderController extends AdminController implements HasMiddleware
                     'printed_at'  => $result['ticket']->printed_at,
                     'payload'     => $result['payload'],
                 ],
+            ]);
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Reprint customer invoice/bill (thermal Direct Print or browser popup jobs).
+     */
+    public function printInvoice(Order $order): \Illuminate\Http\Response|OrderDetailsResource|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            $result = $this->posRunningOrderService->reprintInvoice($order);
+            $print  = $result['print'];
+
+            return (new OrderDetailsResource($result['order']))->additional([
+                'print_jobs' => $print['jobs'] ?? [],
+                'kot_count'  => 0,
+                'warnings'   => $print['warnings'] ?? [],
             ]);
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);

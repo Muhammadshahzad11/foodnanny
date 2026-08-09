@@ -19,9 +19,13 @@ export function usePwaUpdate() {
         } catch (e) {}
 
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (state._reloading) return;
-            state._reloading = true;
-            window.location.reload();
+            // Soft prompt only — auto hard-reload after SW activate often whitescreens
+            // admin right after settings/Force Update while /build assets re-fetch.
+            if (state._reloading || state.autoUpdate === false) {
+                state.updateReady = true;
+                return;
+            }
+            state.updateReady = true;
         });
 
         const registration = await navigator.serviceWorker.getRegistration();
@@ -62,7 +66,14 @@ export function usePwaUpdate() {
     function updateNow() {
         const worker = state.waitingWorker || state.registration?.waiting;
         if (worker) {
+            state._reloading = true;
             worker.postMessage({type: 'SKIP_WAITING'});
+            // Explicit user action — safe to reload once
+            window.setTimeout(() => {
+                window.location.reload();
+            }, 300);
+        } else {
+            window.location.reload();
         }
         state.updateReady = false;
     }

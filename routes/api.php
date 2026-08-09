@@ -499,6 +499,8 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
     Route::prefix('pos')->name('pos.')->group(function () {
         Route::post('/', [PosController::class, 'store']);
         Route::get('/tables', [PosController::class, 'tables']);
+        Route::post('/tables/{tableId}/status', [PosController::class, 'updateTableStatus']);
+        Route::get('/customers', [PosController::class, 'customers']);
         Route::get('/printers', [PosController::class, 'printers']);
         Route::get('/open-orders', [PosController::class, 'openOrders']);
         Route::get('/open-orders/table/{tableId}', [PosController::class, 'openOrderForTable']);
@@ -515,6 +517,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::get('/export', [PosOrderController::class, 'export']);
         Route::post('/change-status/{order}', [PosOrderController::class, 'changeStatus']);
         Route::post('/{order}/print-kot', [PosOrderController::class, 'printKot']);
+        Route::post('/{order}/print-invoice', [PosOrderController::class, 'printInvoice']);
     });
 
     Route::prefix('items-report')->name('items-report.')->group(function () {
@@ -528,6 +531,9 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::get('/export', [OnlineOrderController::class, 'export']);
         Route::post('/change-status/{order}', [OnlineOrderController::class, 'changeStatus']);
         Route::post('/add-token/{order}', [OnlineOrderController::class, 'addToken']);
+        Route::post('/{order}/print-invoice', [OnlineOrderController::class, 'printInvoice']);
+        Route::post('/{order}/print-kot', [OnlineOrderController::class, 'printKot']);
+        Route::post('/{order}/print-both', [OnlineOrderController::class, 'printBoth']);
     });
 
     Route::prefix('restaurant')->name('restaurant.')->group(function () {

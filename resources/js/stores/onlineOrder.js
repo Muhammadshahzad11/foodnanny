@@ -125,6 +125,33 @@ export const useOnlineOrderStore = defineStore('onlineOrder', {
                     reject(err);
                 })
             })
-        }
+        },
+        printInvoice: function (orderId) {
+            return new Promise((resolve, reject) => {
+                axios.post(`/admin/online-order/${orderId}/print-invoice`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        printKot: function (orderId) {
+            return new Promise((resolve, reject) => {
+                axios.post(`/admin/online-order/${orderId}/print-kot`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        printBoth: function (orderId) {
+            return new Promise((resolve, reject) => {
+                axios.post(`/admin/online-order/${orderId}/print-both`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
     }
 })

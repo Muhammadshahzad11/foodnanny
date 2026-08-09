@@ -7,7 +7,7 @@ $ListenPort = 1811
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  FoodNanny Local Print Agent — SETUP v2" -ForegroundColor Cyan
+Write-Host "  buildwithnexclass Local Print Agent — SETUP v2" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -57,7 +57,7 @@ if (-not (Test-Path $srcAgent)) {
     exit 1
 }
 
-$installDir = Join-Path $env:LOCALAPPDATA 'FoodNanny\LocalPrintAgent'
+$installDir = Join-Path $env:LOCALAPPDATA 'buildwithnexclass\LocalPrintAgent'
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 $destAgent = Join-Path $installDir 'Start-LocalPrintAgent-v2.ps1'
 Copy-Item -Force -Path $srcAgent -Destination $destAgent
@@ -65,7 +65,7 @@ Write-Host "Installed agent to: $destAgent" -ForegroundColor Green
 
 # Replace Startup shortcut so login uses v2 (not old Downloads copy)
 $startup = [Environment]::GetFolderPath('Startup')
-$startupCmd = Join-Path $startup 'FoodNanny-LocalPrintAgent.cmd'
+$startupCmd = Join-Path $startup 'buildwithnexclass-LocalPrintAgent.cmd'
 "@echo off`r`npowershell -ExecutionPolicy Bypass -WindowStyle Minimized -File `"$destAgent`"`r`n" |
     Set-Content -Path $startupCmd -Encoding ASCII
 Write-Host "Startup updated: $startupCmd" -ForegroundColor Green

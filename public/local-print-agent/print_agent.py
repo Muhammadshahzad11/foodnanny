@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Local Print Agent — Cost to Cost Foods / FoodNanny
+Local Print Agent — Cost to Cost Foods / buildwithnexclass
 Cross-platform (Windows / macOS / Linux).
 
 Receives ESC/POS from the browser and forwards raw bytes to the thermal
@@ -118,7 +118,7 @@ class PrintHandler(BaseHTTPRequestHandler):
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="FoodNanny local print agent")
+    parser = argparse.ArgumentParser(description="buildwithnexclass local print agent")
     parser.add_argument("--host", default=LISTEN_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     args = parser.parse_args()

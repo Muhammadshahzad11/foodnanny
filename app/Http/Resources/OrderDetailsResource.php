@@ -30,6 +30,8 @@ class OrderDetailsResource extends JsonResource
             'rider_tip'                   => AppLibrary::convertAmountFormat($this->rider_tip),
             'delivery_fee'                => AppLibrary::convertAmountFormat($this->delivery_fee),
             'total_tax'                   => AppLibrary::convertAmountFormat($this->total_tax),
+            'subtotal'                    => AppLibrary::convertAmountFormat($this->subtotal),
+            'total'                       => AppLibrary::convertAmountFormat($this->total),
             'subtotal_currency_price'     => AppLibrary::currencyAmountFormat($this->subtotal),
             'discount_currency_price'     => AppLibrary::currencyAmountFormat($this->discount),
             'delivery_fee_currency_price' => AppLibrary::currencyAmountFormat($this->delivery_fee),
@@ -79,9 +81,7 @@ class OrderDetailsResource extends JsonResource
             'status_name'                 => trans('order_status.' . $this->status),
             'reason'                      => $this->reason,
             'is_scan_menu_order'          => $this->resource->isScanMenuOrder(),
-            'cancel_window_seconds'       => $this->resource->isScanMenuOrder()
-                ? ($this->resource::SCAN_MENU_CANCEL_MINUTES * 60)
-                : null,
+            'cancel_window_seconds'       => $this->resource::SCAN_MENU_CANCEL_MINUTES * 60,
             'cancel_expires_at'           => $this->cancelExpiresAt(),
             'can_cancel'                  => $this->customerCanCancel(),
             'updated_at'                  => AppLibrary::datetime($this->updated_at),
@@ -143,7 +143,7 @@ class OrderDetailsResource extends JsonResource
 
     private function cancelExpiresAt(): ?string
     {
-        if (!$this->resource->isScanMenuOrder() || !$this->order_datetime) {
+        if (!$this->order_datetime || (int) $this->status !== OrderStatus::PENDING) {
             return null;
         }
 
@@ -156,10 +156,6 @@ class OrderDetailsResource extends JsonResource
     {
         if ((int) $this->status !== OrderStatus::PENDING) {
             return false;
-        }
-
-        if (!$this->resource->isScanMenuOrder()) {
-            return true;
         }
 
         if (!$this->order_datetime) {

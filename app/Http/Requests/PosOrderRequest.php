@@ -46,8 +46,8 @@ class PosOrderRequest extends FormRequest
             'items'           => ['required', 'json', new ValidJsonOrder],
             'payment_note'    => request('payment_method') === PosPaymentMethod::CARD || request('payment_method') === PosPaymentMethod::MOBILE_BANKING || request('payment_method') === PosPaymentMethod::OTHER ? (request('payment_method') === PosPaymentMethod::CARD ? ['required', 'numeric', 'min_digits:4', 'max_digits:4'] : ['required', 'string']) : ['nullable', 'string'],
             'received_amount' => (request('payment_method') === PosPaymentMethod::CASH && !request()->boolean('place_only')) ? ['required', 'numeric'] : ['nullable', 'numeric'],
-            // POS service channel: takeaway / dine-in / delivery
-            'order_type'      => ['required', 'numeric', 'in:5,10,20'],
+            // POS service channel: takeaway / classic POS / dine-in / delivery
+            'order_type'      => ['required', 'numeric', 'in:5,10,15,20'],
             'table_id'        => ['nullable', 'integer', 'exists:restaurant_tables,id'],
             'order_note'      => ['nullable', 'string', 'max:500'],
             'customer_name'   => ['nullable', 'string', 'max:120'],
@@ -58,6 +58,8 @@ class PosOrderRequest extends FormRequest
             'close_with_payment' => ['nullable', 'boolean'],
             'kot_only'        => ['nullable', 'boolean'],
             'skip_invoice'    => ['nullable', 'boolean'],
+            // When paying an existing open order, cart items are already stored
+            'editing_order_id' => ['nullable', 'integer'],
         ];
     }
 
@@ -75,8 +77,21 @@ class PosOrderRequest extends FormRequest
                     $validator->errors()->add('received_amount', trans('all.message.received_amount_can_not_less'));
                 }
             }
-            // Dine-in requires a table
-            if ((int) request('order_type') === \App\Enums\OrderType::DINING_TABLE && (int) request('table_id') <= 0) {
+            // Dine-in requires a table (skip when closing an existing open order that already has a table)
+            $payingExisting = request()->boolean('close_with_payment') && (
+                (int) request('editing_order_id') > 0
+                || (function () {
+                    $routeOrder = request()->route('order');
+                    if (is_object($routeOrder) && isset($routeOrder->id)) {
+                        return (int) $routeOrder->id > 0;
+                    }
+                    return (int) $routeOrder > 0;
+                })()
+            );
+            if ((int) request('order_type') === \App\Enums\OrderType::DINING_TABLE
+                && (int) request('table_id') <= 0
+                && !$payingExisting
+            ) {
                 $validator->errors()->add('table_id', trans('all.message.table_required_for_dine_in') ?: 'Please select a table for dine-in orders.');
             }
             // Delivery: name + phone recommended

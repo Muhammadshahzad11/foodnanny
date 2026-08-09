@@ -50,6 +50,7 @@ import {useOnlineOrderStore} from "../../../../stores/onlineOrder.js";
 import {useModal} from "../../../../composables/modal.js";
 import orderStatusEnum from "../../../../enums/modules/orderStatusEnum.js";
 import alertService from "../../../../services/alertService.js";
+import VueSimpleAlert from "vue3-simple-alert";
 
 export default {
     name: "ReasonComponent",
@@ -76,7 +77,19 @@ export default {
     },
     methods: {
         reasonModal: function () {
-            useModal().openModal('reasonModal');
+            return new VueSimpleAlert.confirm(
+                this.$t('message.cancel_order_confirm_detail'),
+                this.$t('message.are_you_sure'),
+                "warning",
+                {
+                    confirmButtonText: this.$t('button.yes_do') || 'Yes',
+                    cancelButtonText: this.$t('button.no_cancel'),
+                    confirmButtonColor: "#1AB759",
+                    cancelButtonColor: "#E93C3C"
+                }
+            ).then(() => {
+                useModal().openModal('reasonModal');
+            }).catch(() => {});
         },
         resetModal: function () {
             useModal().closeModal('reasonModal');

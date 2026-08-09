@@ -58,8 +58,8 @@ class PwaManifestBuilder
             'description' => $manifest['description'],
             'theme_color' => $manifest['theme_color'],
             'background_color' => $manifest['background_color'],
-            // Always same-origin relative path so the popup icon loads on localhost AND 127.0.0.1
-            'icon' => '/images/default/pwa/icons/icon-192x192.png?v=' . (int) ($pwa?->cache_version ?? 1),
+            // Prefer uploaded same-origin icon when available
+            'icon' => $this->installIcon($manifest, $pwa),
             'enable_install_popup' => (bool) ($pwa?->enable_install_popup ?? true),
             'popup_delay_seconds' => (int) ($pwa?->popup_delay_seconds ?? 2),
             'popup_frequency_hours' => (int) ($pwa?->popup_frequency_hours ?? 24),
@@ -68,6 +68,18 @@ class PwaManifestBuilder
             'cache_strategy' => $manifest['cache_strategy'],
             'cache_version' => $manifest['cache_version'],
         ];
+    }
+
+    private function installIcon(array $manifest, ?Pwa $pwa): string
+    {
+        $version = (int) ($pwa?->cache_version ?? 1);
+        foreach (($manifest['icons'] ?? []) as $icon) {
+            if (($icon['sizes'] ?? '') === '192x192' && !empty($icon['src'])) {
+                return (string) $icon['src'];
+            }
+        }
+
+        return '/images/default/pwa/icons/icon-192x192.png?v=' . $version;
     }
 
     private function icons(array $config, ?Pwa $pwa): array

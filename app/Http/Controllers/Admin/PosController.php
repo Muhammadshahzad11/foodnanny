@@ -41,8 +41,13 @@ class PosController extends AdminController implements HasMiddleware
                 'openOrderForTable',
                 'updateOpenOrder',
                 'printBill',
-                'payOpenOrder',
                 'orderHistory',
+                'updateTableStatus',
+                'customers',
+            ]),
+            // POS screen + POS Orders view can take payment / close open orders
+            new Middleware('permission:pos|pos-orders_show', only: [
+                'payOpenOrder',
             ]),
         ];
     }
@@ -209,6 +214,40 @@ class PosController extends AdminController implements HasMiddleware
             $request->merge(['paginate' => 0]);
 
             return RestaurantTableResource::collection($this->restaurantTableService->list($request));
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Change table status from POS (Available / Occupied / Reserved / Cleaning).
+     */
+    public function updateTableStatus(\Illuminate\Http\Request $request, int $tableId): \Illuminate\Http\Response|\Illuminate\Http\JsonResponse|\Illuminate\Http\Resources\Json\JsonResource|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            $status = (int) $request->input('status');
+            $table  = $this->posRunningOrderService->updateTableStatus($tableId, $status);
+
+            return new RestaurantTableResource($table);
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Customer list for POS Delivery (select previous customers).
+     */
+    public function customers(PaginateRequest $request): \Illuminate\Http\Response|\Illuminate\Http\Resources\Json\AnonymousResourceCollection|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            $request->merge(['paginate' => 0, 'order_column' => 'name', 'order_type' => 'asc']);
+
+            $customers = app(\App\Services\CustomerService::class)->allCustomer($request);
+            if (method_exists($customers, 'loadMissing')) {
+                $customers->loadMissing('addresses');
+            }
+
+            return \App\Http\Resources\PosCustomerResource::collection($customers);
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
         }

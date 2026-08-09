@@ -1,13 +1,13 @@
 @echo off
-title FoodNanny Print Agent Setup v3
+title buildwithnexclass Print Agent Setup v3
 cd /d "%~dp0"
 echo.
 echo ========================================
-echo   FoodNanny Local Print Agent SETUP v3
+echo   buildwithnexclass Local Print Agent SETUP v3
 echo ========================================
 echo.
 
-set "INSTALL=%LOCALAPPDATA%\FoodNanny\LocalPrintAgent"
+set "INSTALL=%LOCALAPPDATA%\buildwithnexclass\LocalPrintAgent"
 if not exist "%INSTALL%" mkdir "%INSTALL%"
 set "AGENT=%INSTALL%\Start-LocalPrintAgent-v2.ps1"
 
@@ -36,10 +36,10 @@ set "STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
 (
   echo @echo off
   echo powershell -ExecutionPolicy Bypass -WindowStyle Minimized -File "%AGENT%"
-) > "%STARTUP%\FoodNanny-LocalPrintAgent.cmd"
+) > "%STARTUP%\buildwithnexclass-LocalPrintAgent.cmd"
 
 echo [3/4] Starting agent v3 (TCP mode - no URL conflict)...
-start "FoodNanny Local Print Agent v3" powershell -NoProfile -ExecutionPolicy Bypass -NoExit -File "%AGENT%"
+start "buildwithnexclass Local Print Agent v3" powershell -NoProfile -ExecutionPolicy Bypass -NoExit -File "%AGENT%"
 
 echo [4/4] Waiting for Ready v3...
 set OK=0

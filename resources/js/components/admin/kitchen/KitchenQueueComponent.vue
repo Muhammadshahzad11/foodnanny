@@ -268,6 +268,7 @@ import {getAuthRestaurantId, subscribeRestaurantRealtime} from "../../../composa
 import roleEnum from "../../../enums/modules/roleEnum.js";
 import sourceEnum from "../../../enums/modules/sourceEnum.js";
 import orderTypeEnum from "../../../enums/modules/orderTypeEnum.js";
+import VueSimpleAlert from "vue3-simple-alert";
 
 export default {
     name: "KitchenQueueComponent",
@@ -562,6 +563,21 @@ export default {
             }
         },
         async reject(order) {
+            try {
+                await VueSimpleAlert.confirm(
+                    this.$t('message.cancel_order_confirm_detail'),
+                    this.$t('message.are_you_sure'),
+                    'warning',
+                    {
+                        confirmButtonText: this.$t('button.yes_do') || 'Yes',
+                        cancelButtonText: this.$t('button.no_cancel'),
+                        confirmButtonColor: '#1AB759',
+                        cancelButtonColor: '#E93C3C',
+                    }
+                );
+            } catch (e) {
+                return;
+            }
             const reason = window.prompt(this.$t('message.kitchen_reject_reason'), '');
             if (reason === null) return;
             try {
@@ -574,6 +590,21 @@ export default {
             }
         },
         async cancel(order) {
+            try {
+                await VueSimpleAlert.confirm(
+                    this.$t('message.cancel_order_confirm_detail'),
+                    this.$t('message.are_you_sure'),
+                    'warning',
+                    {
+                        confirmButtonText: this.$t('button.yes_cancel'),
+                        cancelButtonText: this.$t('button.no_cancel'),
+                        confirmButtonColor: '#1AB759',
+                        cancelButtonColor: '#E93C3C',
+                    }
+                );
+            } catch (e) {
+                return;
+            }
             const reason = window.prompt(this.$t('message.kitchen_cancel_reason'), '');
             if (reason === null) return;
             try {

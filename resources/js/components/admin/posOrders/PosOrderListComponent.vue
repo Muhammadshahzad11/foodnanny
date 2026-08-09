@@ -89,7 +89,7 @@
                     </tr>
                     </thead>
                     <tbody class="db-table-body" v-if="orders.length > 0">
-                    <tr class="db-table-body-tr" v-for="order in orders" :key="order">
+                    <tr class="db-table-body-tr" v-for="order in orders" :key="order.id">
                         <td class="db-table-body-td">
                             {{ order.order_serial_no }}
                         </td>
@@ -99,15 +99,41 @@
                         <td class="db-table-body-td">{{ order.total_amount_price }}</td>
                         <td class="db-table-body-td">{{ order.order_datetime }}</td>
                         <td class="db-table-body-td">
-                            <span :class="orderStatusClassForTable(order.status)">
-                                {{ enums.orderStatusEnumArray[order.status] }}
-                            </span>
+                            <div class="flex flex-wrap items-center gap-1">
+                                <span
+                                    v-if="Number(order.payment_status) === enums.paymentStatusEnum.UNPAID"
+                                    class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-red-100 text-red-600"
+                                >
+                                    {{ $t('label.unpaid') }}
+                                </span>
+                                <span :class="orderStatusClassForTable(order.status)">
+                                    {{ enums.orderStatusEnumArray[order.status] || '—' }}
+                                </span>
+                            </div>
                         </td>
                         <td class="db-table-body-td hidden-print"
                             v-if="permissionChecker('pos-orders_show') || permissionChecker('pos-orders_delete')">
                             <div class="flex justify-start items-center sm:items-start sm:justify-start gap-1.5">
                                 <SmIconViewComponent :link="'admin.pos.orders.show'" :id="order.id"
                                                      v-if="permissionChecker('pos-orders_show')"/>
+                                <button
+                                    v-if="permissionChecker('pos-orders_show') && canTakePayment(order)"
+                                    type="button"
+                                    class="db-table-action pay"
+                                    @click.prevent="openPayment(order)"
+                                >
+                                    <i class="lab lab-fill-moneys"></i>
+                                    <span class="db-tooltip">{{ $t('label.payment') }}</span>
+                                </button>
+                                <button
+                                    v-if="permissionChecker('pos-orders_show') && canPrintInvoice(order)"
+                                    type="button"
+                                    class="db-table-action print"
+                                    @click.prevent="printInvoice(order)"
+                                >
+                                    <i class="lab lab-fill-printer"></i>
+                                    <span class="db-tooltip">{{ $t('button.print_invoice') }}</span>
+                                </button>
                                 <SmIconDeleteComponent @click="destroy(order.id)"
                                                        v-if="permissionChecker('pos-orders_delete')"/>
                             </div>
@@ -138,6 +164,9 @@
             </div>
         </div>
     </div>
+
+    <PaymentComponent ref="paymentRef" :method="onPaymentComplete" :props="checkoutProps"/>
+    <SimplePrintSetupModal v-model="showSimplePrintSetup" @ready="onSimplePrintReady"/>
 </template>
 
 <script>
@@ -163,7 +192,19 @@ import SmIconDeleteComponent from "../components/buttons/SmIconDeleteComponent.v
 import VueSimpleAlert from "vue3-simple-alert";
 import orderTypeEnum from "../../../enums/modules/orderTypeEnum.js";
 import alertService from "../../../services/alertService.js";
-
+import PaymentComponent from "../pos/PaymentComponent.vue";
+import SimplePrintSetupModal from "../pos/SimplePrintSetupModal.vue";
+import posPaymentMethodEnum from "../../../enums/modules/posPaymentMethodEnum.js";
+import paymentStatusEnum from "../../../enums/modules/paymentStatusEnum.js";
+import {useModal} from "../../../composables/modal.js";
+import {
+    isPrintPreviewOn,
+    setPrintPreviewOn,
+    isSilentPrintReady,
+    syncSilentPrintFromUrl,
+} from "../../../services/printPreference.js";
+import {printBillIframe} from "../../../services/thermalIframePrint.js";
+import {sendViaLocalBridge, probeLocalAgentInfo, localAgentSetupUrl} from "../../../services/localPrintBridge.js";
 
 export default {
     name: "PosOrderListComponent",
@@ -179,7 +220,9 @@ export default {
         ExportComponent,
         LoadingComponent,
         TableLimitComponent,
-        DatePickerComponent
+        DatePickerComponent,
+        PaymentComponent,
+        SimplePrintSetupModal,
     },
     setup() {
         const userStore            = useUserStore();
@@ -187,6 +230,7 @@ export default {
         const {handleSlide}        = useSlide();
         const posOrderStore        = usePosOrderStore();
         const frontendSettingStore = useFrontendSettingStore();
+        const {openModal}          = useModal();
 
         return {
             userStore,
@@ -194,6 +238,7 @@ export default {
             handleSlide,
             posOrderStore,
             frontendSettingStore,
+            openModal,
         }
     },
     data() {
@@ -203,6 +248,7 @@ export default {
             },
             enums: {
                 orderStatusEnum: orderStatusEnum,
+                paymentStatusEnum: paymentStatusEnum,
                 orderStatusEnumArray: {
                     [orderStatusEnum.ACCEPT]: this.$t("label.accept"),
                     [orderStatusEnum.PREPARING]: this.$t("label.preparing"),
@@ -230,9 +276,38 @@ export default {
                 }
             },
             modelValue: null,
+            printPreviewOn: false,
+            silentPrintReady: false,
+            showSimplePrintSetup: false,
+            checkoutProps: {
+                form: {
+                    subtotal: 0,
+                    token: "",
+                    discount: 0,
+                    tax: 0,
+                    total: 0,
+                    items: "[]",
+                    payment_method: posPaymentMethodEnum.CASH,
+                    payment_note: null,
+                    received_amount: null,
+                    order_type: orderTypeEnum.TAKEAWAY,
+                    table_id: '',
+                    order_note: '',
+                    customer_name: '',
+                    customer_phone: '',
+                    customer_address: '',
+                    delivery_note: '',
+                    place_only: false,
+                    close_with_payment: true,
+                    editing_order_id: null,
+                }
+            },
         }
     },
     mounted() {
+        syncSilentPrintFromUrl();
+        this.printPreviewOn = isPrintPreviewOn();
+        this.silentPrintReady = isSilentPrintReady();
         this.list();
         this.userStore.fetch();
     },
@@ -259,6 +334,201 @@ export default {
         },
         orderStatusClassForTable: function (status) {
             return appService.orderStatusClassForTable(status);
+        },
+        canTakePayment(order) {
+            if (!order?.id) return false;
+            if (Number(order.payment_status) === paymentStatusEnum.PAID) return false;
+            const status = Number(order.status);
+            return ![orderStatusEnum.DELIVERED, orderStatusEnum.CANCELED, orderStatusEnum.REJECTED].includes(status);
+        },
+        canPrintInvoice(order) {
+            if (!order?.id) return false;
+            const status = Number(order.status);
+            return ![orderStatusEnum.CANCELED, orderStatusEnum.REJECTED].includes(status);
+        },
+        num(v) {
+            const n = parseFloat(v);
+            return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
+        },
+        buildPaymentItems(orderItems) {
+            const items = Array.isArray(orderItems) ? orderItems : Object.values(orderItems || {});
+            if (!items.length) {
+                return JSON.stringify([{item_id: 0, quantity: 1, item_price: 0, total_price: 0}]);
+            }
+            return JSON.stringify(items.map((item) => ({
+                item_id: item.item_id || 0,
+                item_price: this.num(item.convert_price),
+                instruction: item.instruction || '',
+                quantity: item.quantity || 1,
+                discount: 0,
+                total_price: this.num(item.total_convert_price),
+                item_variation_total: this.num(item.item_variation_total),
+                item_extra_total: this.num(item.item_extra_total),
+                item_variations: item.item_variations || [],
+                item_extras: item.item_extras || [],
+                tax_name: item.tax_name || '',
+                tax_rate: item.tax_rate || 0,
+                tax_type: item.tax_type_value ?? 5,
+                tax_amount: this.num(item.tax_amount),
+            })));
+        },
+        async openPayment(row) {
+            if (!this.canTakePayment(row)) return;
+            this.loading.isActive = true;
+            try {
+                await this.posOrderStore.view(row.id);
+                const order = this.posOrderStore.show;
+                const orderType = Number(order.order_type) === orderTypeEnum.POS
+                    ? orderTypeEnum.TAKEAWAY
+                    : Number(order.order_type) || orderTypeEnum.TAKEAWAY;
+
+                this.checkoutProps.form.subtotal = this.num(order.subtotal);
+                this.checkoutProps.form.discount = this.num(order.discount);
+                this.checkoutProps.form.tax = this.num(order.total_tax);
+                this.checkoutProps.form.total = this.num(order.total);
+                this.checkoutProps.form.token = order.token || '';
+                this.checkoutProps.form.items = this.buildPaymentItems(this.posOrderStore.orderItems);
+                this.checkoutProps.form.payment_method = posPaymentMethodEnum.CASH;
+                this.checkoutProps.form.payment_note = null;
+                this.checkoutProps.form.received_amount = null;
+                this.checkoutProps.form.order_type = orderType;
+                this.checkoutProps.form.table_id = order.table_id || order.table?.id || '';
+                this.checkoutProps.form.order_note = order.order_note || '';
+                this.checkoutProps.form.customer_name = order.customer_name || '';
+                this.checkoutProps.form.customer_phone = order.customer_phone || '';
+                this.checkoutProps.form.customer_address = order.customer_address || '';
+                this.checkoutProps.form.delivery_note = order.delivery_note || '';
+                this.checkoutProps.form.place_only = false;
+                this.checkoutProps.form.close_with_payment = true;
+                this.checkoutProps.form.editing_order_id = order.id;
+
+                this.openModal('order-payment-modal');
+                this.$nextTick(() => {
+                    this.$refs.paymentRef?.prefillCashAmount?.();
+                });
+            } catch (err) {
+                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+            } finally {
+                this.loading.isActive = false;
+            }
+        },
+        async onPaymentComplete() {
+            alertService.success(this.$t('message.payment_successful') || 'Payment completed');
+            this.list(this.props.search.page || 1);
+        },
+        onSimplePrintReady() {
+            this.silentPrintReady = isSilentPrintReady();
+            setPrintPreviewOn(false);
+            this.printPreviewOn = false;
+        },
+        async printInvoice(row) {
+            if (!this.canPrintInvoice(row)) return;
+            this.loading.isActive = true;
+            try {
+                this.printPreviewOn = isPrintPreviewOn();
+                this.silentPrintReady = isSilentPrintReady();
+
+                if (this.printPreviewOn) {
+                    await this.posOrderStore.view(row.id);
+                    await this.printBrowserInvoice();
+                    alertService.success(this.$t('message.bill_printed') || 'Invoice sent to printer');
+                    return;
+                }
+
+                const res = await this.posOrderStore.printInvoice(row.id);
+                (res.data.warnings || []).forEach((w) => {
+                    try { alertService.error(w); } catch (e) {}
+                });
+                await this.runPrintJobs(res.data.print_jobs || [], row.id);
+                alertService.success(this.$t('message.bill_printed') || 'Invoice sent to printer');
+            } catch (err) {
+                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+            } finally {
+                this.loading.isActive = false;
+            }
+        },
+        async printBrowserInvoice() {
+            const order = this.posOrderStore.show || {};
+            const items = Array.isArray(this.posOrderStore.orderItems)
+                ? this.posOrderStore.orderItems
+                : Object.values(this.posOrderStore.orderItems || {});
+            await printBillIframe(order, {
+                restaurant: this.posOrderStore.restaurant || {},
+                items: items.map((i) => ({
+                    name: i.item_name || i.name,
+                    quantity: i.quantity,
+                    total_price: i.total_currency_price || i.total_price,
+                    item_variations: i.item_variations,
+                    item_extras: i.item_extras,
+                    instruction: i.instruction,
+                })),
+                cashierName: order?.waiter?.name || '',
+                tableLabel: order?.table
+                    ? [order.table.name, order.table.table_number].filter(Boolean).join(' · ')
+                    : '',
+            });
+        },
+        async runPrintJobs(printJobs = [], orderId = null) {
+            const jobs = Array.isArray(printJobs) ? printJobs : [];
+            const directJobs = jobs.filter((job) =>
+                (job.mode === 'local_bridge' || job.mode === 'direct_print')
+                && job.raw_base64
+                && job.status !== 'printed'
+                && job.status !== 'skipped'
+            );
+
+            if (directJobs.length > 0) {
+                const needsWindows = directJobs.some((j) => !!(j.windows_printer_name || '').trim());
+                const agentInfo = await probeLocalAgentInfo(directJobs[0]?.bridge_port || 1811);
+                if (!agentInfo.ok) {
+                    alertService.error(this.$t('message.local_agent_required_auto_print'));
+                    try {
+                        window.open(localAgentSetupUrl(), '_blank', 'noopener');
+                    } catch (e) {}
+                    return;
+                }
+                if (needsWindows && (agentInfo.version < 3 || !agentInfo.features.includes('windows'))) {
+                    alertService.error(this.$t('message.local_agent_outdated_usb'));
+                    try {
+                        window.open(localAgentSetupUrl(), '_blank', 'noopener');
+                    } catch (e) {}
+                    return;
+                }
+
+                for (const job of directJobs) {
+                    try {
+                        await sendViaLocalBridge(job);
+                        await new Promise((r) => setTimeout(r, 250));
+                    } catch (err) {
+                        alertService.error(
+                            this.$t('message.bill_auto_print_failed') + ' ' + (err?.message || '')
+                        );
+                    }
+                }
+                return;
+            }
+
+            const browserJobs = jobs.filter((j) =>
+                j.type === 'invoice'
+                && (j.mode === 'browser_popup' || j.status === 'pending_browser')
+            );
+            if (browserJobs.length > 0 || jobs.length === 0) {
+                if (orderId) {
+                    await this.posOrderStore.view(orderId);
+                }
+                await this.printBrowserInvoice();
+                return;
+            }
+
+            if (this.silentPrintReady) {
+                if (orderId) {
+                    await this.posOrderStore.view(orderId);
+                }
+                await this.printBrowserInvoice();
+                return;
+            }
+            alertService.error(this.$t('message.printer_not_connected'));
+            this.showSimplePrintSetup = true;
         },
         search: function () {
             this.list();

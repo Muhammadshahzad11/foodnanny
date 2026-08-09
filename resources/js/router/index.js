@@ -156,7 +156,23 @@ router.beforeEach((to, from, next) => {
                 });
             } else {
                 if (to.meta.template === 'admin') {
-                    if (typeof to.meta.access !== "undefined" && to.meta.access) {
+                    const permissionUrl = to.meta.permissionUrl;
+                    // Empty permissionUrl (e.g. profile) is always allowed for authenticated staff
+                    if (permissionUrl === '' || permissionUrl == null) {
+                        next();
+                        return;
+                    }
+                    let allowed = typeof to.meta.access !== "undefined" && !!to.meta.access;
+                    // Fallback: re-check live auth permissions (covers login race / stale route meta)
+                    if (!allowed && Array.isArray(authStore.permission)) {
+                        allowed = authStore.permission.some(
+                            (p) => p && p.url === permissionUrl && !!p.access
+                        );
+                        if (allowed) {
+                            to.meta.access = true;
+                        }
+                    }
+                    if (allowed) {
                         next();
                     } else {
                         next({

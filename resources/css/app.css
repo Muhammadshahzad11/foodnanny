@@ -535,6 +535,8 @@
     .db-table-action.edit i { @apply text-green-500 bg-green-100 hover:bg-green-200 }
     .db-table-action.delete i { @apply text-red-500 bg-red-100 hover:bg-red-200 }
     .db-table-action.download i { @apply text-cyan-500 bg-cyan-100 hover:bg-cyan-200 }
+    .db-table-action.print i { @apply text-sky-600 bg-sky-100 hover:bg-sky-200 }
+    .db-table-action.pay i { @apply text-amber-600 bg-amber-100 hover:bg-amber-200 }
     .table-filter-div { @apply h-0 overflow-hidden transition-all duration-500 ease-linear }
 
     /* TOOLTIP */

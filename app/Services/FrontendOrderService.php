@@ -219,8 +219,8 @@ class FrontendOrderService
                         throw new Exception(trans('all.message.order_accept'), 422);
                     }
 
-                    // Scan-menu (dine-in table) orders: cancel only within the short guest window.
-                    if ($frontendOrder->isScanMenuOrder() && $frontendOrder->order_datetime) {
+                    // Guests can cancel only within the short window (2 minutes).
+                    if ($frontendOrder->order_datetime) {
                         $expiresAt = \Carbon\Carbon::parse($frontendOrder->order_datetime)
                             ->addMinutes(FrontendOrder::SCAN_MENU_CANCEL_MINUTES);
                         if (\Carbon\Carbon::now()->gt($expiresAt)) {

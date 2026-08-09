@@ -134,10 +134,8 @@ export default {
                     this.errors = "";
                     await this.defaultAccessStore.fetch();
                     await this.myRestaurantStore.resetDefaultRestaurant();
+                    appService.recursiveRouter(router.options.routes, this.authStore.permission);
                     alertService.success(loginRes.data.message);
-                    setTimeout(async () => {
-                        await appService.recursiveRouter(router.options.routes, this.authStore.permission);
-                    }, 1000);
                     this.loading.isActive = false;
                     this.props.form       = {
                         code: "",

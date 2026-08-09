@@ -68,7 +68,23 @@ self.addEventListener('message', (event) => {
         activeVersion = 'v' + String(data.version);
     }
     if (data.type === 'CLEAR_CACHES') {
-        event.waitUntil(caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))));
+        // Only clear our versioned PWA caches — never wipe everything
+        // (wiping /build assets caused blank white admin screens).
+        event.waitUntil((async () => {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((key) => {
+                const isOurs = key.startsWith('pwa-')
+                    || key.startsWith(SHELL_PREFIX)
+                    || key.startsWith(RUNTIME_PREFIX)
+                    || key.startsWith(IMAGE_PREFIX)
+                    || key.startsWith(FONT_PREFIX);
+                return isOurs ? caches.delete(key) : null;
+            }));
+            if (data.version) {
+                activeVersion = 'v' + String(data.version);
+            }
+            await precacheShell();
+        })());
     }
 });
 

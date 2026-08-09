@@ -134,7 +134,9 @@ async function loadConfig() {
             cache_version: 1,
         };
     }
-    state.config.icon = DEFAULT_ICON;
+    if (!state.config?.icon) {
+        state.config.icon = DEFAULT_ICON;
+    }
 }
 
 function schedulePopup() {

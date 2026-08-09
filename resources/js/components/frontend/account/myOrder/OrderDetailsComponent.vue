@@ -258,7 +258,6 @@
 
                     <div class="p-4" v-if="order.status === enums.orderStatusEnum.PENDING">
                         <div
-                            v-if="isScanMenuOrder"
                             class="mb-4 overflow-hidden rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 shadow-[0_8px_24px_rgba(245,158,11,0.18)]"
                         >
                             <div class="flex gap-3 p-4">
@@ -554,11 +553,11 @@ export default {
             if (!o || Number(o.status) !== this.enums.orderStatusEnum.PENDING) {
                 return false;
             }
-            if (!this.isScanMenuOrder) {
-                return true;
-            }
-            if (typeof o.can_cancel === 'boolean' && !o.cancel_expires_at) {
-                return o.can_cancel;
+            if (typeof o.can_cancel === 'boolean') {
+                // Prefer backend flag; still respect live countdown when expires_at present
+                if (!o.cancel_expires_at) {
+                    return o.can_cancel;
+                }
             }
             const expiresAt = o.cancel_expires_at
                 ? new Date(o.cancel_expires_at).getTime()
@@ -709,7 +708,7 @@ export default {
             if (this.cancelTimer) {
                 clearInterval(this.cancelTimer);
             }
-            if (!this.isScanMenuOrder) return;
+            if (Number(this.order?.status) !== this.enums.orderStatusEnum.PENDING) return;
             this.nowTick = Date.now();
             this.cancelTimer = setInterval(() => {
                 this.nowTick = Date.now();
@@ -728,7 +727,7 @@ export default {
                 return;
             }
             return new VueSimpleAlert.confirm(
-                this.$t('message.cancel_your_order'),
+                this.$t('message.cancel_order_confirm_detail'),
                 this.$t('message.are_you_sure'),
                 "warning",
                 {

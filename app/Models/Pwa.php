@@ -64,24 +64,25 @@ class Pwa extends Model implements HasMedia
 
     public function registerMediaConversions(Media $media = null): void
     {
-        $this->addMediaConversion('D_2048x2732')->performOnCollections('pwa_splash')->width(2048)->height(2732)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_1668x2388')->performOnCollections('pwa_splash')->width(1668)->height(2388)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_1668x2224')->performOnCollections('pwa_splash')->width(1668)->height(2224)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_1536x2048')->performOnCollections('pwa_splash')->width(1536)->height(2048)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_1242x2688')->performOnCollections('pwa_splash')->width(1242)->height(2688)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_1242x2208')->performOnCollections('pwa_splash')->width(1242)->height(2208)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_1125x2436')->performOnCollections('pwa_splash')->width(1125)->height(2436)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_828x1792')->performOnCollections('pwa_splash')->width(828)->height(1792)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_750x1334')->performOnCollections('pwa_splash')->width(750)->height(1334)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_640x1136')->performOnCollections('pwa_splash')->width(640)->height(1136)->keepOriginalImageFormat()->sharpen(10);
+        // Process immediately so admin Save shows updated icons without a queue worker
+        $this->addMediaConversion('D_2048x2732')->performOnCollections('pwa_splash')->nonQueued()->width(2048)->height(2732)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_1668x2388')->performOnCollections('pwa_splash')->nonQueued()->width(1668)->height(2388)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_1668x2224')->performOnCollections('pwa_splash')->nonQueued()->width(1668)->height(2224)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_1536x2048')->performOnCollections('pwa_splash')->nonQueued()->width(1536)->height(2048)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_1242x2688')->performOnCollections('pwa_splash')->nonQueued()->width(1242)->height(2688)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_1242x2208')->performOnCollections('pwa_splash')->nonQueued()->width(1242)->height(2208)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_1125x2436')->performOnCollections('pwa_splash')->nonQueued()->width(1125)->height(2436)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_828x1792')->performOnCollections('pwa_splash')->nonQueued()->width(828)->height(1792)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_750x1334')->performOnCollections('pwa_splash')->nonQueued()->width(750)->height(1334)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_640x1136')->performOnCollections('pwa_splash')->nonQueued()->width(640)->height(1136)->keepOriginalImageFormat()->sharpen(10);
 
-        $this->addMediaConversion('D_512x512')->performOnCollections('pwa_icon')->width(512)->height(512)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_384x384')->performOnCollections('pwa_icon')->width(384)->height(384)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_192x192')->performOnCollections('pwa_icon')->width(192)->height(192)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_152x152')->performOnCollections('pwa_icon')->width(152)->height(152)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_144x144')->performOnCollections('pwa_icon')->width(144)->height(144)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_128x128')->performOnCollections('pwa_icon')->width(128)->height(128)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_96x96')->performOnCollections('pwa_icon')->width(96)->height(96)->keepOriginalImageFormat()->sharpen(10);
-        $this->addMediaConversion('D_72x72')->performOnCollections('pwa_icon')->width(72)->height(72)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_512x512')->performOnCollections('pwa_icon')->nonQueued()->width(512)->height(512)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_384x384')->performOnCollections('pwa_icon')->nonQueued()->width(384)->height(384)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_192x192')->performOnCollections('pwa_icon')->nonQueued()->width(192)->height(192)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_152x152')->performOnCollections('pwa_icon')->nonQueued()->width(152)->height(152)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_144x144')->performOnCollections('pwa_icon')->nonQueued()->width(144)->height(144)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_128x128')->performOnCollections('pwa_icon')->nonQueued()->width(128)->height(128)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_96x96')->performOnCollections('pwa_icon')->nonQueued()->width(96)->height(96)->keepOriginalImageFormat()->sharpen(10);
+        $this->addMediaConversion('D_72x72')->performOnCollections('pwa_icon')->nonQueued()->width(72)->height(72)->keepOriginalImageFormat()->sharpen(10);
     }
 }

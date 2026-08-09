@@ -315,8 +315,7 @@ class EscPosPrintService
     {
         $width = $this->effectiveWidth($printer);
         $out   = $this->escInit(true);
-        $out  .= $this->logoBlock($payload['logo_url'] ?? null, min(384, $width * 8));
-
+        // KOT is kitchen-only — never print restaurant logo (logo is for customer invoice only)
         $text  = $this->renderKotText($printer, $payload);
         $lines = preg_split("/\r\n|\n|\r/", $text) ?: [];
         $printedHeader = 0;

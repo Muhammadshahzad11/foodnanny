@@ -414,10 +414,10 @@ class KotRoutingService
             'copy'             => 'KITCHEN KOT',
             'ticket_no'        => 'KOT - ' . $order->id . ($station ? ' / ' . $station->name : ''),
             'kot_no'           => (string) $order->id,
+            // No logo_url on KOT — logo is for customer invoice only
             'restaurant'       => $order->restaurant?->name,
-            'logo_url'         => $order->restaurant?->logo,
-            'tagline'          => $this->restaurantTagline($order),
-            'phone'            => $this->restaurantPhone($order),
+            'tagline'          => null,
+            'phone'            => null,
             'powered_by'       => $this->poweredByName(),
             'order_serial_no'  => $order->order_serial_no,
             'order_type'       => $order->order_type,

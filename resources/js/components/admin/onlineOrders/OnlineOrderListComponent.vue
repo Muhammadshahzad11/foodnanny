@@ -113,7 +113,35 @@
                         </td>
                         <td class="db-table-body-td hidden-print" v-if="permissionChecker('online-orders')">
                             <div class="flex justify-start items-center sm:items-start sm:justify-start gap-1.5">
-                                <SmIconViewComponent :link="'admin.order.show'" :id="order.id" v-if="permissionChecker('online-orders')"/>
+                                <SmIconViewComponent :link="'admin.order.show'" :id="order.id"/>
+                                <button
+                                    v-if="canPrint(order)"
+                                    type="button"
+                                    class="db-table-action pay"
+                                    title="Print KOT"
+                                    @click.prevent="quickPrint(order, 'kot')"
+                                >
+                                    <i class="lab lab-fill-reserve"></i>
+                                    <span class="db-tooltip">{{ $t('button.print_kot') }}</span>
+                                </button>
+                                <button
+                                    v-if="canPrint(order)"
+                                    type="button"
+                                    class="db-table-action print"
+                                    @click.prevent="quickPrint(order, 'invoice')"
+                                >
+                                    <i class="lab lab-fill-receipt"></i>
+                                    <span class="db-tooltip">{{ $t('button.print_customer') }}</span>
+                                </button>
+                                <button
+                                    v-if="canPrint(order)"
+                                    type="button"
+                                    class="db-table-action view"
+                                    @click.prevent="quickPrint(order, 'both')"
+                                >
+                                    <i class="lab lab-fill-printer"></i>
+                                    <span class="db-tooltip">{{ $t('button.print_both') }}</span>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -141,6 +169,8 @@
             </div>
         </div>
     </div>
+
+    <SimplePrintSetupModal v-model="showSimplePrintSetup" @ready="onSimplePrintReady"/>
 </template>
 
 <script>
@@ -164,6 +194,14 @@ import {usePaper} from "../../../composables/paper.js";
 import {useSlide} from "../../../composables/slide.js";
 import {useOnlineOrderStore} from "../../../stores/onlineOrder.js";
 import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
+import SimplePrintSetupModal from "../pos/SimplePrintSetupModal.vue";
+import {
+    isPrintPreviewOn,
+    isSilentPrintReady,
+    syncSilentPrintFromUrl,
+} from "../../../services/printPreference.js";
+import {printBillIframe, printKotIframe} from "../../../services/thermalIframePrint.js";
+import {sendViaLocalBridge, probeLocalAgentInfo, localAgentSetupUrl} from "../../../services/localPrintBridge.js";
 
 
 export default {
@@ -179,7 +217,8 @@ export default {
         ExportComponent,
         PrintComponent,
         ExcelComponent,
-        DatePickerComponent
+        DatePickerComponent,
+        SimplePrintSetupModal,
     },
     setup() {
         const onlineOrderStore     = useOnlineOrderStore();
@@ -238,9 +277,15 @@ export default {
             modelValue: null,
             handlePaper: usePaper().handlePaper,
             handleSlide: useSlide().handleSlide,
+            printPreviewOn: false,
+            silentPrintReady: false,
+            showSimplePrintSetup: false,
         }
     },
     mounted() {
+        syncSilentPrintFromUrl();
+        this.printPreviewOn = isPrintPreviewOn();
+        this.silentPrintReady = isSilentPrintReady();
         this.list();
     },
     computed: {
@@ -269,6 +314,144 @@ export default {
         },
         textShortener: function (text, number = 30) {
             return appService.textShortener(text, number);
+        },
+        canPrint(order) {
+            if (!order?.id) return false;
+            const status = Number(order.status);
+            return ![orderStatusEnum.CANCELED, orderStatusEnum.REJECTED].includes(status);
+        },
+        onSimplePrintReady() {
+            this.silentPrintReady = isSilentPrintReady();
+            this.printPreviewOn = false;
+        },
+        async quickPrint(row, mode = 'both') {
+            if (!this.canPrint(row)) return;
+            this.loading.isActive = true;
+            this.printPreviewOn = isPrintPreviewOn();
+            this.silentPrintReady = isSilentPrintReady();
+            try {
+                if (this.printPreviewOn) {
+                    await this.onlineOrderStore.view(row.id);
+                    if (mode === 'kot' || mode === 'both') {
+                        await this.printBrowserKot();
+                        await new Promise((r) => setTimeout(r, 400));
+                    }
+                    if (mode === 'invoice' || mode === 'both') {
+                        await this.printBrowserInvoice();
+                    }
+                    alertService.success(this.$t('message.bill_printed') || 'Print sent');
+                    return;
+                }
+
+                let res;
+                if (mode === 'kot') {
+                    res = await this.onlineOrderStore.printKot(row.id);
+                } else if (mode === 'invoice') {
+                    res = await this.onlineOrderStore.printInvoice(row.id);
+                } else {
+                    res = await this.onlineOrderStore.printBoth(row.id);
+                }
+                (res.data.warnings || []).forEach((w) => {
+                    try { alertService.error(w); } catch (e) {}
+                });
+                await this.runPrintJobs(res.data.print_jobs || [], row.id);
+                alertService.success(this.$t('message.bill_printed') || 'Print sent');
+            } catch (err) {
+                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+            } finally {
+                this.loading.isActive = false;
+            }
+        },
+        buildKotPayloadFromOrder() {
+            const order = this.onlineOrderStore.show || {};
+            const items = Array.isArray(this.onlineOrderStore.orderItems)
+                ? this.onlineOrderStore.orderItems
+                : Object.values(this.onlineOrderStore.orderItems || {});
+            return {
+                order_serial_no: order.order_serial_no,
+                order_type: order.order_type,
+                table_no: order.table?.table_number || order.table?.name || '',
+                customer_name: this.onlineOrderStore.orderUser?.name || order.customer_name || '',
+                note: order.order_note || '',
+                items: items.map((i) => ({
+                    name: i.item_name || i.name,
+                    quantity: i.quantity,
+                    instruction: i.instruction || '',
+                    variation_lines: Object.keys(i.item_variations || {}).length
+                        ? Object.values(i.item_variations).map((v) => `${v.variation_name}: ${v.name}`)
+                        : [],
+                    extra_lines: (i.item_extras || []).map((e) => e.name),
+                })),
+            };
+        },
+        async printBrowserKot() {
+            await printKotIframe(this.buildKotPayloadFromOrder(), 'Kitchen');
+        },
+        async printBrowserInvoice() {
+            const order = this.onlineOrderStore.show || {};
+            const items = Array.isArray(this.onlineOrderStore.orderItems)
+                ? this.onlineOrderStore.orderItems
+                : Object.values(this.onlineOrderStore.orderItems || {});
+            await printBillIframe(order, {
+                restaurant: this.onlineOrderStore.orderRestaurant || {},
+                items: items.map((i) => ({
+                    name: i.item_name || i.name,
+                    quantity: i.quantity,
+                    total_price: i.total_currency_price || i.total_price,
+                    item_variations: i.item_variations,
+                    item_extras: i.item_extras,
+                    instruction: i.instruction,
+                })),
+            });
+        },
+        async runPrintJobs(printJobs = [], orderId = null) {
+            const jobs = Array.isArray(printJobs) ? printJobs : [];
+            const directJobs = jobs.filter((job) =>
+                (job.mode === 'local_bridge' || job.mode === 'direct_print')
+                && job.raw_base64
+                && job.status !== 'printed'
+                && job.status !== 'skipped'
+            );
+
+            if (directJobs.length > 0) {
+                const agentInfo = await probeLocalAgentInfo(directJobs[0]?.bridge_port || 1811);
+                if (!agentInfo.ok) {
+                    alertService.error(this.$t('message.local_agent_required_auto_print'));
+                    try {
+                        window.open(localAgentSetupUrl(), '_blank', 'noopener');
+                    } catch (e) {}
+                    return;
+                }
+                for (const job of directJobs) {
+                    try {
+                        await sendViaLocalBridge(job);
+                        await new Promise((r) => setTimeout(r, 250));
+                    } catch (err) {
+                        alertService.error(
+                            (job.type === 'invoice'
+                                ? this.$t('message.bill_auto_print_failed')
+                                : this.$t('message.kot_auto_print_failed'))
+                            + ' ' + (err?.message || '')
+                        );
+                    }
+                }
+                return;
+            }
+
+            if (orderId) {
+                await this.onlineOrderStore.view(orderId);
+            }
+            const kotJobs = jobs.filter((j) => j.type === 'kot' && j.status !== 'skipped' && j.payload);
+            for (const job of kotJobs) {
+                try {
+                    await printKotIframe(job.payload, job.printer || '');
+                    await new Promise((r) => setTimeout(r, 400));
+                } catch (e) {}
+            }
+            const wantsInvoice = jobs.some((j) => j.type === 'invoice') || jobs.length === 0;
+            if (wantsInvoice || !kotJobs.length) {
+                await this.printBrowserInvoice();
+            }
         },
         search: function () {
             this.list();

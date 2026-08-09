@@ -96,6 +96,15 @@ export const usePosOrderStore = defineStore('posOrder', {
                 });
             });
         },
+        printInvoice: function (orderId) {
+            return new Promise((resolve, reject) => {
+                axios.post(`/admin/pos-order/${orderId}/print-invoice`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
         printKot: function (orderId) {
             return new Promise((resolve, reject) => {
                 axios.post(`admin/pos-order/${orderId}/print-kot`).then((res) => {
@@ -108,6 +117,28 @@ export const usePosOrderStore = defineStore('posOrder', {
         fetchTables: function () {
             return new Promise((resolve, reject) => {
                 axios.get('admin/pos/tables').then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        updateTableStatus: function (tableId, status) {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/pos/tables/${tableId}/status`, {status}).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        fetchCustomers: function (payload = {}) {
+            return new Promise((resolve, reject) => {
+                let url = 'admin/pos/customers';
+                if (payload && Object.keys(payload).length) {
+                    url = url + appService.requestHandler(payload);
+                }
+                axios.get(url).then((res) => {
                     resolve(res);
                 }).catch((err) => {
                     reject(err);
