@@ -7,8 +7,8 @@
             </h3>
 
             <div class="px-2.5 pt-1 pb-2.5 flex items-center justify-between gap-2">
-                <h4 v-if="Object.keys(offer).length > 0" class="text-sm font-bold">{{
-                        currencyFormat((item.convert_price - parseFloat((item.convert_price / 100) * offer.amount).toFixed(setting.site_digit_after_decimal_point)), setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position)
+                <h4 v-if="hasOffer" class="text-sm font-bold">{{
+                        currencyFormat((item.convert_price - parseFloat((item.convert_price / 100) * offerAmount).toFixed(setting.site_digit_after_decimal_point)), setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position)
                     }}</h4>
                 <h4 v-else class="text-sm font-bold">
                     {{ item.discount > 0 ? item.currency_discounted_price : item.currency_price }}</h4>
@@ -50,10 +50,10 @@
                         <p v-if="item.description_alt" class="text-sm text-paragraph mt-2 mb-2">{{
                                 item.description_alt
                             }}</p>
-                        <div v-if="Object.keys(offer).length > 0" class="flex items-center gap-2">
+                        <div v-if="hasOffer" class="flex items-center gap-2">
                             <del class="font-medium leading-none text-paragraph">{{ item.currency_price }}</del>
                             <span class="font-medium leading-none text-heading">{{
-                                    currencyFormat((item.convert_price - parseFloat((item.convert_price / 100) * offer.amount).toFixed(setting.site_digit_after_decimal_point)), setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position)
+                                    currencyFormat((item.convert_price - parseFloat((item.convert_price / 100) * offerAmount).toFixed(setting.site_digit_after_decimal_point)), setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position)
                                 }}</span>
                         </div>
                         <div v-else class="flex items-center gap-2">
@@ -312,6 +312,12 @@ export default {
         },
         canAddToCart: function () {
             return !!(this.temp.item_id && this.temp.quantity > 0 && !Number.isNaN(Number(this.temp.total_price)));
+        },
+        hasOffer: function () {
+            return this.safeOfferAmount() > 0;
+        },
+        offerAmount: function () {
+            return this.safeOfferAmount();
         }
     },
     methods: {
@@ -325,11 +331,12 @@ export default {
             return appService.currencyFormat(amount, decimal, currency, position);
         },
         safeOfferAmount: function () {
-            const offer = this.$props.offer;
+            const offer = this.offer;
             if (!offer || typeof offer !== 'object') {
                 return 0;
             }
-            return Number(offer.amount) || 0;
+            const amount = Number(offer.amount);
+            return Number.isFinite(amount) && amount > 0 ? amount : 0;
         },
         infoModalShow: function (name, caution) {
             this.itemInfo = {
@@ -672,7 +679,10 @@ export default {
                     this.temp.instruction               = "";
                     alertService.success(this.$t('message.add_to_cart'));
                     this.closeModal('variation-modal');
-                }).catch();
+                }).catch((err) => {
+                    console.error(err);
+                    alertService.error(err?.message || 'Could not add item to cart. Refresh POS and try again.');
+                });
             }
         }
     }

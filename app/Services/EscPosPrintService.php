@@ -103,6 +103,8 @@ class EscPosPrintService
         }
         $rows[] = '';
         $rows[] = '';
+        $rows[] = '';
+        $rows[] = '';
 
         return implode("\n", $rows);
     }
@@ -163,9 +165,14 @@ class EscPosPrintService
         $rows[] = $this->center('Thank You | Visit Again!', $width);
         if (!empty($payload['powered_by'])) {
             $rows[] = '';
+            $rows[] = $this->center(str_repeat('-', min(30, $width)), $width);
             $rows[] = $this->center('Powered by', $width);
             $rows[] = $this->center($this->ascii((string) $payload['powered_by']), $width);
         }
+        // Extra blank lines so footer is not cut off by the autocutter
+        $rows[] = '';
+        $rows[] = '';
+        $rows[] = '';
         $rows[] = '';
         $rows[] = '';
 
@@ -318,7 +325,10 @@ class EscPosPrintService
             $out .= $this->emitLine($this->clipLine($line, $width));
         }
 
-        $out .= "\n\n\x1D\x56\x00";
+        $out .= "\n\n\n";
+        // Feed paper past cutter, then partial cut (keeps "Powered by" on the slip)
+        $out .= "\x1B\x64\x08";   // ESC d 8 — advance 8 lines
+        $out .= "\x1D\x56\x42\x00"; // GS V 66 0 — feed then cut
 
         return $out;
     }
@@ -332,7 +342,9 @@ class EscPosPrintService
         if ($printer->opensCashDrawer()) {
             $out .= "\x1B\x70\x00\x19\xFA";
         }
-        $out .= "\n\n\x1D\x56\x00";
+        $out .= "\n\n\n";
+        $out .= "\x1B\x64\x08";
+        $out .= "\x1D\x56\x42\x00";
 
         return $out;
     }
@@ -344,7 +356,9 @@ class EscPosPrintService
         if ($openDrawer) {
             $out .= "\x1B\x70\x00\x19\xFA";
         }
-        $out .= "\n\n\x1D\x56\x00";
+        $out .= "\n\n\n";
+        $out .= "\x1B\x64\x08";
+        $out .= "\x1D\x56\x42\x00";
 
         return $out;
     }

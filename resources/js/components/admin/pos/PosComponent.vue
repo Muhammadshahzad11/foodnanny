@@ -511,10 +511,12 @@ export default {
 
             this.loading.isActive = true;
             await this.posOfferStore.fetch().then(res => {
-                this.mainOffer        = res.data.data;
-                this.offer            = this.mainOffer;
+                this.mainOffer        = res.data.data || {};
+                this.offer            = this.mainOffer && typeof this.mainOffer === 'object' ? this.mainOffer : {};
                 this.loading.isActive = false;
             }).catch(err => {
+                this.mainOffer        = {};
+                this.offer            = {};
                 this.offerStatus      = switchEnum.OFF;
                 this.loading.isActive = false;
             })
@@ -569,7 +571,7 @@ export default {
         offerApply: function (status) {
             this.offerStatus = status;
             if (status === switchEnum.ON) {
-                this.offer = this.mainOffer;
+                this.offer = this.mainOffer && typeof this.mainOffer === 'object' ? this.mainOffer : {};
             } else if (status === switchEnum.OFF) {
                 this.offer = {};
             }
