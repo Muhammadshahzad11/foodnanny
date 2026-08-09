@@ -182,6 +182,82 @@ export const usePosCartStore = defineStore('posCart', {
             this.discount = 0;
             this.total = 0;
             this.tax = 0;
-        }
+        },
+        loadFromOrderItems: function (orderItems) {
+            this.resetCart();
+            const mapped = (orderItems || []).map((oi) => {
+                const varsRaw = oi.item_variations;
+                let item_variations = {variations: {}, names: {}};
+                if (Array.isArray(varsRaw)) {
+                    varsRaw.forEach((v) => {
+                        if (v && v.item_attribute_id != null && v.id != null) {
+                            item_variations.variations[v.item_attribute_id] = v.id;
+                            if (v.variation_name || v.name) {
+                                item_variations.names[v.variation_name || String(v.item_attribute_id)] = v.name || '';
+                            }
+                        }
+                    });
+                } else if (varsRaw && typeof varsRaw === 'object') {
+                    item_variations = normalizeVariations(varsRaw);
+                }
+
+                const extrasRaw = oi.item_extras;
+                let item_extras = {extras: [], names: []};
+                if (Array.isArray(extrasRaw)) {
+                    extrasRaw.forEach((e) => {
+                        if (e && e.id != null) {
+                            item_extras.extras.push(e.id);
+                            item_extras.names.push(e.name || '');
+                        }
+                    });
+                } else if (extrasRaw && typeof extrasRaw === 'object') {
+                    item_extras = normalizeExtras(extrasRaw);
+                }
+
+                const priceNum = Number(oi.convert_price)
+                    || parseFloat(String(oi.price || '').replace(/[^0-9.-]/g, ''))
+                    || 0;
+
+                // OrderItemResource exposes display tax_type as "%" / currency code — never send that to DB
+                let taxType = oi.tax_type_value;
+                if (taxType == null || taxType === '' || Number.isNaN(Number(taxType))) {
+                    const raw = oi.tax_type;
+                    if (raw === '%' || String(raw).includes('%')) {
+                        taxType = 10; // TaxType::PERCENTAGE
+                    } else if (raw === 5 || raw === 10 || raw === '5' || raw === '10') {
+                        taxType = Number(raw);
+                    } else if (typeof raw === 'string' && raw.length > 0) {
+                        taxType = 5; // fixed (currency symbol label)
+                    } else {
+                        taxType = null;
+                    }
+                } else {
+                    taxType = Number(taxType);
+                }
+
+                return {
+                    item_id: oi.item_id,
+                    name: oi.item_name || oi.name || '',
+                    image: oi.item_image || '',
+                    quantity: Number(oi.quantity) || 1,
+                    convert_price: priceNum,
+                    currency_price: oi.price,
+                    discount: 0,
+                    instruction: oi.instruction || '',
+                    item_variations,
+                    item_extras,
+                    item_variation_total: Number(oi.item_variation_total) || 0,
+                    item_extra_total: Number(oi.item_extra_total) || 0,
+                    tax_name: oi.tax_name,
+                    tax_rate: Number(oi.tax_rate) || 0,
+                    tax_type: taxType,
+                    maximum_purchase_quantity: 0,
+                };
+            }).filter((r) => r.item_id);
+
+            this.lists = mapped.map(normalizeCartItem);
+            this.callSubtotal();
+            return Promise.resolve(true);
+        },
     }
 });

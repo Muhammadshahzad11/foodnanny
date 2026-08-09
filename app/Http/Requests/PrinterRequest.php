@@ -31,7 +31,7 @@ class PrinterRequest extends FormRequest
         return [
             'name'                 => ['required', 'string', 'max:190'],
             'printing_choice'      => ['required', 'numeric', Rule::in([PrintingChoice::BROWSER_POPUP, PrintingChoice::DIRECT_PRINT])],
-            'print_format'         => ['required', 'numeric', Rule::in([PrintFormat::INVOICE, PrintFormat::KOT, PrintFormat::NO_AUTO_KOT])],
+            'print_format'         => ['required', 'numeric', Rule::in([PrintFormat::INVOICE, PrintFormat::KOT, PrintFormat::NO_AUTO_KOT, PrintFormat::BOTH])],
             'printer_type'         => ['required', 'numeric', Rule::in([PrinterType::WINDOWS_SHARED, PrinterType::NETWORK])],
             'characters_per_line'  => ['required', 'integer', 'min:24', 'max:80'],
             'open_cash_drawer'     => ['required', 'numeric', Rule::in([Ask::YES, Ask::NO])],

@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Exception;
-use App\Services\OrderService;
-use App\Services\KotRoutingService;
-use App\Services\RestaurantTableService;
-use App\Http\Requests\PosOrderRequest;
 use App\Http\Requests\PaginateRequest;
+use App\Http\Requests\PosOrderRequest;
 use App\Http\Resources\OrderDetailsResource;
 use App\Http\Resources\RestaurantTableResource;
+use App\Models\Order;
+use App\Services\KotRoutingService;
+use App\Services\OrderService;
+use App\Services\PosRunningOrderService;
+use App\Services\RestaurantTableService;
+use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
@@ -20,7 +23,8 @@ class PosController extends AdminController implements HasMiddleware
     public function __construct(
         OrderService $order,
         protected RestaurantTableService $restaurantTableService,
-        protected KotRoutingService $kotRoutingService
+        protected KotRoutingService $kotRoutingService,
+        protected PosRunningOrderService $posRunningOrderService
     ) {
         parent::__construct();
         $this->orderService = $order;
@@ -29,19 +33,151 @@ class PosController extends AdminController implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:pos', only: ['store', 'tables', 'printers']),
+            new Middleware('permission:pos', only: [
+                'store',
+                'tables',
+                'printers',
+                'openOrders',
+                'openOrderForTable',
+                'updateOpenOrder',
+                'printBill',
+                'payOpenOrder',
+                'orderHistory',
+            ]),
         ];
     }
 
     public function store(PosOrderRequest $request): \Illuminate\Foundation\Application|\Illuminate\Http\Response|OrderDetailsResource|\Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            $orderType  = (int) $request->input('order_type');
+            $placeOnly  = $request->boolean('place_only')
+                || ($orderType === \App\Enums\OrderType::DINING_TABLE && !$request->boolean('close_with_payment'));
+
+            // Dine-in Place Order: save + KOT only, leave open/unpaid
+            if ($placeOnly && $orderType === \App\Enums\OrderType::DINING_TABLE) {
+                $result = $this->posRunningOrderService->placeDineIn($request);
+                $order  = $result['order'];
+                $print  = $result['print'];
+
+                return (new OrderDetailsResource($order))->additional([
+                    'print_jobs' => $print['jobs'] ?? [],
+                    'kot_count'  => $print['kot_count'] ?? 0,
+                    'warnings'   => $print['warnings'] ?? [],
+                    'open_order' => true,
+                ]);
+            }
+
             $order = $this->orderService->posOrderStore($request);
-            $print = $this->kotRoutingService->processPosOrder($order);
+
+            $printInvoice = true;
+            // Delivery: KOT on place; invoice still allowed when paid at counter (default)
+            if ($orderType === \App\Enums\OrderType::DELIVERY && $request->boolean('kot_only')) {
+                $printInvoice = false;
+            }
+
+            $print = $this->kotRoutingService->processPosOrder($order, [
+                'print_kot'     => true,
+                'print_invoice' => $printInvoice,
+            ]);
 
             return (new OrderDetailsResource($order))->additional([
-                'print_jobs' => $print['jobs'],
-                'kot_count'  => $print['kot_count'],
+                'print_jobs' => $print['jobs'] ?? [],
+                'kot_count'  => $print['kot_count'] ?? 0,
+                'warnings'   => $print['warnings'] ?? [],
+            ]);
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Running / open unpaid POS orders.
+     */
+    public function openOrders(): \Illuminate\Http\Response|\Illuminate\Http\Resources\Json\AnonymousResourceCollection|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            return OrderDetailsResource::collection($this->posRunningOrderService->listOpenOrders());
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Open existing order for an occupied table (do not create duplicate).
+     */
+    public function openOrderForTable(int $tableId): \Illuminate\Http\Response|OrderDetailsResource|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            $order = $this->posRunningOrderService->openOrderForTable($tableId);
+            if (!$order) {
+                return response(['status' => false, 'message' => 'No open order for this table.'], 404);
+            }
+
+            return new OrderDetailsResource($order);
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    public function updateOpenOrder(PosOrderRequest $request, Order $order): \Illuminate\Http\Response|OrderDetailsResource|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            $result = $this->posRunningOrderService->updateOpenOrder($order, $request);
+            $print  = $result['print'];
+
+            return (new OrderDetailsResource($result['order']))->additional([
+                'print_jobs' => $print['jobs'] ?? [],
+                'kot_count'  => $print['kot_count'] ?? 0,
+                'warnings'   => $print['warnings'] ?? [],
+                'changes'    => $result['changes'],
+            ]);
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    public function printBill(Order $order): \Illuminate\Http\Response|OrderDetailsResource|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            $result = $this->posRunningOrderService->printBill($order);
+            $print  = $result['print'];
+
+            return (new OrderDetailsResource($result['order']))->additional([
+                'print_jobs' => $print['jobs'] ?? [],
+                'kot_count'  => 0,
+                'warnings'   => $print['warnings'] ?? [],
+            ]);
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    public function payOpenOrder(PosOrderRequest $request, Order $order): \Illuminate\Http\Response|OrderDetailsResource|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            $result = $this->posRunningOrderService->payAndClose(
+                $order,
+                $request,
+                !$request->boolean('skip_invoice')
+            );
+            $print = $result['print'];
+
+            return (new OrderDetailsResource($result['order']))->additional([
+                'print_jobs' => $print['jobs'] ?? [],
+                'kot_count'  => 0,
+                'warnings'   => $print['warnings'] ?? [],
+            ]);
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    public function orderHistory(Order $order): \Illuminate\Http\Response|\Illuminate\Http\JsonResponse|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            return response()->json([
+                'data' => $this->posRunningOrderService->history($order),
             ]);
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
@@ -51,7 +187,7 @@ class PosController extends AdminController implements HasMiddleware
     /**
      * Auto-fetch restaurant printers with live IP connection status for POS/KOT.
      */
-    public function printers(\Illuminate\Http\Request $request): \Illuminate\Http\Response|\Illuminate\Http\Resources\Json\AnonymousResourceCollection|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    public function printers(Request $request): \Illuminate\Http\Response|\Illuminate\Http\Resources\Json\AnonymousResourceCollection|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
             $format = $request->get('format'); // kot|invoice|null

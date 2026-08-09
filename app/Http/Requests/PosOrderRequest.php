@@ -42,22 +42,32 @@ class PosOrderRequest extends FormRequest
             'discount'        => ['nullable', 'numeric'],
             'total'           => ['required', 'numeric'],
             'tax'             => ['required', 'numeric'],
-            'payment_method'  => ['required', 'numeric'],
+            'payment_method'  => ['required_unless:place_only,1,true', 'nullable', 'numeric'],
             'items'           => ['required', 'json', new ValidJsonOrder],
             'payment_note'    => request('payment_method') === PosPaymentMethod::CARD || request('payment_method') === PosPaymentMethod::MOBILE_BANKING || request('payment_method') === PosPaymentMethod::OTHER ? (request('payment_method') === PosPaymentMethod::CARD ? ['required', 'numeric', 'min_digits:4', 'max_digits:4'] : ['required', 'string']) : ['nullable', 'string'],
-            'received_amount' => request('payment_method') === PosPaymentMethod::CASH ? ['required', 'numeric'] : ['nullable', 'numeric'],
+            'received_amount' => (request('payment_method') === PosPaymentMethod::CASH && !request()->boolean('place_only')) ? ['required', 'numeric'] : ['nullable', 'numeric'],
             // POS service channel: takeaway / dine-in / delivery
             'order_type'      => ['required', 'numeric', 'in:5,10,20'],
             'table_id'        => ['nullable', 'integer', 'exists:restaurant_tables,id'],
             'order_note'      => ['nullable', 'string', 'max:500'],
             'customer_name'   => ['nullable', 'string', 'max:120'],
+            'customer_phone'  => ['nullable', 'string', 'max:40'],
+            'customer_address'=> ['nullable', 'string', 'max:500'],
+            'delivery_note'   => ['nullable', 'string', 'max:500'],
+            'place_only'      => ['nullable', 'boolean'],
+            'close_with_payment' => ['nullable', 'boolean'],
+            'kot_only'        => ['nullable', 'boolean'],
+            'skip_invoice'    => ['nullable', 'boolean'],
         ];
     }
 
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            if (request('payment_method') == PosPaymentMethod::CASH) {
+            $placeOnly = request()->boolean('place_only')
+                || ((int) request('order_type') === \App\Enums\OrderType::DINING_TABLE && !request()->boolean('close_with_payment'));
+
+            if (!$placeOnly && request('payment_method') == PosPaymentMethod::CASH) {
                 // Compare in paise/cents to avoid float false negatives (e.g. 1967.86 == 1967.86)
                 $totalCents    = (int) round(((float) request('total')) * 100);
                 $receivedCents = (int) round(((float) request('received_amount')) * 100);
@@ -68,6 +78,12 @@ class PosOrderRequest extends FormRequest
             // Dine-in requires a table
             if ((int) request('order_type') === \App\Enums\OrderType::DINING_TABLE && (int) request('table_id') <= 0) {
                 $validator->errors()->add('table_id', trans('all.message.table_required_for_dine_in') ?: 'Please select a table for dine-in orders.');
+            }
+            // Delivery: name + phone recommended
+            if ((int) request('order_type') === \App\Enums\OrderType::DELIVERY) {
+                if (!request()->filled('customer_name') && !request()->filled('customer_phone')) {
+                    $validator->errors()->add('customer_name', 'Please enter customer name or phone for delivery.');
+                }
             }
         });
     }

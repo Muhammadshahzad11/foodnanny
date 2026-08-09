@@ -41,6 +41,13 @@ class OrderDetailsResource extends JsonResource
             'table_id'                    => $this->table_id,
             'waiter_id'                   => $this->waiter_id,
             'order_note'                  => $this->order_note,
+            'customer_name'               => $this->customer_name,
+            'customer_phone'              => $this->customer_phone,
+            'customer_address'            => $this->customer_address,
+            'delivery_note'               => $this->delivery_note,
+            'billing_requested_at'        => optional($this->billing_requested_at)?->toIso8601String(),
+            'pos_status'                  => $this->posStatusLabel(),
+            'items_count'                 => $this->when(isset($this->order_items_count), $this->order_items_count, fn () => $this->orderItems?->count()),
             'table'                       => $this->when((int) $this->table_id > 0, function () {
                 return [
                     'id'           => $this->diningTable?->id,
@@ -110,6 +117,28 @@ class OrderDetailsResource extends JsonResource
         }
 
         return (string) (trans('payment_gateway.' . $method) ?: '');
+    }
+
+    private function posStatusLabel(): string
+    {
+        if ((int) $this->status === OrderStatus::CANCELED || (int) $this->status === OrderStatus::REJECTED) {
+            return 'CANCELLED';
+        }
+        if ((int) $this->payment_status === \App\Enums\PaymentStatus::PAID
+            || (int) $this->status === OrderStatus::DELIVERED) {
+            return 'COMPLETED';
+        }
+        if ($this->billing_requested_at) {
+            return 'BILLING';
+        }
+        if ((int) $this->status === OrderStatus::PREPARED) {
+            return 'READY';
+        }
+        if ((int) $this->status === OrderStatus::PREPARING) {
+            return 'IN_PROGRESS';
+        }
+
+        return 'OPEN';
     }
 
     private function cancelExpiresAt(): ?string

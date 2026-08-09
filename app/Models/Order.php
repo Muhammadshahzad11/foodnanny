@@ -47,6 +47,11 @@ class Order extends Model implements HasMedia
         'service_fee',
         'reason',
         'order_note',
+        'customer_name',
+        'customer_phone',
+        'customer_address',
+        'delivery_note',
+        'billing_requested_at',
         'kitchen_priority',
         'kitchen_station_id',
         'kitchen_accepted_by',
@@ -89,6 +94,11 @@ class Order extends Model implements HasMedia
         'service_fee'          => 'decimal:6',
         'reason'               => 'string',
         'order_note'           => 'string',
+        'customer_name'        => 'string',
+        'customer_phone'       => 'string',
+        'customer_address'     => 'string',
+        'delivery_note'        => 'string',
+        'billing_requested_at' => 'datetime',
         'kitchen_priority'     => 'integer',
         'kitchen_station_id'   => 'integer',
         'kitchen_accepted_by'  => 'integer',
@@ -167,6 +177,11 @@ class Order extends Model implements HasMedia
     public function kitchenTickets(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(KitchenTicket::class);
+    }
+
+    public function itemChanges(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(OrderItemChange::class);
     }
 
     public function kitchenStatusLogs(): \Illuminate\Database\Eloquent\Relations\HasMany

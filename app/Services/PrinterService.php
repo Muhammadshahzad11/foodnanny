@@ -43,9 +43,9 @@ class PrinterService
                 ->orderBy('name');
 
             if ($format === 'kot') {
-                $query->where('print_format', PrintFormat::KOT);
+                $query->whereIn('print_format', [PrintFormat::KOT, PrintFormat::BOTH]);
             } elseif ($format === 'invoice') {
-                $query->where('print_format', PrintFormat::INVOICE);
+                $query->whereIn('print_format', [PrintFormat::INVOICE, PrintFormat::BOTH]);
             }
 
             $printers = $query->get();

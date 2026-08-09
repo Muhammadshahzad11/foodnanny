@@ -78,7 +78,21 @@ class EscPosPrintService
         foreach ($payload['items'] ?? [] as $item) {
             $qty  = (int) ($item['quantity'] ?? 1);
             $name = $this->ascii((string) ($item['name'] ?? 'Item'));
-            $rows[] = $qty . ' x ' . $name;
+            if (!empty($item['change_label']) || !empty($item['direction'])) {
+                $dir = strtoupper((string) ($item['direction'] ?? ''));
+                if ($dir === 'REMOVE') {
+                    $rows[] = $name;
+                    $rows[] = 'REMOVE: ' . $qty;
+                } elseif ($dir === 'ADD') {
+                    $rows[] = $name;
+                    $rows[] = 'ADD: ' . $qty;
+                } else {
+                    $rows[] = $name;
+                    $rows[] = $this->ascii((string) $item['change_label']);
+                }
+            } else {
+                $rows[] = $qty . ' x ' . $name;
+            }
             foreach ($item['variation_lines'] ?? [] as $v) {
                 $rows[] = '  - ' . $this->ascii((string) $v);
             }

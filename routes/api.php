@@ -500,6 +500,12 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::post('/', [PosController::class, 'store']);
         Route::get('/tables', [PosController::class, 'tables']);
         Route::get('/printers', [PosController::class, 'printers']);
+        Route::get('/open-orders', [PosController::class, 'openOrders']);
+        Route::get('/open-orders/table/{tableId}', [PosController::class, 'openOrderForTable']);
+        Route::put('/open-orders/{order}', [PosController::class, 'updateOpenOrder']);
+        Route::post('/open-orders/{order}/print-bill', [PosController::class, 'printBill']);
+        Route::post('/open-orders/{order}/pay', [PosController::class, 'payOpenOrder']);
+        Route::get('/open-orders/{order}/history', [PosController::class, 'orderHistory']);
     });
 
     Route::prefix('pos-order')->name('posOrder.')->group(function () {

@@ -212,6 +212,13 @@ class OrderService
                     'payment_note',
                     'received_amount',
                     'customer_name',
+                    'customer_phone',
+                    'customer_address',
+                    'delivery_note',
+                    'place_only',
+                    'close_with_payment',
+                    'kot_only',
+                    'skip_invoice',
                 ])->all();
 
                 $this->order = Order::create(
@@ -228,10 +235,15 @@ class OrderService
                         'order_type'       => $orderType,
                         'table_id'         => $tableId,
                         'order_note'       => $request->input('order_note'),
+                        'customer_name'    => $request->input('customer_name'),
+                        'customer_phone'   => $request->input('customer_phone'),
+                        'customer_address' => $request->input('customer_address'),
+                        'delivery_note'    => $request->input('delivery_note'),
                         'source'           => Source::POS,
                         'delivery_time'    => "$start - $end",
                         'delivery_fee'     => 0,
-                        'active'           => Ask::YES
+                        'active'           => Ask::YES,
+                        'waiter_id'        => Auth::id(),
                     ]
                 );
 

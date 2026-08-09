@@ -8,10 +8,12 @@ use App\Enums\PrintFormat;
 use App\Enums\Source;
 use App\Enums\Status;
 use App\Libraries\AppLibrary;
+use App\Enums\OrderItemChangeAction;
 use App\Models\KitchenStation;
 use App\Models\KitchenTicket;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderItemChange;
 use App\Models\Printer;
 use Dipokhalder\Settings\Facades\Settings;
 use Exception;
@@ -30,12 +32,19 @@ class KotRoutingService
     }
 
     /**
-     * Assign stations, generate per-kitchen KOTs, print invoice.
+     * Assign stations, generate per-kitchen KOTs, optionally print invoice.
      *
-     * @return array{jobs: array<int, array>, kot_count: int}
+     * Options:
+     * - print_kot (bool, default true)
+     * - print_invoice (bool, default true) — set false for dine-in Place Order
+     *
+     * @return array{jobs: array<int, array>, kot_count: int, warnings: array<int, string>}
      */
-    public function processPosOrder(Order $order): array
+    public function processPosOrder(Order $order, array $options = []): array
     {
+        $printKot     = array_key_exists('print_kot', $options) ? (bool) $options['print_kot'] : true;
+        $printInvoice = array_key_exists('print_invoice', $options) ? (bool) $options['print_invoice'] : true;
+
         $order->loadMissing([
             'orderItems.orderItem.category',
             'diningTable',
@@ -45,20 +54,185 @@ class KotRoutingService
             'posDetail',
         ]);
 
-        $groups = $this->groupItemsByKitchen($order);
+        $groups   = $this->groupItemsByKitchen($order);
         $this->persistItemStations($groups);
 
-        $jobs = [];
+        $jobs     = [];
+        $warnings = [];
 
-        foreach ($groups as $group) {
-            /** @var KitchenStation|null $station */
-            $station = $group['station'];
-            $items   = $group['items'];
-            if ($items->isEmpty()) {
+        if ($printKot) {
+            $kotJobs = 0;
+            foreach ($groups as $group) {
+                /** @var KitchenStation|null $station */
+                $station = $group['station'];
+                $items   = $group['items'];
+                if ($items->isEmpty()) {
+                    continue;
+                }
+
+                // Kitchen explicitly set to "No Auto KOT" — skip kitchen slip
+                if ($station?->printer && $station->printer->skipsAutoKot()) {
+                    continue;
+                }
+
+                $printer = $this->resolveKotPrinter($order, $station);
+                if ($printer && $printer->skipsAutoKot()) {
+                    continue;
+                }
+
+                $payload = $this->buildKotPayload($order, $items, $station);
+                $ticket  = $this->storeTicket($order, $station, $printer, $payload);
+                $jobs[]  = $this->dispatchPrintJob('kot', $printer, $payload, $ticket);
+                $kotJobs++;
+            }
+
+            if ($kotJobs === 0 && $order->orderItems->isNotEmpty()) {
+                $warnings[] = 'No KOT printer configured. Order was saved; kitchen slip was not printed.';
+                $jobs[]     = [
+                    'type'    => 'kot',
+                    'mode'    => 'none',
+                    'status'  => 'skipped',
+                    'message' => $warnings[0],
+                    'payload' => null,
+                ];
+            }
+        }
+
+        if ($printInvoice) {
+            $invoiceJob = $this->processInvoice($order);
+            if ($invoiceJob) {
+                $jobs[] = $invoiceJob;
+            }
+        }
+
+        return [
+            'jobs'      => $jobs,
+            'kot_count' => collect($jobs)->where('type', 'kot')->where('status', '!=', 'skipped')->count(),
+            'warnings'  => $warnings,
+        ];
+    }
+
+    /**
+     * Print invoice/bill only (dine-in final bill, or on-demand reprint).
+     *
+     * @return array{jobs: array<int, array>, kot_count: int, warnings: array<int, string>}
+     */
+    public function processInvoiceOnly(Order $order): array
+    {
+        $order->loadMissing([
+            'orderItems.orderItem',
+            'diningTable',
+            'waiter',
+            'user',
+            'restaurant',
+            'posDetail',
+        ]);
+
+        $jobs     = [];
+        $warnings = [];
+        $invoiceJob = $this->processInvoice($order);
+        if ($invoiceJob) {
+            $jobs[] = $invoiceJob;
+            if (!empty($invoiceJob['message']) && empty($invoiceJob['printer_id'])) {
+                $warnings[] = $invoiceJob['message'];
+            }
+        }
+
+        return [
+            'jobs'      => $jobs,
+            'kot_count' => 0,
+            'warnings'  => $warnings,
+        ];
+    }
+
+    /**
+     * Print modification KOT showing only deltas (ADD / REMOVE).
+     *
+     * @param Collection<int, OrderItemChange>|iterable $changes
+     * @return array{jobs: array<int, array>, kot_count: int, warnings: array<int, string>}
+     */
+    public function processOrderModification(Order $order, $changes): array
+    {
+        $order->loadMissing([
+            'orderItems.orderItem.category',
+            'diningTable',
+            'waiter',
+            'user',
+            'restaurant',
+        ]);
+
+        $changeList = collect($changes)->filter(function ($c) {
+            return abs((float) $c->difference) > 0.0001
+                || in_array($c->action, [OrderItemChangeAction::VOID, OrderItemChangeAction::REMOVE], true);
+        });
+
+        if ($changeList->isEmpty()) {
+            return ['jobs' => [], 'kot_count' => 0, 'warnings' => []];
+        }
+
+        // Build synthetic OrderItem-like rows for kitchen grouping by item_id category
+        $deltaItems = collect();
+        foreach ($changeList as $change) {
+            $orderItem = $order->orderItems->firstWhere('id', $change->order_item_id)
+                ?: OrderItem::with('orderItem.category')->find($change->order_item_id);
+
+            if (!$orderItem && $change->item_id) {
+                $orderItem = new OrderItem([
+                    'id'         => 0,
+                    'item_id'    => $change->item_id,
+                    'quantity'   => abs((float) $change->difference) ?: abs((float) $change->previous_quantity),
+                    'order_id'   => $order->id,
+                ]);
+                $orderItem->setRelation('orderItem', \App\Models\Item::with('category')->find($change->item_id));
+            }
+
+            if (!$orderItem) {
                 continue;
             }
 
-            // Kitchen explicitly set to "No Auto KOT" — skip kitchen slip
+            $qty = abs((float) $change->difference);
+            if ($qty < 0.0001) {
+                $qty = abs((float) $change->previous_quantity);
+            }
+
+            $deltaItems->push([
+                'order_item' => $orderItem,
+                'change'     => $change,
+                'qty'        => $qty,
+                'direction'  => ((float) $change->difference) < 0
+                    || in_array($change->action, [OrderItemChangeAction::VOID, OrderItemChangeAction::REMOVE], true)
+                    ? 'REMOVE'
+                    : 'ADD',
+            ]);
+        }
+
+        // Group by kitchen station using the underlying order item
+        $fakeOrderItems = $deltaItems->map(fn ($row) => $row['order_item']);
+        $tempOrder = clone $order;
+        $tempOrder->setRelation('orderItems', $fakeOrderItems->values());
+        $groups = $this->groupItemsByKitchen($tempOrder);
+
+        $jobs     = [];
+        $warnings = [];
+        $kotJobs  = 0;
+
+        foreach ($groups as $group) {
+            $station = $group['station'];
+            $groupItemIds = $group['items']->pluck('id')->filter()->all();
+
+            $rows = $deltaItems->filter(function ($row) use ($groupItemIds, $group) {
+                $oi = $row['order_item'];
+                if ($oi->id && in_array($oi->id, $groupItemIds, true)) {
+                    return true;
+                }
+                // new items may share station via category match
+                return $group['items']->contains(fn ($gi) => (int) $gi->item_id === (int) $oi->item_id);
+            });
+
+            if ($rows->isEmpty()) {
+                continue;
+            }
+
             if ($station?->printer && $station->printer->skipsAutoKot()) {
                 continue;
             }
@@ -68,20 +242,72 @@ class KotRoutingService
                 continue;
             }
 
-            $payload = $this->buildKotPayload($order, $items, $station);
+            $payload = $this->buildModificationKotPayload($order, $rows, $station);
             $ticket  = $this->storeTicket($order, $station, $printer, $payload);
             $jobs[]  = $this->dispatchPrintJob('kot', $printer, $payload, $ticket);
+            $kotJobs++;
         }
 
-        $invoiceJob = $this->processInvoice($order);
-        if ($invoiceJob) {
-            $jobs[] = $invoiceJob;
+        if ($kotJobs === 0) {
+            $warnings[] = 'No KOT printer configured. Order changes were saved; modification slip was not printed.';
+            $jobs[]     = [
+                'type'    => 'kot',
+                'mode'    => 'none',
+                'status'  => 'skipped',
+                'message' => $warnings[0],
+                'payload' => null,
+            ];
         }
 
         return [
             'jobs'      => $jobs,
-            'kot_count' => collect($jobs)->where('type', 'kot')->count(),
+            'kot_count' => $kotJobs,
+            'warnings'  => $warnings,
         ];
+    }
+
+    /**
+     * @param Collection<int, array{order_item: OrderItem, change: OrderItemChange, qty: float, direction: string}> $rows
+     */
+    protected function buildModificationKotPayload(Order $order, Collection $rows, ?KitchenStation $station): array
+    {
+        $mappedItems = $rows->map(function (array $row) {
+            /** @var OrderItem $item */
+            $item   = $row['order_item'];
+            $change = $row['change'];
+            $variations = is_string($item->item_variations)
+                ? json_decode($item->item_variations, true)
+                : ($item->item_variations ?? ($change->meta['item_variations'] ?? null));
+            $extras = is_string($item->item_extras)
+                ? json_decode($item->item_extras, true)
+                : ($item->item_extras ?? ($change->meta['item_extras'] ?? null));
+
+            $name = $item->orderItem?->name ?: $change->item_name;
+
+            return [
+                'name'            => $name,
+                'quantity'        => $row['qty'],
+                'change_label'    => $row['direction'] . ': ' . (int) $row['qty'],
+                'direction'       => $row['direction'],
+                'instruction'     => $item->instruction,
+                'item_variations' => $variations,
+                'item_extras'     => $extras,
+                'variation_lines' => $this->variationLines(is_array($variations) ? $variations : null),
+                'extra_lines'     => $this->extraLines(is_array($extras) ? $extras : null),
+                'kitchen_status'  => $item->kitchen_status,
+            ];
+        })->values()->all();
+
+        $base = $this->buildKotPayload($order, collect(), $station);
+        $base['copy']            = 'ORDER CHANGE';
+        $base['ticket_no']       = 'CHG - ' . $order->id . ($station ? ' / ' . $station->name : '');
+        $base['kot_no']          = 'CHG-' . $order->id;
+        $base['items']           = $mappedItems;
+        $base['total_qty']       = (int) $rows->sum('qty');
+        $base['is_modification'] = true;
+        $base['modification']    = true;
+
+        return $base;
     }
 
     /**
@@ -141,7 +367,10 @@ class KotRoutingService
 
     protected function storeTicket(Order $order, ?KitchenStation $station, ?Printer $printer, array $payload): KitchenTicket
     {
-        $ticketNo = 'KOT-' . $order->id . '-' . ($station?->id ?: 'x');
+        $isMod = !empty($payload['is_modification']) || !empty($payload['modification']);
+        $prefix = $isMod ? 'CHG' : 'KOT';
+        // Unique per print event (DB unique on order_id + ticket_no)
+        $ticketNo = $prefix . '-' . $order->id . '-' . ($station?->id ?: 'x') . '-' . now()->format('Hisv') . '-' . substr((string) microtime(true), -4);
 
         return KitchenTicket::create([
             'restaurant_id'      => $order->restaurant_id,
@@ -203,7 +432,10 @@ class KotRoutingService
             ] : null,
             'table_no'         => $order->diningTable?->table_number,
             'waiter'           => $order->waiter?->name,
-            'customer'         => $order->user?->name,
+            'customer'         => $order->customer_name ?: $order->user?->name,
+            'customer_phone'   => $order->customer_phone,
+            'customer_address' => $order->customer_address,
+            'delivery_note'    => $order->delivery_note,
             'order_note'       => $order->order_note,
             'special_note'     => $order->order_note,
             'order_datetime'   => AppLibrary::datetime($order->order_datetime),
@@ -276,7 +508,7 @@ class KotRoutingService
     }
 
     /**
-     * Prefer kitchen-station printer; otherwise any active restaurant KOT printer.
+     * Prefer kitchen-station printer; otherwise any active KOT or BOTH printer.
      */
     protected function resolveKotPrinter(Order $order, ?KitchenStation $station): ?Printer
     {
@@ -288,20 +520,32 @@ class KotRoutingService
         return Printer::query()
             ->where('restaurant_id', $order->restaurant_id)
             ->where('status', Status::ACTIVE)
-            ->where('print_format', PrintFormat::KOT)
+            ->whereIn('print_format', [PrintFormat::KOT, PrintFormat::BOTH])
+            ->orderByRaw('CASE WHEN print_format = ? THEN 0 ELSE 1 END', [PrintFormat::KOT])
             ->orderBy('id')
             ->first();
     }
 
     /**
-     * Bill/invoice must use a dedicated Invoice printer — never the KOT machine.
+     * Prefer dedicated Invoice printer; fall back to BOTH (same physical printer, separate print event).
      */
     protected function resolveInvoicePrinter(Order $order): ?Printer
     {
-        return Printer::query()
+        $invoice = Printer::query()
             ->where('restaurant_id', $order->restaurant_id)
             ->where('status', Status::ACTIVE)
             ->where('print_format', PrintFormat::INVOICE)
+            ->orderBy('id')
+            ->first();
+
+        if ($invoice) {
+            return $invoice;
+        }
+
+        return Printer::query()
+            ->where('restaurant_id', $order->restaurant_id)
+            ->where('status', Status::ACTIVE)
+            ->where('print_format', PrintFormat::BOTH)
             ->orderBy('id')
             ->first();
     }
@@ -334,6 +578,10 @@ class KotRoutingService
             'order_type_label' => $orderTypeLabel,
             'table_no'         => $order->diningTable?->table_number,
             'biller'           => Auth::user()?->name ?: 'Cashier',
+            'customer'         => $order->customer_name ?: $order->user?->name,
+            'customer_phone'   => $order->customer_phone,
+            'customer_address' => $order->customer_address,
+            'delivery_note'    => $order->delivery_note,
             'order_datetime'   => AppLibrary::datetime($order->order_datetime),
             'items'            => $items,
             'subtotal'         => (float) $order->subtotal,

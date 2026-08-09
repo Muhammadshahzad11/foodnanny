@@ -141,6 +141,7 @@ export default {
                 printFormatArray: {
                     [printFormatEnum.INVOICE]: this.$t("label.invoice"),
                     [printFormatEnum.KOT]: this.$t("label.kot"),
+                    [printFormatEnum.BOTH]: this.$t("label.both_kot_invoice") || "Both (KOT + Invoice)",
                     [printFormatEnum.NO_AUTO_KOT]: this.$t("label.no_auto_kot"),
                 },
                 printerTypeArray: {

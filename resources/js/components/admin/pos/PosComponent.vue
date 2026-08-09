@@ -122,12 +122,54 @@
 
             <div v-if="Number(checkoutProps.form.order_type) === enums.orderTypeEnum.DINING_TABLE" class="mb-3">
                 <label class="text-xs font-medium text-[#6E7191] mb-1.5 block">{{ $t('label.table') }}</label>
-                <select v-model="checkoutProps.form.table_id" class="db-field-control w-full">
+                <select v-model="checkoutProps.form.table_id" class="db-field-control w-full" @change="onTableSelected">
                     <option value="">{{ $t('label.select_table') || 'Select table' }}</option>
                     <option v-for="t in diningTables" :key="t.id" :value="t.id">
-                        {{ t.table_number }} · {{ t.name }}
+                        {{ t.table_number }} · {{ t.name }}{{ Number(t.status) === 10 ? ' (Occupied)' : '' }}
                     </option>
                 </select>
+            </div>
+
+            <div v-if="Number(checkoutProps.form.order_type) === enums.orderTypeEnum.DINING_TABLE && openOrders.length" class="mb-3">
+                <p class="text-xs font-semibold uppercase tracking-wide text-[#6E7191] mb-2">
+                    {{ $t('label.running_orders') }}
+                </p>
+                <div class="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
+                    <button
+                        v-for="o in openOrders"
+                        :key="o.id"
+                        type="button"
+                        class="text-left rounded-lg border px-2.5 py-2 text-xs transition"
+                        :class="editingOrderId === o.id
+                            ? 'border-primary bg-primary/5'
+                            : 'border-[#EFF0F6] bg-white hover:border-primary/40'"
+                        @click.prevent="openRunningOrder(o)"
+                    >
+                        <div class="font-bold text-heading">
+                            {{ o.table?.table_number || o.table?.name || '—' }}
+                            · #{{ o.order_serial_no }}
+                        </div>
+                        <div class="text-[#6E7191] mt-0.5">
+                            {{ o.pos_status || 'OPEN' }}
+                            · {{ o.items_count || o.order_items?.length || 0 }} {{ $t('label.items') }}
+                            · {{ o.total_currency_price }}
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="Number(checkoutProps.form.order_type) === enums.orderTypeEnum.DELIVERY" class="mb-3 space-y-2">
+                <p class="text-xs font-semibold uppercase tracking-wide text-[#6E7191]">
+                    {{ $t('label.customer') || 'Customer' }}
+                </p>
+                <input v-model="checkoutProps.form.customer_name" type="text" class="db-field-control w-full"
+                       :placeholder="$t('label.name') || 'Customer name'"/>
+                <input v-model="checkoutProps.form.customer_phone" type="text" class="db-field-control w-full"
+                       :placeholder="$t('label.phone') || 'Phone'"/>
+                <input v-model="checkoutProps.form.customer_address" type="text" class="db-field-control w-full"
+                       :placeholder="$t('label.address') || 'Address'"/>
+                <input v-model="checkoutProps.form.delivery_note" type="text" class="db-field-control w-full"
+                       :placeholder="$t('label.delivery_note') || 'Delivery notes'"/>
             </div>
 
             <div class="mb-3">
@@ -137,6 +179,25 @@
                     class="db-field-control w-full"
                     :placeholder="$t('label.order_note')"
                 />
+            </div>
+
+            <div v-if="editingOrderId" class="mb-3 flex flex-wrap gap-1.5">
+                <button type="button" class="text-[11px] px-2 py-1 rounded-md bg-[#FFF8F2] text-heading border border-[#EFF0F6]"
+                        @click.prevent="printBillForEditing">
+                    {{ $t('button.print_bill') }}
+                </button>
+                <button type="button" class="text-[11px] px-2 py-1 rounded-md bg-[#FFF8F2] text-heading border border-[#EFF0F6]"
+                        @click.prevent="viewOrderHistory">
+                    {{ $t('label.history') }}
+                </button>
+                <button type="button" class="text-[11px] px-2 py-1 rounded-md bg-primary text-white"
+                        @click.prevent="payEditingOrder">
+                    {{ $t('label.payment') }}
+                </button>
+                <button type="button" class="text-[11px] px-2 py-1 rounded-md bg-[#FB4E4E] text-white"
+                        @click.prevent="clearEditingOrder">
+                    {{ $t('button.cancel') }}
+                </button>
             </div>
 
             <div class="mb-3">
@@ -318,7 +379,11 @@
                 </button>
                 <button @click.prevent="orderSubmit"
                         class="capitalize text-sm font-medium leading-6 w-full text-center rounded-3xl py-2 text-white bg-[#1AB759]">
-                    {{ $t('button.order') }}
+                    {{ editingOrderId
+                        ? $t('button.update_order')
+                        : (Number(checkoutProps.form.order_type) === enums.orderTypeEnum.DINING_TABLE
+                            ? $t('button.place_order')
+                            : $t('button.order')) }}
                 </button>
             </div>
         </div>
@@ -337,6 +402,27 @@
     </button>
 
     <PaymentComponent ref="paymentRef" :method="submitReset" :props="checkoutProps"/>
+
+    <div v-if="showHistory" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="showHistory = false">
+        <div class="bg-white rounded-xl max-w-md w-full max-h-[70vh] overflow-hidden shadow-xl">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-[#EFF0F6]">
+                <h3 class="font-medium text-heading">{{ $t('label.order_history') || 'Order History' }}</h3>
+                <button type="button" class="text-[#6E7191]" @click="showHistory = false">✕</button>
+            </div>
+            <div class="p-4 overflow-y-auto max-h-[55vh] text-sm space-y-2">
+                <div v-if="!orderHistoryLines.length" class="text-[#6E7191]">{{ $t('label.no_data') || 'No changes yet.' }}</div>
+                <div v-for="h in orderHistoryLines" :key="h.id" class="border-b border-[#EFF0F6] pb-2">
+                    <div class="font-medium text-heading">{{ h.item_name }} · {{ h.action }}</div>
+                    <div class="text-[#6E7191] text-xs">
+                        {{ h.previous_quantity }} → {{ h.new_quantity }}
+                        ({{ Number(h.difference) > 0 ? '+' : '' }}{{ h.difference }})
+                        · {{ h.user?.name || '—' }}
+                    </div>
+                    <div class="text-[11px] text-[#A0A3BD]">{{ h.created_at }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script>
@@ -371,6 +457,8 @@ import {
     setSilentPrintReady,
     syncSilentPrintFromUrl,
 } from "../../../services/printPreference.js";
+import {printBillIframe, printKotIframe} from "../../../services/thermalIframePrint.js";
+import {sendViaLocalBridge, probeLocalAgentInfo} from "../../../services/localPrintBridge.js";
 
 export default {
     name: "PosComponent",
@@ -422,6 +510,10 @@ export default {
             offer: {},
             discount: null,
             diningTables: [],
+            openOrders: [],
+            editingOrderId: null,
+            orderHistoryLines: [],
+            showHistory: false,
             errors: {},
             enums: {
                 switchEnum: switchEnum,
@@ -442,6 +534,13 @@ export default {
                     order_type: orderTypeEnum.TAKEAWAY,
                     table_id: '',
                     order_note: '',
+                    customer_name: '',
+                    customer_phone: '',
+                    customer_address: '',
+                    delivery_note: '',
+                    place_only: false,
+                    close_with_payment: false,
+                    editing_order_id: null,
                 }
             },
             props: {
@@ -508,6 +607,7 @@ export default {
             this.itemCategories();
             this.itemList();
             this.loadDiningTables();
+            this.loadOpenOrders();
 
             this.loading.isActive = true;
             await this.posOfferStore.fetch().then(res => {
@@ -651,8 +751,18 @@ export default {
             this.checkoutProps.form.order_type = type;
             if (Number(type) !== orderTypeEnum.DINING_TABLE) {
                 this.checkoutProps.form.table_id = '';
-            } else if (!this.diningTables.length) {
-                this.loadDiningTables();
+                this.clearEditingOrder(false);
+            } else {
+                if (!this.diningTables.length) {
+                    this.loadDiningTables();
+                }
+                this.loadOpenOrders();
+            }
+            if (Number(type) !== orderTypeEnum.DELIVERY) {
+                this.checkoutProps.form.customer_name = '';
+                this.checkoutProps.form.customer_phone = '';
+                this.checkoutProps.form.customer_address = '';
+                this.checkoutProps.form.delivery_note = '';
             }
         },
         async loadDiningTables() {
@@ -663,19 +773,64 @@ export default {
                 this.diningTables = [];
             }
         },
-        orderSubmit: function () {
-            if (Number(this.checkoutProps.form.order_type) === orderTypeEnum.DINING_TABLE
-                && !this.checkoutProps.form.table_id) {
-                alertService.error(this.$t('message.table_required_for_dine_in') || 'Please select a table for dine-in.');
+        async loadOpenOrders() {
+            try {
+                const res = await this.posOrderStore.fetchOpenOrders();
+                this.openOrders = (res.data.data || []).filter(
+                    (o) => Number(o.order_type) === orderTypeEnum.DINING_TABLE
+                );
+            } catch (e) {
+                this.openOrders = [];
+            }
+        },
+        async onTableSelected() {
+            const tableId = this.checkoutProps.form.table_id;
+            if (!tableId) {
                 return;
             }
-
+            try {
+                const res = await this.posOrderStore.openOrderForTable(tableId);
+                if (res?.data?.data?.id) {
+                    await this.openRunningOrder(res.data.data);
+                }
+            } catch (e) {
+                // No open order — start fresh for this table
+                if (this.editingOrderId) {
+                    this.clearEditingOrder(false);
+                    this.posCartStore.resetCart();
+                }
+            }
+        },
+        async openRunningOrder(order) {
+            this.editingOrderId = order.id;
+            this.checkoutProps.form.editing_order_id = order.id;
+            this.checkoutProps.form.order_type = orderTypeEnum.DINING_TABLE;
+            this.checkoutProps.form.table_id = order.table_id || order.table?.id || '';
+            this.checkoutProps.form.order_note = order.order_note || '';
+            this.checkoutProps.form.token = order.token || '';
+            await this.posCartStore.loadFromOrderItems(order.order_items || []);
+            if (order.discount) {
+                const d = parseFloat(String(order.discount).replace(/[^0-9.-]/g, '')) || 0;
+                if (d > 0) {
+                    this.posCartStore.callDiscount(d);
+                }
+            }
+            alertService.success(this.$t('message.opened_running_order') || `Opened order #${order.order_serial_no}`);
+        },
+        clearEditingOrder(resetCart = true) {
+            this.editingOrderId = null;
+            this.checkoutProps.form.editing_order_id = null;
+            if (resetCart) {
+                this.posCartStore.resetCart();
+            }
+        },
+        buildCheckoutItems() {
             this.checkoutProps.form.subtotal = this.subtotal;
             this.checkoutProps.form.tax      = this.tax;
             this.checkoutProps.form.total    = this.total;
             this.checkoutProps.form.items    = [];
 
-            _.forEach(this.carts, (item, index) => {
+            _.forEach(this.carts, (item) => {
                 let item_variations = [];
                 if (Object.keys(item.item_variations.variations).length > 0) {
                     _.forEach(item.item_variations.variations, (value, index) => {
@@ -733,7 +888,151 @@ export default {
             });
 
             this.checkoutProps.form.items = JSON.stringify(this.checkoutProps.form.items);
+        },
+        async runPrintJobs(printJobs) {
+            if (this.$refs.paymentRef?.runAutoPrintJobs) {
+                await this.$refs.paymentRef.runAutoPrintJobs(printJobs || []);
+                return;
+            }
+            // Fallback: browser KOT only
+            for (const job of (printJobs || [])) {
+                if (job.type === 'kot' && job.payload && job.status !== 'skipped') {
+                    if (job.mode === 'local_bridge' || job.mode === 'direct_print') {
+                        try {
+                            const agent = await probeLocalAgentInfo();
+                            if (agent?.ok && job.raw_base64) {
+                                await sendViaLocalBridge(job);
+                                continue;
+                            }
+                        } catch (e) {}
+                    }
+                    try {
+                        await printKotIframe(job.payload, job.printer || '');
+                    } catch (e) {}
+                }
+                if (job.type === 'invoice' && job.payload) {
+                    try {
+                        await printBillIframe({order_serial_no: job.payload.order_serial_no}, {
+                            restaurant: {name: job.payload.restaurant},
+                            items: (job.payload.items || []).map((i) => ({
+                                name: i.name,
+                                quantity: i.quantity,
+                                total_price: i.total_price,
+                            })),
+                            printerHint: job.printer || '',
+                        });
+                    } catch (e) {}
+                }
+            }
+        },
+        orderSubmit: async function () {
+            if (Number(this.checkoutProps.form.order_type) === orderTypeEnum.DINING_TABLE
+                && !this.checkoutProps.form.table_id) {
+                alertService.error(this.$t('message.table_required_for_dine_in') || 'Please select a table for dine-in.');
+                return;
+            }
+            if (Number(this.checkoutProps.form.order_type) === orderTypeEnum.DELIVERY
+                && !this.checkoutProps.form.customer_name
+                && !this.checkoutProps.form.customer_phone) {
+                alertService.error('Please enter customer name or phone for delivery.');
+                return;
+            }
+            if (!this.carts.length) {
+                alertService.error(this.$t('message.cart_empty') || 'Cart is empty.');
+                return;
+            }
 
+            this.buildCheckoutItems();
+
+            // Editing open dine-in order → update + modification KOT
+            if (this.editingOrderId) {
+                this.loading.isActive = true;
+                this.checkoutProps.form.place_only = true;
+                try {
+                    const res = await this.posOrderStore.updateOpenOrder(this.editingOrderId, this.checkoutProps.form);
+                    const printJobs = res.data.print_jobs || [];
+                    (res.data.warnings || []).forEach((w) => alertService.error(w));
+                    alertService.success(this.$t('message.order_updated') || 'Order updated');
+                    await this.runPrintJobs(printJobs);
+                    await this.loadOpenOrders();
+                    const updated = res.data.data;
+                    if (updated) {
+                        await this.openRunningOrder(updated);
+                    }
+                } catch (err) {
+                    alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+                } finally {
+                    this.loading.isActive = false;
+                }
+                return;
+            }
+
+            // New dine-in → Place Order (KOT only, leave open)
+            if (Number(this.checkoutProps.form.order_type) === orderTypeEnum.DINING_TABLE) {
+                this.loading.isActive = true;
+                this.checkoutProps.form.place_only = true;
+                this.checkoutProps.form.close_with_payment = false;
+                try {
+                    const res = await this.posOrderStore.save(this.checkoutProps.form);
+                    const printJobs = res.data.print_jobs || [];
+                    (res.data.warnings || []).forEach((w) => alertService.error(w));
+                    const serial = res.data.data?.order_serial_no || res.data.data?.id;
+                    alertService.success(this.$t('message.order_placed_success', { serial: '#' + serial })
+                        || `Order #${serial} placed (KOT sent). Order remains open.`);
+                    await this.runPrintJobs(printJobs);
+                    this.posCartStore.resetCart();
+                    this.checkoutProps.form.token = '';
+                    this.checkoutProps.form.order_note = '';
+                    this.checkoutProps.form.table_id = '';
+                    this.checkoutProps.form.place_only = false;
+                    await this.loadOpenOrders();
+                    await this.loadDiningTables();
+                } catch (err) {
+                    alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+                } finally {
+                    this.loading.isActive = false;
+                }
+                return;
+            }
+
+            // Takeaway / Delivery → payment modal (existing)
+            this.checkoutProps.form.place_only = false;
+            this.checkoutProps.form.close_with_payment = true;
+            this.openModal('order-payment-modal');
+            this.$nextTick(() => {
+                this.$refs.paymentRef?.prefillCashAmount?.();
+            });
+        },
+        async printBillForEditing() {
+            if (!this.editingOrderId) return;
+            this.loading.isActive = true;
+            try {
+                const res = await this.posOrderStore.printBill(this.editingOrderId);
+                await this.runPrintJobs(res.data.print_jobs || []);
+                alertService.success(this.$t('message.bill_printed') || 'Bill sent to printer');
+                await this.loadOpenOrders();
+            } catch (err) {
+                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+            } finally {
+                this.loading.isActive = false;
+            }
+        },
+        async viewOrderHistory() {
+            if (!this.editingOrderId) return;
+            try {
+                const res = await this.posOrderStore.orderHistory(this.editingOrderId);
+                this.orderHistoryLines = res.data.data || [];
+                this.showHistory = true;
+            } catch (err) {
+                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+            }
+        },
+        payEditingOrder() {
+            if (!this.editingOrderId) return;
+            this.buildCheckoutItems();
+            this.checkoutProps.form.place_only = false;
+            this.checkoutProps.form.close_with_payment = true;
+            this.checkoutProps.form.editing_order_id = this.editingOrderId;
             this.openModal('order-payment-modal');
             this.$nextTick(() => {
                 this.$refs.paymentRef?.prefillCashAmount?.();
@@ -755,6 +1054,10 @@ export default {
             if (objects.hasOwnProperty('discountType')) {
                 this.discountType = objects.discountType
             }
+
+            this.clearEditingOrder(false);
+            this.loadOpenOrders();
+            this.loadDiningTables();
         }
     }
 }

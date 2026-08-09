@@ -35,6 +35,7 @@
                             <select v-model.number="props.form.print_format" class="db-field-control" :class="errors.print_format ? 'invalid' : ''">
                                 <option :value="enums.printFormatEnum.INVOICE">{{ $t('label.invoice') }}</option>
                                 <option :value="enums.printFormatEnum.KOT">{{ $t('label.kot') }}</option>
+                                <option :value="enums.printFormatEnum.BOTH">{{ $t('label.both_kot_invoice') || 'Both (KOT + Invoice)' }}</option>
                                 <option :value="enums.printFormatEnum.NO_AUTO_KOT">{{ $t('label.no_auto_kot') }}</option>
                             </select>
                             <small class="db-field-alert" v-if="errors.print_format">{{ errors.print_format[0] }}</small>

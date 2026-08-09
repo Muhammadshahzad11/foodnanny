@@ -88,17 +88,26 @@ class Printer extends Model
 
     public function isKotFormat(): bool
     {
-        return (int) $this->print_format === PrintFormat::KOT;
+        $format = (int) $this->print_format;
+
+        return $format === PrintFormat::KOT || $format === PrintFormat::BOTH;
     }
 
     public function isInvoiceFormat(): bool
     {
-        return (int) $this->print_format === PrintFormat::INVOICE;
+        $format = (int) $this->print_format;
+
+        return $format === PrintFormat::INVOICE || $format === PrintFormat::BOTH;
     }
 
     public function skipsAutoKot(): bool
     {
         return (int) $this->print_format === PrintFormat::NO_AUTO_KOT;
+    }
+
+    public function isBothFormat(): bool
+    {
+        return (int) $this->print_format === PrintFormat::BOTH;
     }
 
     public function opensCashDrawer(): bool

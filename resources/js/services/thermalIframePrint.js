@@ -116,6 +116,7 @@ async function printHtmlDocument(html) {
 
 export function buildKotHtml(payload = {}, printerHint = '') {
     const items = Array.isArray(payload.items) ? payload.items : [];
+    const isMod = !!(payload.is_modification || payload.modification);
     const rows = items.map((item, idx) => {
         const mods = []
             .concat(item.variation_lines || [])
@@ -125,11 +126,14 @@ export function buildKotHtml(payload = {}, printerHint = '') {
             .map((l) => `<div class="mod">+ ${esc(l)}</div>`)
             .join('');
         const instr = item.instruction ? `<div class="mod">** ${esc(item.instruction)}</div>` : '';
+        const qtyCell = item.change_label || item.direction
+            ? esc(item.change_label || (`${item.direction}: ${item.quantity}`))
+            : esc(item.quantity);
         return `
           <tr>
             <td style="width:10%">${idx + 1}</td>
             <td style="width:72%">${esc(item.name)}${mods}${extras}${instr}</td>
-            <td class="r" style="width:18%">${esc(item.quantity)}</td>
+            <td class="r" style="width:18%">${qtyCell}</td>
           </tr>`;
     }).join('');
 
@@ -137,11 +141,12 @@ export function buildKotHtml(payload = {}, printerHint = '') {
     const hint = printerHint
         ? `<div class="hint">KOT — select kitchen printer${printerHint ? `: ${esc(printerHint)}` : ''}</div>`
         : `<div class="hint">KOT — select the KITCHEN / KOT printer</div>`;
+    const title = isMod ? 'ORDER CHANGE' : 'KITCHEN KOT';
 
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>KOT</title><style>${THERMAL_CSS}</style></head><body>
       ${hint}
       <div class="sheet">
-        <div class="c title">KITCHEN KOT</div>
+        <div class="c title">${title}</div>
         <div class="c meta">${esc(payload.order_date || '')} ${esc(payload.order_time || '')}</div>
         <div class="c b" style="margin:4px 0">${esc(payload.ticket_no || ('KOT - ' + (payload.kot_no || '')))}</div>
         <div class="banner">
@@ -153,7 +158,7 @@ export function buildKotHtml(payload = {}, printerHint = '') {
         ${payload.waiter ? `<div>Waiter: ${esc(payload.waiter)}</div>` : ''}
         <div class="dash"></div>
         <table>
-          <thead><tr><th class="l">No.</th><th class="l">Item</th><th class="r">Qty</th></tr></thead>
+          <thead><tr><th class="l">No.</th><th class="l">Item</th><th class="r">${isMod ? 'Change' : 'Qty'}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
         <div class="dash"></div>

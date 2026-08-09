@@ -397,8 +397,8 @@ export default {
         async runAutoPrintJobs(printJobs = []) {
             const jobs = Array.isArray(printJobs) ? printJobs : [];
             const expected = {
-                kot: jobs.some((j) => j.type === 'kot'),
-                invoice: jobs.some((j) => j.type === 'invoice'),
+                kot: jobs.some((j) => j.type === 'kot' && j.status !== 'skipped' && j.mode !== 'none'),
+                invoice: jobs.some((j) => j.type === 'invoice' && j.status !== 'skipped'),
             };
             const done = { kot: false, invoice: false };
 
@@ -530,11 +530,24 @@ export default {
                 }
 
                 this.loading.isActive = true;
-                this.posOrderStore.save(this.$props.props.form).then(async orderResponse => {
+                const form = this.$props.props.form;
+                const editingId = form.editing_order_id;
+                const savePromise = editingId
+                    ? this.posOrderStore.payOpenOrder(editingId, {
+                        ...form,
+                        close_with_payment: true,
+                        place_only: false,
+                    })
+                    : this.posOrderStore.save(form);
+
+                savePromise.then(async orderResponse => {
                     const orderId = orderResponse.data.data.id;
                     const orderSerial = orderResponse.data.data.order_serial_no;
                     this.placedOrderId = orderId;
                     const printJobs = orderResponse.data.print_jobs || [];
+                    (orderResponse.data.warnings || []).forEach((w) => {
+                        try { alertService.error(w); } catch (e) {}
+                    });
 
                     this.$props.props.form.token                     = "";
                     this.$props.props.form.subtotal                  = 0;
@@ -548,6 +561,13 @@ export default {
                     this.$props.props.form.order_type                = orderTypeEnum.TAKEAWAY;
                     this.$props.props.form.table_id                  = '';
                     this.$props.props.form.order_note                = '';
+                    this.$props.props.form.customer_name             = '';
+                    this.$props.props.form.customer_phone            = '';
+                    this.$props.props.form.customer_address          = '';
+                    this.$props.props.form.delivery_note             = '';
+                    this.$props.props.form.editing_order_id          = null;
+                    this.$props.props.form.place_only                = false;
+                    this.$props.props.form.close_with_payment        = false;
                     this.$refs.paymentMethodCashInput.value          = "";
                     this.$refs.paymentMethodCardInput.value          = "";
                     this.$refs.paymentMethodMobileBankingInput.value = "";

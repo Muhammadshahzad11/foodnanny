@@ -114,5 +114,59 @@ export const usePosOrderStore = defineStore('posOrder', {
                 });
             });
         },
+        fetchOpenOrders: function () {
+            return new Promise((resolve, reject) => {
+                axios.get('admin/pos/open-orders').then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        openOrderForTable: function (tableId) {
+            return new Promise((resolve, reject) => {
+                axios.get(`admin/pos/open-orders/table/${tableId}`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        updateOpenOrder: function (orderId, payload) {
+            return new Promise((resolve, reject) => {
+                axios.put(`/admin/pos/open-orders/${orderId}`, payload).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        printBill: function (orderId) {
+            return new Promise((resolve, reject) => {
+                axios.post(`/admin/pos/open-orders/${orderId}/print-bill`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        payOpenOrder: function (orderId, payload) {
+            return new Promise((resolve, reject) => {
+                axios.post(`/admin/pos/open-orders/${orderId}/pay`, payload).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        orderHistory: function (orderId) {
+            return new Promise((resolve, reject) => {
+                axios.get(`/admin/pos/open-orders/${orderId}/history`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
     }
 })

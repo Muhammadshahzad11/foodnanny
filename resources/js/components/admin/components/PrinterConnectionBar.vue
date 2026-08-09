@@ -97,6 +97,9 @@ export default {
             if (Number(printer.print_format) === printFormatEnum.KOT) {
                 return this.$t("label.kot");
             }
+            if (Number(printer.print_format) === printFormatEnum.BOTH) {
+                return this.$t("label.both_kot_invoice") || "KOT + Invoice";
+            }
             return this.$t("label.no_auto_kot");
         },
         statusText(printer) {
