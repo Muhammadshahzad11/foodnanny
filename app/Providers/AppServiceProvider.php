@@ -30,6 +30,9 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Console\Events\CommandFinished;
+use App\Services\PwaService;
 use App\Observers\ItemAttributeObserver;
 use App\Observers\ItemVariationObserver;
 
@@ -109,6 +112,21 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('webhook', function (Request $request) {
             $provider = (string)$request->route('paymentGateway', 'default');
             return Limit::perMinute(config('security.rate_limits.webhook'))->by("wh:$provider|" . $request->ip());
+        });
+
+        // After optimize:clear / cache:clear, bump PWA cache so phones drop stale shells
+        Event::listen(CommandFinished::class, function (CommandFinished $event) {
+            if ($event->exitCode !== 0) {
+                return;
+            }
+            if (!in_array($event->command, ['optimize:clear', 'cache:clear'], true)) {
+                return;
+            }
+            try {
+                app(PwaService::class)->forceUpdate();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('PWA bump after '.$event->command.': '.$e->getMessage());
+            }
         });
     }
 }

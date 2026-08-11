@@ -65,7 +65,8 @@ async function ensureServiceWorker() {
             await existing.update().catch(() => {});
             return existing;
         }
-        return await navigator.serviceWorker.register('/serviceworker.js', {
+        const version = state.config?.cache_version || Date.now();
+        return await navigator.serviceWorker.register('/serviceworker.js?v=' + version, {
             scope: '/',
             updateViaCache: 'none',
         });

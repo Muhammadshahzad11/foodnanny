@@ -7,6 +7,9 @@ use Exception;
 use App\Models\Order;
 use App\Exports\OrderExport;
 use App\Services\OrderService;
+use App\Services\OtpManagerService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Services\KitchenOrderService;
 use App\Services\PosRunningOrderService;
 use Maatwebsite\Excel\Facades\Excel;
@@ -25,7 +28,8 @@ class PosOrderController extends AdminController implements HasMiddleware
     public function __construct(
         OrderService $order,
         protected KitchenOrderService $kitchenOrderService,
-        protected PosRunningOrderService $posRunningOrderService
+        protected PosRunningOrderService $posRunningOrderService,
+        protected OtpManagerService $otpManagerService
     ) {
         parent::__construct();
         $this->orderService = $order;
@@ -35,7 +39,7 @@ class PosOrderController extends AdminController implements HasMiddleware
     {
         return [
             new Middleware('permission:pos-orders', only: ['index', 'export']),
-            new Middleware('permission:pos-orders_delete', only: ['destroy']),
+            new Middleware('permission:pos-orders_delete', only: ['destroy', 'requestDeleteOtp', 'confirmDelete']),
             new Middleware('permission:pos-orders_show', only: ['show', 'changeStatus']),
             // Cashiers with POS access can print KOT after checkout; order show users can reprint.
             new Middleware('permission:pos|pos-orders_show', only: ['printKot', 'printInvoice']),
@@ -60,14 +64,66 @@ class PosOrderController extends AdminController implements HasMiddleware
         }
     }
 
-    public function destroy(Order $order): \Illuminate\Http\Response | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
+    /**
+     * Send OTP required before deleting a POS order (OTP shown in response when SHOW_OTP=true).
+     */
+    public function requestDeleteOtp(Order $order): \Illuminate\Http\Response|\Illuminate\Http\JsonResponse|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
-            $this->orderService->destroy($order);
-            return response('', 202);
+            $provider = 'user:' . (Auth::id() ?: 0);
+            $code     = 'pos-order-delete:' . $order->id;
+            $otp      = $this->otpManagerService->issueToken($provider, $code);
+
+            $payload = [
+                'status'  => true,
+                'message' => 'Enter the OTP to confirm deleting this order.',
+            ];
+
+            // Temporary: always expose OTP in popup for testing until SMS is configured
+            if (filter_var(env('SHOW_OTP', true), FILTER_VALIDATE_BOOLEAN)) {
+                $payload['otp'] = $otp;
+            }
+
+            return response($payload);
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
         }
+    }
+
+    /**
+     * Delete POS order only after a valid OTP is provided.
+     * Prefer POST /confirm-delete — DELETE without OTP is rejected.
+     */
+    public function confirmDelete(Request $request, Order $order): \Illuminate\Http\Response|\Illuminate\Http\JsonResponse|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            $token = trim((string) ($request->input('otp') ?: $request->input('token') ?: ''));
+            if ($token === '') {
+                return response([
+                    'status'  => false,
+                    'message' => 'OTP is required. You cannot delete this order without entering the OTP.',
+                ], 422);
+            }
+
+            $provider = 'user:' . (Auth::id() ?: 0);
+            $code     = 'pos-order-delete:' . $order->id;
+            $this->otpManagerService->verifyToken($provider, $code, $token);
+
+            $this->orderService->destroy($order);
+
+            return response([
+                'status'  => true,
+                'message' => 'Order deleted successfully.',
+            ], 200);
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+    public function destroy(Request $request, Order $order): \Illuminate\Http\Response | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
+    {
+        // Never allow delete without OTP — same gate as confirmDelete
+        return $this->confirmDelete($request, $order);
     }
 
     public function export(PaginateRequest $request): \Illuminate\Http\Response | \Symfony\Component\HttpFoundation\BinaryFileResponse | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory

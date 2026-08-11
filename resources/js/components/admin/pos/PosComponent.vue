@@ -272,13 +272,21 @@
                     </p>
                 </div>
                 <input v-model="checkoutProps.form.customer_name" type="text" class="db-field-control w-full"
-                       :placeholder="$t('label.name') || 'Customer name'"/>
+                       :placeholder="$t('label.name')"/>
                 <input v-model="checkoutProps.form.customer_phone" type="text" class="db-field-control w-full"
-                       :placeholder="$t('label.phone') || 'Phone'"/>
+                       :placeholder="$t('label.phone')"/>
                 <input v-model="checkoutProps.form.customer_address" type="text" class="db-field-control w-full"
-                       :placeholder="$t('label.address') || 'Address'"/>
+                       :placeholder="$t('label.address')"/>
                 <input v-model="checkoutProps.form.delivery_note" type="text" class="db-field-control w-full"
-                       :placeholder="$t('label.delivery_note') || 'Delivery notes'"/>
+                       :placeholder="$t('label.delivery_note')"/>
+                <button
+                    type="button"
+                    class="w-full h-10 rounded-md bg-primary text-white text-sm font-semibold disabled:opacity-60"
+                    :disabled="savingCustomer"
+                    @click.prevent="saveDeliveryCustomer"
+                >
+                    {{ savingCustomer ? 'Saving…' : $t('button.save_customer') }}
+                </button>
             </div>
 
             <div class="mb-3">
@@ -628,6 +636,7 @@ export default {
             selectedCustomerId: '',
             customerSearch: '',
             customersLoading: false,
+            savingCustomer: false,
             errors: {},
             enums: {
                 switchEnum: switchEnum,
@@ -730,6 +739,15 @@ export default {
                     activeClass: 'bg-sky-50 border-sky-500 shadow-sm',
                     iconClass: 'bg-sky-100 text-sky-700',
                     iconActiveClass: 'bg-sky-500 text-white',
+                },
+                {
+                    value: 25,
+                    label: this.$t('label.out_of_service') || 'Out of service',
+                    hint: this.$t('label.table_status_oos_hint') || 'Not usable right now',
+                    icon: '✕',
+                    activeClass: 'bg-slate-100 border-slate-500 shadow-sm',
+                    iconClass: 'bg-slate-200 text-slate-700',
+                    iconActiveClass: 'bg-slate-600 text-white',
                 },
             ];
         },
@@ -965,6 +983,7 @@ export default {
                 10: 'bg-rose-100 text-rose-700',
                 15: 'bg-amber-100 text-amber-700',
                 20: 'bg-sky-100 text-sky-700',
+                25: 'bg-slate-200 text-slate-700',
             };
             return map[Number(status)] || 'bg-gray-100 text-gray-600';
         },
@@ -990,7 +1009,7 @@ export default {
                     + this.tableStatusLabel(status)
                 );
             } catch (err) {
-                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+                alertService.error(this.posApiError(err));
             } finally {
                 this.loading.isActive = false;
             }
@@ -1012,6 +1031,32 @@ export default {
         ensureCustomersLoaded() {
             if (!this.allDeliveryCustomers.length && !this.customersLoading) {
                 this.loadDeliveryCustomers();
+            }
+        },
+        async saveDeliveryCustomer() {
+            const name = String(this.checkoutProps.form.customer_name || '').trim();
+            const phone = String(this.checkoutProps.form.customer_phone || '').trim();
+            const address = String(this.checkoutProps.form.customer_address || '').trim();
+            if (!name) {
+                alertService.error(this.$t('message.customer_name_required'));
+                return;
+            }
+            try {
+                this.savingCustomer = true;
+                const res = await this.posOrderStore.saveCustomer({ name, phone, address });
+                const saved = res.data?.data || res.data || {};
+                await this.loadDeliveryCustomers();
+                if (saved.id) {
+                    this.pickCustomer(saved);
+                }
+                alertService.success(this.$t('message.customer_saved'));
+            } catch (err) {
+                const msg = err.response?.data?.message
+                    || (err.response?.data?.errors && Object.values(err.response.data.errors).flat()[0])
+                    || this.$t('message.something_wrong');
+                alertService.error(msg);
+            } finally {
+                this.savingCustomer = false;
             }
         },
         pickCustomer(c) {
@@ -1111,9 +1156,16 @@ export default {
             this.checkoutProps.form.items    = [];
 
             _.forEach(this.carts, (item) => {
+                const variationsBag = item.item_variations || {variations: {}, names: {}};
+                const extrasBag = item.item_extras || {extras: [], names: []};
+                const variationMap = variationsBag.variations || {};
+                const variationNames = variationsBag.names || {};
+                const extraIds = extrasBag.extras || [];
+                const extraNames = extrasBag.names || [];
+
                 let item_variations = [];
-                if (Object.keys(item.item_variations.variations).length > 0) {
-                    _.forEach(item.item_variations.variations, (value, index) => {
+                if (Object.keys(variationMap).length > 0) {
+                    _.forEach(variationMap, (value, index) => {
                         item_variations.push({
                             "id": value,
                             "item_id": item.item_id,
@@ -1122,18 +1174,20 @@ export default {
                     });
                 }
 
-                if (Object.keys(item.item_variations.names).length > 0) {
+                if (Object.keys(variationNames).length > 0) {
                     let i = 0;
-                    _.forEach(item.item_variations.names, (value, index) => {
-                        item_variations[i].variation_name = index;
-                        item_variations[i].name           = value;
+                    _.forEach(variationNames, (value, index) => {
+                        if (item_variations[i]) {
+                            item_variations[i].variation_name = index;
+                            item_variations[i].name           = value;
+                        }
                         i++;
                     });
                 }
 
                 let item_extras = [];
-                if (item.item_extras.extras.length) {
-                    _.forEach(item.item_extras.extras, (value) => {
+                if (extraIds.length) {
+                    _.forEach(extraIds, (value) => {
                         item_extras.push({
                             id: value,
                             item_id: item.item_id,
@@ -1141,10 +1195,12 @@ export default {
                     });
                 }
 
-                if (item.item_extras.names.length) {
+                if (extraNames.length) {
                     let i = 0;
-                    _.forEach(item.item_extras.names, (value) => {
-                        item_extras[i].name = value;
+                    _.forEach(extraNames, (value) => {
+                        if (item_extras[i]) {
+                            item_extras[i].name = value;
+                        }
                         i++;
                     });
                 }
@@ -1205,6 +1261,16 @@ export default {
                 }
             }
         },
+        posApiError(err) {
+            const data = err?.response?.data;
+            if (!data) return this.$t('message.something_wrong');
+            if (data.message && data.message !== 'The given data was invalid.') return data.message;
+            if (data.errors) {
+                const first = Object.values(data.errors).flat()[0];
+                if (first) return first;
+            }
+            return this.$t('message.something_wrong');
+        },
         orderSubmit: async function () {
             if (Number(this.checkoutProps.form.order_type) === orderTypeEnum.DINING_TABLE
                 && !this.checkoutProps.form.table_id) {
@@ -1220,6 +1286,17 @@ export default {
             if (!this.carts.length) {
                 alertService.error(this.$t('message.cart_empty') || 'Cart is empty.');
                 return;
+            }
+
+            // If this table already has an open order, update it instead of failing on create
+            if (Number(this.checkoutProps.form.order_type) === orderTypeEnum.DINING_TABLE
+                && !this.editingOrderId) {
+                const tableId = Number(this.checkoutProps.form.table_id);
+                const open = (this.openOrders || []).find((o) => Number(o.table_id) === tableId);
+                if (open?.id) {
+                    this.editingOrderId = open.id;
+                    this.checkoutProps.form.editing_order_id = open.id;
+                }
             }
 
             this.buildCheckoutItems();
@@ -1240,7 +1317,7 @@ export default {
                         await this.openRunningOrder(updated);
                     }
                 } catch (err) {
-                    alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+                    alertService.error(this.posApiError(err));
                 } finally {
                     this.loading.isActive = false;
                 }
@@ -1268,7 +1345,7 @@ export default {
                     await this.loadOpenOrders();
                     await this.loadDiningTables();
                 } catch (err) {
-                    alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+                    alertService.error(this.posApiError(err));
                 } finally {
                     this.loading.isActive = false;
                 }
@@ -1292,7 +1369,7 @@ export default {
                 alertService.success(this.$t('message.bill_printed') || 'Bill sent to printer');
                 await this.loadOpenOrders();
             } catch (err) {
-                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+                alertService.error(this.posApiError(err));
             } finally {
                 this.loading.isActive = false;
             }
@@ -1304,7 +1381,7 @@ export default {
                 this.orderHistoryLines = res.data.data || [];
                 this.showHistory = true;
             } catch (err) {
-                alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+                alertService.error(this.posApiError(err));
             }
         },
         payEditingOrder() {

@@ -27,6 +27,15 @@ class PosOrderRequest extends FormRequest
         if (!$this->filled('order_note')) {
             $this->merge(['order_note' => null]);
         }
+
+        // Axios may send place_only as boolean true; normalize for required_unless rules
+        $placeOnly = $this->boolean('place_only')
+            || ((int) $this->input('order_type') === \App\Enums\OrderType::DINING_TABLE
+                && !$this->boolean('close_with_payment'));
+        $this->merge([
+            'place_only' => $placeOnly ? 1 : 0,
+            'close_with_payment' => $this->boolean('close_with_payment') ? 1 : 0,
+        ]);
     }
 
     /**

@@ -118,7 +118,8 @@
 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
-            navigator.serviceWorker.register('/serviceworker.js', {
+            var swUrl = '/serviceworker.js?v={{ $pwaCacheVersion }}';
+            navigator.serviceWorker.register(swUrl, {
                 scope: '/',
                 updateViaCache: 'none'
             }).catch(function () {});

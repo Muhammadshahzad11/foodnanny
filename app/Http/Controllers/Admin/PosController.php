@@ -44,6 +44,7 @@ class PosController extends AdminController implements HasMiddleware
                 'orderHistory',
                 'updateTableStatus',
                 'customers',
+                'storeCustomer',
             ]),
             // POS screen + POS Orders view can take payment / close open orders
             new Middleware('permission:pos|pos-orders_show', only: [
@@ -61,9 +62,15 @@ class PosController extends AdminController implements HasMiddleware
 
             // Dine-in Place Order: save + KOT only, leave open/unpaid
             if ($placeOnly && $orderType === \App\Enums\OrderType::DINING_TABLE) {
-                $result = $this->posRunningOrderService->placeDineIn($request);
-                $order  = $result['order'];
-                $print  = $result['print'];
+                $tableId  = (int) $request->input('table_id');
+                $existing = $tableId > 0 ? $this->posRunningOrderService->openOrderForTable($tableId) : null;
+                if ($existing) {
+                    $result = $this->posRunningOrderService->updateOpenOrder($existing, $request);
+                } else {
+                    $result = $this->posRunningOrderService->placeDineIn($request);
+                }
+                $order = $result['order'];
+                $print = $result['print'];
 
                 return (new OrderDetailsResource($order))->additional([
                     'print_jobs' => $print['jobs'] ?? [],
@@ -91,8 +98,9 @@ class PosController extends AdminController implements HasMiddleware
                 'kot_count'  => $print['kot_count'] ?? 0,
                 'warnings'   => $print['warnings'] ?? [],
             ]);
-        } catch (Exception $exception) {
-            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Log::error('POS store failed: '.$exception->getMessage(), ['exception' => $exception]);
+            return response(['status' => false, 'message' => $exception->getMessage() ?: 'Could not place order.'], 422);
         }
     }
 
@@ -222,14 +230,31 @@ class PosController extends AdminController implements HasMiddleware
     /**
      * Change table status from POS (Available / Occupied / Reserved / Cleaning).
      */
-    public function updateTableStatus(\Illuminate\Http\Request $request, int $tableId): \Illuminate\Http\Response|\Illuminate\Http\JsonResponse|\Illuminate\Http\Resources\Json\JsonResource|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    public function updateTableStatus(\Illuminate\Http\Request $request, int $tableId): \Illuminate\Http\Response|\Illuminate\Http\JsonResponse|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
             $status = (int) $request->input('status');
             $table  = $this->posRunningOrderService->updateTableStatus($tableId, $status);
 
-            return new RestaurantTableResource($table);
-        } catch (Exception $exception) {
+            return (new RestaurantTableResource($table))->response();
+        } catch (\Throwable $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], 422);
+        }
+    }
+
+
+    /**
+     * Create/update a delivery customer from POS (name, phone, address).
+     */
+    public function storeCustomer(\Illuminate\Http\Request $request): \Illuminate\Http\Response|\App\Http\Resources\PosCustomerResource|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            $customer = app(\App\Services\CustomerService::class)->storeFromPos(
+                $request->only(['name', 'phone', 'address', 'country_code'])
+            );
+
+            return new \App\Http\Resources\PosCustomerResource($customer);
+        } catch (\Throwable $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
         }
     }

@@ -646,7 +646,12 @@ class PosRunningOrderService
      */
     protected function sanitizeTaxType(mixed $value, mixed $fallback = null): ?int
     {
+        // Guard against infinite recursion when both value and fallback are empty
         if ($value === null || $value === '') {
+            if ($fallback === null || $fallback === '' || $fallback === $value) {
+                return \App\Enums\TaxType::PERCENTAGE;
+            }
+
             return $this->sanitizeTaxType($fallback, null);
         }
 
@@ -666,11 +671,11 @@ class PosRunningOrderService
             return \App\Enums\TaxType::FIXED;
         }
 
-        if ($fallback !== null && $fallback !== $value) {
+        if ($fallback !== null && $fallback !== '' && $fallback !== $value) {
             return $this->sanitizeTaxType($fallback, null);
         }
 
-        return null;
+        return \App\Enums\TaxType::PERCENTAGE;
     }
 
     protected function buildSignature(int $itemId, $variations, $extras, string $instruction): string

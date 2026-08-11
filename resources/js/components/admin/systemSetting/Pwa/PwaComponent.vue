@@ -117,6 +117,9 @@
                     <button type="button" class="db-btn border border-[#EFF0F6] text-heading" @click="forceUpdate">
                         {{ $t('button.force_update') }}
                     </button>
+                    <button type="button" class="db-btn border border-rose-200 text-rose-600" @click="clearPwaCaches">
+                        {{ $t('button.clear_pwa_cache') || 'Clear PWA Cache' }}
+                    </button>
                 </div>
             </form>
 
@@ -242,24 +245,39 @@ export default {
                 }
             });
         },
+        async broadcastPwaClear(version) {
+            if (!('serviceWorker' in navigator)) return;
+            try {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (const reg of regs) {
+                    const worker = reg.active || reg.waiting || reg.installing;
+                    worker?.postMessage({type: 'CLEAR_CACHES', version});
+                    worker?.postMessage({type: 'SET_CACHE_VERSION', version});
+                    reg.update().catch(() => {});
+                }
+                // Also clear Cache Storage keys directly as a fallback
+                if (window.caches?.keys) {
+                    const keys = await caches.keys();
+                    await Promise.all(keys
+                        .filter((k) => k.startsWith('pwa-') || k.startsWith('ctc-'))
+                        .map((k) => caches.delete(k)));
+                }
+            } catch (e) {}
+        },
         forceUpdate() {
             this.loading.isActive = true;
-            this.pwaStore.forceUpdate().then(() => {
+            this.pwaStore.forceUpdate().then(async (res) => {
                 this.loading.isActive = false;
                 alertService.successFlip(1, this.$t('button.force_update'));
-                if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.ready.then((reg) => {
-                        const version = this.pwa.cache_version;
-                        // Safe clear: only CTC/PWA caches, then set version (no full wipe)
-                        reg.active?.postMessage({type: 'CLEAR_CACHES', version});
-                        reg.active?.postMessage({type: 'SET_CACHE_VERSION', version});
-                        reg.update().catch(() => {});
-                    }).catch(() => {});
-                }
+                const version = res?.data?.data?.cache_version || this.pwa.cache_version;
+                await this.broadcastPwaClear(version);
             }).catch((err) => {
                 this.loading.isActive = false;
                 alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
             });
+        },
+        clearPwaCaches() {
+            this.forceUpdate();
         }
     }
 }

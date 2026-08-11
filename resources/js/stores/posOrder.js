@@ -61,9 +61,26 @@ export const usePosOrderStore = defineStore('posOrder', {
                 });
             });
         },
+        requestDeleteOtp: function (orderId) {
+            return new Promise((resolve, reject) => {
+                axios.post(`admin/pos-order/${orderId}/request-delete-otp`).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
         destroy: function (payload) {
             return new Promise((resolve, reject) => {
-                axios.delete(`admin/pos-order/${payload.id}`).then((res) => {
+                const otp = String(payload.otp || payload.token || '').trim();
+                if (!otp) {
+                    reject({response: {data: {message: 'OTP is required to delete this order.'}}});
+                    return;
+                }
+                axios.post(`admin/pos-order/${payload.id}/confirm-delete`, {
+                    otp,
+                    token: otp,
+                }).then((res) => {
                     this.fetch(payload.search).then().catch();
                     resolve(res);
                 }).catch((err) => {
@@ -126,6 +143,15 @@ export const usePosOrderStore = defineStore('posOrder', {
         updateTableStatus: function (tableId, status) {
             return new Promise((resolve, reject) => {
                 axios.post(`admin/pos/tables/${tableId}/status`, {status}).then((res) => {
+                    resolve(res);
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        },
+        saveCustomer: function (payload) {
+            return new Promise((resolve, reject) => {
+                axios.post('admin/pos/customers', payload).then((res) => {
                     resolve(res);
                 }).catch((err) => {
                     reject(err);

@@ -223,6 +223,7 @@ import appService from "../../../services/appService.js";
 import {useFrontendLanguageStore} from "../../../stores/frontendLanguage.js";
 import {useDefaultAccessStore} from "../../../stores/defaultAccess.js";
 import alertService from "../../../services/alertService.js";
+import { clearClientPwaCaches } from "../../../services/pwaCacheClear.js";
 import VueSimpleAlert from "vue3-simple-alert";
 import {useCommonStore} from "../../../stores/common.js";
 import {useRestaurantSwitchStore} from "../../../stores/restaurantSwitch.js";
@@ -366,9 +367,10 @@ export default {
             }
             this.flushingCache = true;
             this.loading.isActive = true;
-            this.cacheStore.flush().then((res) => {
+            this.cacheStore.flush().then(async (res) => {
                 this.flushingCache = false;
                 this.loading.isActive = false;
+                await clearClientPwaCaches(res.data?.data?.pwa_cache_version);
                 alertService.success(res.data.message || this.$t('message.cache_cleared_successfully'));
             }).catch((err) => {
                 this.flushingCache = false;

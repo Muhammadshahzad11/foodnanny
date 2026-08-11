@@ -31,7 +31,8 @@ class CacheController extends AdminController implements HasMiddleware
                 'status'  => true,
                 'message' => $result['message'],
                 'data'    => [
-                    'cleared' => $result['cleared'],
+                    'cleared'           => $result['cleared'],
+                    'pwa_cache_version' => $result['pwa_cache_version'] ?? null,
                 ],
             ]);
         } catch (Exception $exception) {

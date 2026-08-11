@@ -34,6 +34,10 @@
                                 <i class="lab-line-tick-circle text-primary"></i>
                                 {{ $t('label.cache_views') }}
                             </li>
+                            <li class="flex items-center gap-2">
+                                <i class="lab-line-tick-circle text-primary"></i>
+                                {{ $t('label.cache_pwa') || 'PWA / app cache' }}
+                            </li>
                         </ul>
                         <button
                             type="button"
@@ -59,6 +63,7 @@
 import LoadingComponent from "../../../common/LoadingComponent.vue";
 import alertService from "../../../../services/alertService.js";
 import { useCacheStore } from "../../../../stores/cache.js";
+import { clearClientPwaCaches } from "../../../../services/pwaCacheClear.js";
 
 export default {
     name: "CacheComponent",
@@ -82,9 +87,10 @@ export default {
         flushCache() {
             this.flushing = true;
             this.loading.isActive = true;
-            this.cacheStore.flush().then((res) => {
+            this.cacheStore.flush().then(async (res) => {
                 this.loading.isActive = false;
                 this.flushing = false;
+                await clearClientPwaCaches(res.data?.data?.pwa_cache_version);
                 alertService.success(res.data.message || this.$t('message.cache_cleared_successfully'));
             }).catch((err) => {
                 this.loading.isActive = false;

@@ -501,6 +501,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::get('/tables', [PosController::class, 'tables']);
         Route::post('/tables/{tableId}/status', [PosController::class, 'updateTableStatus']);
         Route::get('/customers', [PosController::class, 'customers']);
+        Route::post('/customers', [PosController::class, 'storeCustomer']);
         Route::get('/printers', [PosController::class, 'printers']);
         Route::get('/open-orders', [PosController::class, 'openOrders']);
         Route::get('/open-orders/table/{tableId}', [PosController::class, 'openOrderForTable']);
@@ -513,6 +514,8 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
     Route::prefix('pos-order')->name('posOrder.')->group(function () {
         Route::get('/', [PosOrderController::class, 'index']);
         Route::get('show/{order}', [PosOrderController::class, 'show']);
+        Route::post('/{order}/request-delete-otp', [PosOrderController::class, 'requestDeleteOtp']);
+        Route::post('/{order}/confirm-delete', [PosOrderController::class, 'confirmDelete']);
         Route::delete('/{order}', [PosOrderController::class, 'destroy']);
         Route::get('/export', [PosOrderController::class, 'export']);
         Route::post('/change-status/{order}', [PosOrderController::class, 'changeStatus']);

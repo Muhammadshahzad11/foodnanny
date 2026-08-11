@@ -4,11 +4,14 @@ namespace App\Services;
 
 use Exception;
 use App\Enums\Ask;
+use App\Enums\Status;
 use App\Models\User;
+use App\Models\Address;
 use App\Enums\Role as EnumRole;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use App\Http\Requests\CustomerRequest;
 use App\Http\Requests\PaginateRequest;
 use App\Libraries\QueryExceptionLibrary;
@@ -154,6 +157,86 @@ class CustomerService
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             DB::rollBack();
+            throw new Exception(QueryExceptionLibrary::message($exception), 422);
+        }
+    }
+
+
+    /**
+     * Lightweight customer create/update for POS Delivery (name/phone/address only).
+     *
+     * @throws Exception
+     */
+    public function storeFromPos(array $data): User
+    {
+        $name        = trim((string) ($data['name'] ?? ''));
+        $phone       = trim((string) ($data['phone'] ?? ''));
+        $addressText = trim((string) ($data['address'] ?? ''));
+        $countryCode = trim((string) ($data['country_code'] ?? '+91')) ?: '+91';
+
+        if ($name === '') {
+            throw new Exception('Customer name is required.', 422);
+        }
+
+        try {
+            return DB::transaction(function () use ($name, $phone, $addressText, $countryCode) {
+                $user = null;
+                if ($phone !== '') {
+                    $user = User::role(EnumRole::CUSTOMER)->where('phone', $phone)->first();
+                }
+
+                if ($user) {
+                    $user->name = $name;
+                    if ($countryCode !== '') {
+                        $user->country_code = $countryCode;
+                    }
+                    $user->save();
+                } else {
+                    $slug = $phone !== '' ? preg_replace('/\D+/', '', $phone) : '';
+                    if ($slug === '') {
+                        $slug = (string) Str::lower(Str::random(8));
+                    }
+                    $email = 'pos.' . $slug . '.' . time() . '@foodnanny.local';
+                    while (User::withTrashed()->where('email', $email)->exists()) {
+                        $email = 'pos.' . $slug . '.' . uniqid() . '@foodnanny.local';
+                    }
+
+                    $user = User::create([
+                        'name'                 => $name,
+                        'email'                => $email,
+                        'phone'                => $phone !== '' ? $phone : null,
+                        'username'             => $this->username($email),
+                        'password'             => bcrypt(Str::random(16)),
+                        'restaurant_id'        => 0,
+                        'email_verified_at'    => now(),
+                        'status'               => Status::ACTIVE,
+                        'country_code'         => $countryCode,
+                        'is_guest'             => Ask::NO,
+                        'terms_and_conditions' => Ask::YES,
+                    ]);
+                    $user->assignRole(EnumRole::CUSTOMER);
+                }
+
+                if ($addressText !== '') {
+                    $existing = $user->addresses()->first();
+                    if ($existing) {
+                        $existing->update(['address' => $addressText]);
+                    } else {
+                        Address::create([
+                            'user_id'   => $user->id,
+                            'label'     => 'Home',
+                            'address'   => $addressText,
+                            'apartment' => null,
+                            'latitude'  => '0',
+                            'longitude' => '0',
+                        ]);
+                    }
+                }
+
+                return $user->load('addresses');
+            });
+        } catch (Exception $exception) {
+            Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);
         }
     }

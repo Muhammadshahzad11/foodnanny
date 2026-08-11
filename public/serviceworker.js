@@ -183,7 +183,8 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // Vite hashed /build assets: prefer network so deploys are not stuck on stale JS/CSS
     if (isAssetRequest(url)) {
-        event.respondWith(cacheFirst(request, runtimeCache()));
+        event.respondWith(staleWhileRevalidate(request, runtimeCache()));
     }
 });

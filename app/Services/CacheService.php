@@ -42,6 +42,16 @@ class CacheService
             }
         }
 
+        // Bump PWA cache version so installed apps/service workers drop stale assets
+        $pwaVersion = null;
+        try {
+            $pwa = app(PwaService::class)->forceUpdate();
+            $pwaVersion = (int) ($pwa->cache_version ?? 0);
+            $cleared[] = 'pwa';
+        } catch (Exception $exception) {
+            Log::warning('PWA cache bump failed: ' . $exception->getMessage());
+        }
+
         if (empty($cleared)) {
             throw new Exception(trans('all.message.cache_clear_failed'));
         }
@@ -49,6 +59,7 @@ class CacheService
         return [
             'cleared' => array_values(array_unique($cleared)),
             'message' => trans('all.message.cache_cleared_successfully'),
+            'pwa_cache_version' => $pwaVersion,
         ];
     }
 }

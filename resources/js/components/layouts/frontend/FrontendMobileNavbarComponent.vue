@@ -23,7 +23,7 @@
         </router-link>
 
         <button
-            v-if="showInstallNav"
+            v-if="showInstallNav && !logged"
             type="button"
             class="flex flex-col items-center gap-1 text-text transition-all duration-300 hover:text-primary"
             @click.prevent="openPwaInstall"
@@ -74,6 +74,18 @@
                     <i class="lab-line-dashboard text-lg text-paragraph group-hover:text-primary transition-all duration-300"></i>
                     <span class="text-sm leading-6 capitalize">{{ $t('menu.dashboard') }}</span>
                 </router-link>
+
+                <button
+                    v-if="showInstallNav"
+                    type="button"
+                    @click.prevent="openPwaInstallFromProfile"
+                    class="w-full flex items-center gap-3.5 py-2.5 border-t border-gray-100 transition-all duration-300 group hover:text-primary"
+                >
+                    <svg class="w-[18px] h-[18px] text-paragraph group-hover:text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 21h14"/>
+                    </svg>
+                    <span class="text-sm leading-6 capitalize">{{ $t('button.install_app') }}</span>
+                </button>
 
                 <router-link @click.prevent="closeCanvas('mobile-profile-canvas')" :to="{ name: 'frontend.myOrder' }" class="w-full flex items-center gap-3.5 py-2.5 border-t border-gray-100 transition-all duration-300 group hover:text-primary">
                     <i class="lab-line-reserve text-lg text-paragraph group-hover:text-primary transition-all duration-300"></i>

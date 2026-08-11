@@ -134,8 +134,10 @@
                                     <i class="lab lab-fill-printer"></i>
                                     <span class="db-tooltip">{{ $t('button.print_invoice') }}</span>
                                 </button>
-                                <SmIconDeleteComponent @click="destroy(order.id)"
-                                                       v-if="permissionChecker('pos-orders_delete')"/>
+                                <SmIconDeleteComponent
+                                    v-if="permissionChecker('pos-orders_delete')"
+                                    @click="destroy(order.id)"
+                                />
                             </div>
                         </td>
                     </tr>
@@ -209,8 +211,8 @@ import {sendViaLocalBridge, probeLocalAgentInfo, localAgentSetupUrl} from "../..
 export default {
     name: "PosOrderListComponent",
     components: {
-        SmIconDeleteComponent,
         SmIconViewComponent,
+        SmIconDeleteComponent,
         PaginationBox,
         PaginationTextComponent,
         PaginationSMBox,
@@ -542,6 +544,79 @@ export default {
                 this.props.search.to_date   = null;
             }
         },
+        destroy: async function (id) {
+            // Step 1: warn — order is NOT deleted yet
+            try {
+                await new VueSimpleAlert.confirm(
+                    this.$t('message.delete_requires_otp')
+                        || 'To delete this order you must enter an OTP. Continue?',
+                    this.$t('message.are_you_sure') || 'Are you sure?',
+                    'warning',
+                    {
+                        confirmButtonText: this.$t('button.continue') || 'Continue',
+                        cancelButtonText: this.$t('button.no_cancel') || 'Cancel',
+                        confirmButtonColor: '#1AB759',
+                        cancelButtonColor: '#E93C3C',
+                    }
+                );
+            } catch (e) {
+                return;
+            }
+
+            this.loading.isActive = true;
+            try {
+                // Step 2: generate OTP (order still not deleted)
+                const otpRes = await this.posOrderStore.requestDeleteOtp(id);
+                const otp = otpRes.data?.otp ? String(otpRes.data.otp) : '';
+                this.loading.isActive = false;
+
+                if (otp) {
+                    await alertService.showOtp(otp);
+                }
+
+                // Step 3: MUST enter OTP — cancel / empty = no delete
+                let entered = '';
+                try {
+                    entered = await VueSimpleAlert.prompt(
+                        this.$t('message.enter_delete_otp')
+                            || 'Enter the OTP to delete this order. Leave empty / cancel to keep the order.',
+                        '',
+                        this.$t('label.otp') || 'OTP',
+                        'question',
+                        {
+                            confirmButtonText: this.$t('button.delete') || 'Delete',
+                            cancelButtonText: this.$t('button.cancel') || 'Cancel',
+                        }
+                    );
+                } catch (e) {
+                    alertService.error(this.$t('message.delete_cancelled') || 'Delete cancelled. Order was not deleted.');
+                    return;
+                }
+
+                entered = String(entered || '').trim();
+                if (!entered) {
+                    alertService.error(this.$t('message.otp_required_to_delete') || 'OTP is required. Order was not deleted.');
+                    return;
+                }
+
+                // Step 4: only now call API with OTP
+                this.loading.isActive = true;
+                await this.posOrderStore.destroy({
+                    id,
+                    otp: entered,
+                    search: this.props.search,
+                });
+                this.loading.isActive = false;
+                alertService.successFlip(null, this.$t('menu.pos_orders'));
+            } catch (err) {
+                this.loading.isActive = false;
+                alertService.error(
+                    err.response?.data?.message
+                    || this.$t('message.otp_invalid_order_kept')
+                    || 'Invalid OTP. Order was not deleted.'
+                );
+            }
+        },
         clear: function () {
             this.props.search.paginate        = 1;
             this.props.search.page            = 1;
@@ -561,35 +636,6 @@ export default {
             }).catch((err) => {
                 this.loading.isActive = false;
             });
-        },
-        destroy: function (id) {
-            return new VueSimpleAlert.confirm(
-                this.$t("message.delete_record"),
-                this.$t("message.are_you_sure"),
-                "warning",
-                {
-                    confirmButtonText: this.$t("button.yes_delete"),
-                    cancelButtonText: this.$t("button.no_cancel"),
-                    confirmButtonColor: "#1AB759",
-                    cancelButtonColor: "#E93C3C"
-                }
-            ).then((res) => {
-                try {
-                    this.loading.isActive = true;
-                    this.posOrderStore.destroy({id: id, search: this.props.search}).then((res) => {
-                        this.loading.isActive = false;
-                        alertService.successFlip(null, this.$t('menu.pos_orders'));
-                    }).catch((err) => {
-                        this.loading.isActive = false;
-                        alertService.error(err.response.data.message);
-                    })
-                } catch (err) {
-                    this.loading.isActive = false;
-                    alertService.error(err.response.data.message);
-                }
-            }).catch((err) => {
-                this.loading.isActive = false;
-            })
         },
         xls: function () {
             this.loading.isActive = true;

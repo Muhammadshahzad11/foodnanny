@@ -88,4 +88,77 @@ class OtpManagerService
             throw new Exception(QueryExceptionLibrary::message($exception), 422);
         }
     }
+
+    /**
+     * Issue a short-lived OTP for a non-phone action (e.g. POS order delete).
+     *
+     * @throws Exception
+     */
+    public function issueToken(string $provider, string $code, ?int $digits = null): string
+    {
+        try {
+            DB::table('one_time_passwords')->where([
+                ['provider', $provider],
+                ['code', $code],
+            ])->delete();
+
+            $digitLimit = $digits
+                ?? (int) (Settings::group('otp')->get('otp_digit_limit') ?: 4);
+            $digitLimit = max(4, min(8, $digitLimit));
+
+            $token = (string) rand(
+                (int) pow(10, $digitLimit - 1),
+                (int) pow(10, $digitLimit) - 1
+            );
+
+            OneTimePassword::create([
+                'provider'   => $provider,
+                'code'       => $code,
+                'token'      => $token,
+                'created_at' => now(),
+            ]);
+
+            return $token;
+        } catch (Exception $exception) {
+            Log::info($exception->getMessage());
+            throw new Exception(QueryExceptionLibrary::message($exception), 422);
+        }
+    }
+
+    /**
+     * Verify an action OTP issued by issueToken().
+     *
+     * @throws Exception
+     */
+    public function verifyToken(string $provider, string $code, string $token, bool $delete = true): true
+    {
+        try {
+            $otp = DB::table('one_time_passwords')->where([
+                'provider' => $provider,
+                'code'     => $code,
+                'token'    => $token,
+            ]);
+
+            if (!$otp->exists()) {
+                throw new Exception(trans('all.message.code_is_invalid') ?: 'Invalid OTP.', 422);
+            }
+
+            $expireMinutes = (int) (Settings::group('otp')->get('otp_expire_time') ?: 5);
+            $difference = (int) Carbon::now()->diffInSeconds($otp->first()->created_at, true);
+            if ($difference > $expireMinutes * 60) {
+                $otp->delete();
+                throw new Exception(trans('all.message.code_is_expired') ?: 'OTP expired.', 422);
+            }
+
+            if ($delete) {
+                $otp->delete();
+            }
+
+            return true;
+        } catch (Exception $exception) {
+            Log::info($exception->getMessage());
+            throw new Exception(QueryExceptionLibrary::message($exception), 422);
+        }
+    }
+
 }
