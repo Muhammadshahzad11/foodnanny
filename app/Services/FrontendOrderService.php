@@ -6,6 +6,7 @@ namespace App\Services;
 use Exception;
 use App\Enums\Status;
 use App\Enums\OrderStatus;
+use App\Enums\OrderType;
 use App\Models\Restaurant;
 use App\Models\FrontendOrder;
 use App\Events\OrderPlacedSMS;
@@ -217,7 +218,8 @@ class FrontendOrderService
     {
         try {
             if ($frontendOrder->user_id == Auth::user()->id) {
-                if ((int) $frontendOrder->status === OrderStatus::OUT_FOR_DELIVERY) {
+                if (in_array((int) $frontendOrder->status, [OrderStatus::PREPARED, OrderStatus::OUT_FOR_DELIVERY], true)
+                    && (int) $frontendOrder->order_type === OrderType::DELIVERY) {
                     app(DeliveryOtpService::class)->ensure($frontendOrder);
                 }
                 return $frontendOrder->load('orderItems', 'user', 'address', 'restaurant', 'deliveryBoy', 'coupon', 'transaction', 'diningTable');

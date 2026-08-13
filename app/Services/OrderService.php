@@ -437,6 +437,11 @@ class OrderService
                 $order->status = $request->status;
                 $order->save();
 
+                if ((int) $order->order_type === OrderType::DELIVERY
+                    && in_array((int) $order->status, [OrderStatus::PREPARED, OrderStatus::OUT_FOR_DELIVERY], true)) {
+                    app(DeliveryOtpService::class)->ensure($order);
+                }
+
                 if (
                     $order->order_type == OrderType::DINING_TABLE
                     && in_array((int) $request->status, [OrderStatus::DELIVERED, OrderStatus::CANCELED, OrderStatus::REJECTED], true)

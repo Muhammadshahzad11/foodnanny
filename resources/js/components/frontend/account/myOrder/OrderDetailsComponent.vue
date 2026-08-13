@@ -41,22 +41,6 @@
                             </button>
                         </div>
                         <OrderStatusComponent :props="order" />
-                        <div
-                            v-if="showDeliveryOtp"
-                            class="mt-5 overflow-hidden rounded-2xl border-2 border-primary bg-gradient-to-br from-emerald-50 via-white to-amber-50"
-                        >
-                            <div class="p-4 text-center">
-                                <p class="text-xs font-bold uppercase tracking-[0.14em] text-primary mb-1">
-                                    {{ $t('label.your_delivery_otp') }}
-                                </p>
-                                <p class="text-3xl font-bold tracking-[0.35em] text-heading my-2">
-                                    {{ order.delivery_otp }}
-                                </p>
-                                <p class="text-xs leading-5 text-paragraph mb-0">
-                                    {{ $t('message.share_this_otp_with_rider') }}
-                                </p>
-                            </div>
-                        </div>
                     </div>
 
                     <div v-if="parseInt(order.status) === enums.orderStatusEnum.REJECTED"
@@ -504,11 +488,6 @@ export default {
         },
         isScanMenuOrder: function () {
             return orderIsScanMenu(this.order);
-        },
-        showDeliveryOtp: function () {
-            return Number(this.order?.status) === this.enums.orderStatusEnum.OUT_FOR_DELIVERY
-                && Number(this.order?.order_type) === this.enums.orderTypeEnum.DELIVERY
-                && !!this.order?.delivery_otp;
         },
         paymentMethodLabel: function () {
             return resolvePaymentMethodLabel(this.order, (key) => this.$t(key));

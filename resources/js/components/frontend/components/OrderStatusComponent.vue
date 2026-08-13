@@ -43,16 +43,23 @@
         <img v-if="statusNum === enums.orderStatusEnum.OUT_FOR_DELIVERY"
             class="w-32 h-32 mx-auto mb-3" :src="setting.image_order_out_for_delivery" alt="gif">
 
-        <!-- Progress bar -->
+        <!-- Progress bar (not clickable — tracker only) -->
         <ul class="w-full flex items-center mb-3">
             <li v-for="(step, index) in timelineSteps" :key="step.status" class="group w-full last:w-fit flex items-center">
-                <i
+                <span
                     :class="[
-                        step.icon,
-                        isStepReached(step.status) ? 'text-white bg-primary' : 'text-primary bg-[#FFEBDD]',
-                        'flex-shrink-0 w-8 h-8 leading-8 text-center rounded-full'
+                        isOtpCurrent(step)
+                            ? 'w-10 h-10 text-white bg-primary ring-4 ring-primary/25 scale-110'
+                            : (isStepReached(step.status) ? 'w-8 h-8 text-white bg-primary' : 'w-8 h-8 text-primary bg-[#FFEBDD]'),
+                        'flex-shrink-0 inline-flex items-center justify-center rounded-full transition'
                     ]"
-                ></i>
+                >
+                    <svg v-if="step.status === 'otp'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="w-4 h-4">
+                        <rect x="3" y="11" width="18" height="11" rx="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    <i v-else :class="[step.icon, 'text-sm leading-none']"></i>
+                </span>
                 <hr
                     v-if="index < timelineSteps.length - 1"
                     :class="isStepReached(timelineSteps[index + 1].status) ? 'bg-primary' : 'bg-[#FFEBDD]'"
@@ -70,12 +77,41 @@
             >
                 <span
                     class="block text-[10px] sm:text-xs leading-tight font-medium"
-                    :class="isStepReached(step.status) ? 'text-heading' : 'text-paragraph'"
+                    :class="isOtpCurrent(step) ? 'text-primary font-semibold' : (isStepReached(step.status) ? 'text-heading' : 'text-paragraph')"
                 >
                     {{ step.label }}
                 </span>
             </li>
         </ul>
+
+        <!-- Big delivery PIN — always visible for delivery, not a clickable tab -->
+        <div v-if="showOtpCard" class="mb-5 rounded-2xl border-2 p-4 text-center"
+             :class="isOtpLive
+                ? 'border-primary bg-gradient-to-br from-emerald-50 via-white to-amber-50 shadow-[0_10px_30px_rgba(26,183,89,0.18)]'
+                : 'border-dashed border-primary/40 bg-[#FFF8F2]'">
+            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-primary mb-3">
+                {{ $t('label.your_delivery_otp') }}
+            </p>
+            <div v-if="otpDigits.length" class="flex justify-center gap-2 sm:gap-3 mb-3">
+                <span
+                    v-for="(digit, i) in otpDigits"
+                    :key="'d'+i"
+                    class="w-12 h-14 sm:w-14 sm:h-16 rounded-xl bg-white border-2 border-primary text-heading text-3xl sm:text-4xl font-bold flex items-center justify-center shadow-sm"
+                >{{ digit }}</span>
+            </div>
+            <p v-else class="text-sm text-paragraph mb-3">••••</p>
+            <p class="text-xs sm:text-sm leading-5 text-heading font-medium mb-3">
+                {{ isOtpLive ? $t('message.share_this_otp_with_rider') : $t('message.otp_ready_give_when_rider_arrives') }}
+            </p>
+            <button
+                v-if="otpDigits.length"
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-full bg-primary text-white text-xs font-semibold px-4 py-2"
+                @click="copyOtp"
+            >
+                {{ otpCopied ? $t('button.copied') : $t('button.copy_otp') }}
+            </button>
+        </div>
 
         <p v-if="statusNum === enums.orderStatusEnum.PENDING" class="text-xs text-center">
             {{ $t("message.we_received_your_order") }}
@@ -117,6 +153,7 @@ export default {
     },
     data() {
         return {
+            otpCopied: false,
             enums: {
                 orderStatusEnum: orderStatusEnum,
                 orderTypeEnum: orderTypeEnum,
@@ -155,6 +192,19 @@ export default {
         isDelivered() {
             return this.statusNum === orderStatusEnum.DELIVERED;
         },
+        showOtpCard() {
+            return this.isDelivery
+                && this.statusNum >= orderStatusEnum.PREPARED
+                && this.statusNum < orderStatusEnum.DELIVERED;
+        },
+        isOtpLive() {
+            return this.statusNum >= orderStatusEnum.OUT_FOR_DELIVERY
+                && this.statusNum < orderStatusEnum.DELIVERED;
+        },
+        otpDigits() {
+            const code = String(this.props?.delivery_otp || '').replace(/\D/g, '');
+            return code.length ? code.split('') : [];
+        },
         isTerminalBad() {
             return [
                 orderStatusEnum.CANCELED,
@@ -178,7 +228,7 @@ export default {
                 steps.push({
                     status: 'otp',
                     label: this.$t('label.track_otp'),
-                    icon: 'lab lab-fill-lock',
+                    icon: '',
                 });
             }
             steps.push({
@@ -195,6 +245,25 @@ export default {
                 return this.statusNum >= orderStatusEnum.OUT_FOR_DELIVERY;
             }
             return this.statusNum >= parseInt(stepStatus, 10);
+        },
+        isOtpCurrent(step) {
+            return step.status === 'otp' && this.isOtpLive;
+        },
+        async copyOtp() {
+            const code = String(this.props?.delivery_otp || '');
+            if (!code) return;
+            try {
+                await navigator.clipboard.writeText(code);
+            } catch (e) {
+                const input = document.createElement('input');
+                input.value = code;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+            }
+            this.otpCopied = true;
+            setTimeout(() => { this.otpCopied = false; }, 2000);
         },
         formatIso(iso) {
             if (!iso) return '';

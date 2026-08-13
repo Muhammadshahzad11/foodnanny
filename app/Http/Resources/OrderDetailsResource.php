@@ -155,7 +155,10 @@ class OrderDetailsResource extends JsonResource
 
     private function visibleDeliveryOtp(): ?string
     {
-        if (!$this->requiresDeliveryOtp() || blank($this->delivery_otp)) {
+        $showToCustomer = (int) $this->order_type === OrderType::DELIVERY
+            && in_array((int) $this->status, [OrderStatus::PREPARED, OrderStatus::OUT_FOR_DELIVERY], true);
+
+        if (!$showToCustomer || blank($this->delivery_otp)) {
             return null;
         }
 
