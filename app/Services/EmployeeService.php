@@ -25,7 +25,7 @@ class EmployeeService
     public object $user;
     public array $roleFilter = ['role_id'];
     public array $userFilter = ['name', 'email', 'phone', 'status'];
-    public array $blockRoles = [EnumRole::ADMIN, EnumRole::RESTAURANT_OWNER, EnumRole::DELIVERY_BOY, EnumRole::CUSTOMER];
+    public array $blockRoles = [EnumRole::ADMIN, EnumRole::RESTAURANT_OWNER, EnumRole::DELIVERY_BOY, EnumRole::CUSTOMER, EnumRole::ZONE_ADMIN];
     public array $restaurantEmployeeRoles = [
         EnumRole::WAITER,
         EnumRole::CHEF,

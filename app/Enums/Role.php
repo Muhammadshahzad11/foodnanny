@@ -13,4 +13,5 @@ interface Role
     const CHEF             = 7;
     const CASHIER          = 8;
     const MANAGER          = 9;
+    const ZONE_ADMIN       = 11;
 }

@@ -53,10 +53,16 @@ class CustomerOrderStatusUpdated implements ShouldBroadcastNow
             'restaurant_id'    => (int) $this->order->restaurant_id,
             'restaurant_name'  => $this->order->restaurant?->name,
             'action'           => $this->action,
-            'is_scan_menu'     => $this->order->isScanMenuOrder(),
-            'preparation_time' => (int) ($this->order->preparation_time ?? 0),
-            'updated_at'       => optional($this->order->updated_at)?->toIso8601String(),
-            'meta'             => $this->meta,
+            'is_scan_menu'            => $this->order->isScanMenuOrder(),
+            'preparation_time'        => (int) ($this->order->preparation_time ?? 0),
+            'requires_delivery_otp'   => (int) $this->order->order_type === \App\Enums\OrderType::DELIVERY
+                && (int) $this->order->status === \App\Enums\OrderStatus::OUT_FOR_DELIVERY,
+            'delivery_otp'            => ((int) $this->order->status === \App\Enums\OrderStatus::OUT_FOR_DELIVERY)
+                ? ($this->order->delivery_otp ?: null)
+                : null,
+            'delivery_otp_length'     => \App\Services\DeliveryOtpService::LENGTH,
+            'updated_at'              => optional($this->order->updated_at)?->toIso8601String(),
+            'meta'                    => $this->meta,
         ];
     }
 }

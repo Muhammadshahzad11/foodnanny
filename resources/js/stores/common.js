@@ -19,6 +19,7 @@ export const useCommonStore = defineStore('common', {
         cuisine_id: null,
         edit_address_id: 0,
         localization: false,
+        manual_location_pick: false,
     }),
     actions: {
         init: function (payload) {
@@ -87,6 +88,7 @@ export const useCommonStore = defineStore('common', {
                 state: null,
                 search_restaurant: null,
                 cuisine_id: null,
+                manual_location_pick: true,
             });
         }
     }

@@ -65,22 +65,28 @@ class PosOrderController extends AdminController implements HasMiddleware
     }
 
     /**
-     * Send OTP required before deleting a POS order (OTP shown in response when SHOW_OTP=true).
+     * Send OTP via 2Factor SMS before deleting a POS order.
      */
     public function requestDeleteOtp(Order $order): \Illuminate\Http\Response|\Illuminate\Http\JsonResponse|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            $recipient = $this->otpManagerService->resolveRestaurantSmsRecipient((int) $order->restaurant_id);
+
             $provider = 'user:' . (Auth::id() ?: 0);
             $code     = 'pos-order-delete:' . $order->id;
             $otp      = $this->otpManagerService->issueToken($provider, $code);
+            $this->otpManagerService->dispatchSms(
+                $recipient['country_code'],
+                $recipient['phone'],
+                $otp
+            );
 
             $payload = [
                 'status'  => true,
-                'message' => 'Enter the OTP to confirm deleting this order.',
+                'message' => 'OTP sent to the restaurant phone. Enter it to confirm deleting this order.',
             ];
 
-            // Temporary: always expose OTP in popup for testing until SMS is configured
-            if (filter_var(env('SHOW_OTP', true), FILTER_VALIDATE_BOOLEAN)) {
+            if (OtpManagerService::shouldExposeOtp()) {
                 $payload['otp'] = $otp;
             }
 

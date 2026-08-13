@@ -20,6 +20,7 @@ use App\Enums\Role as EnumRole;
 use Dipokhalder\Settings\Facades\Settings;
 use Illuminate\Support\Facades\DB;
 use App\Services\OtpManagerService;
+use App\Services\ZoneService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
 use App\Http\Requests\SignupPhoneRequest;
@@ -46,7 +47,7 @@ class RestaurantSignupController extends Controller
                 $payload = ['status' => true, 'message' => trans("all.message.check_your_phone_for_code")];
                 if (Settings::group('site')->get('site_phone_verification') == Activity::ENABLE) {
                     $otp = $this->otpManagerService->phoneOTP($request);
-                    if (filter_var(env('SHOW_OTP', true), FILTER_VALIDATE_BOOLEAN)) {
+                    if (OtpManagerService::shouldExposeOtp()) {
                         $payload['otp'] = $otp;
                     }
                 }
@@ -114,10 +115,16 @@ class RestaurantSignupController extends Controller
                     'terms_and_conditions' => $request->post('page_id') > 0 ? $request->post('terms_and_conditions') : Ask::NO
                 ]);
 
+                $zoneId = app(ZoneService::class)->applyDetectedZoneId(
+                    $restaurant->latitude !== null ? (float) $restaurant->latitude : null,
+                    $restaurant->longitude !== null ? (float) $restaurant->longitude : null
+                );
+                $restaurant->zone_id = $zoneId;
                 $restaurant->user_id = $user->id;
                 $restaurant->save();
 
                 $user->restaurant_id = $restaurant->id;
+                $user->zone_id = $zoneId;
                 $user->save();
 
                 OrderSetup::create([

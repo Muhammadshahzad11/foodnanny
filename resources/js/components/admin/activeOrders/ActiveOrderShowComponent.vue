@@ -40,11 +40,25 @@
                     </button>
                 </div>
 
-                <div class="absolute ltr:right-0 rtl:left-0 bottom-0 flex flex-wrap gap-3" v-if="order.order_type === enums.orderTypeEnum.DELIVERY && order.status === enums.orderStatusEnum.OUT_FOR_DELIVERY">
-                    <button type="button" @click="changeStatus" class="flex items-center justify-center text-white gap-2 px-4 h-[38px] rounded shadow-db-card bg-[#2AC769]">
-                        <i class="lab lab-fill-delivered"></i>
-                        <span class="text-sm capitalize text-white">{{ $t('button.confirm_delivery') }}</span>
-                    </button>
+                <div class="absolute ltr:right-0 rtl:left-0 bottom-0 w-full" v-if="order.order_type === enums.orderTypeEnum.DELIVERY && order.status === enums.orderStatusEnum.OUT_FOR_DELIVERY">
+                    <p class="text-xs text-slate-500 mb-2">{{ $t('message.enter_otp_to_complete_delivery') }}</p>
+                    <div class="flex flex-wrap gap-3 items-end">
+                        <div class="min-w-[140px]">
+                            <label class="db-field-title after:hidden">{{ $t('label.enter_customer_otp') }}</label>
+                            <input
+                                v-model="deliveryOtp"
+                                type="text"
+                                inputmode="numeric"
+                                maxlength="4"
+                                class="db-field-control tracking-[0.35em] text-center font-semibold"
+                                placeholder="••••"
+                            />
+                        </div>
+                        <button type="button" @click="changeStatus" class="flex items-center justify-center text-white gap-2 px-4 h-[38px] rounded shadow-db-card bg-[#2AC769]">
+                            <i class="lab lab-fill-delivered"></i>
+                            <span class="text-sm capitalize text-white">{{ $t('button.confirm_delivery') }}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -83,6 +97,7 @@ export default {
             loading: {
                 isActive: false
             },
+            deliveryOtp: "",
             enums: {
                 orderTypeEnum: orderTypeEnum,
                 orderStatusEnum: orderStatusEnum,
@@ -152,6 +167,11 @@ export default {
             });
         },
         changeStatus: function () {
+            const otp = String(this.deliveryOtp || '').replace(/\D/g, '');
+            if (otp.length < 4) {
+                alertService.error(this.$t('message.enter_otp_to_complete_delivery'));
+                return;
+            }
             return new VueSimpleAlert.confirm(
                 this.order.payment_method === this.enums.paymentTypeEnum.CASH_ON_DELIVERY ? "Collected "+ this.order.total_currency_price +" for this order fee!" : "This order is complete!",
                 "Are you sure?",
@@ -165,16 +185,20 @@ export default {
             ).then(res => {
                 try {
                     this.loading.isActive = true;
-                    this.activeOrderStore.changeStatus(this.$route.params.id).then((res) => {
+                    this.activeOrderStore.changeStatus({
+                        id: this.$route.params.id,
+                        delivery_otp: otp,
+                    }).then((res) => {
                         this.loading.isActive = false;
+                        this.deliveryOtp = "";
                         alertService.success(this.$t("message.delivered_successfully"));
                     }).catch((err) => {
                         this.loading.isActive = false;
-                        alertService.error(err.response.data.message);
+                        alertService.error(err.response?.data?.message || err);
                     });
                 } catch (err) {
                     this.loading.isActive = false;
-                    alertService.error(err.response.data.message);
+                    alertService.error(err.response?.data?.message || err);
                 }
             }).catch(err => {
             })

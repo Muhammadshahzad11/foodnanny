@@ -37,6 +37,25 @@ class FrontendRestaurantDetailsResource extends JsonResource
             'time_slots'        => SimpleTimeSlotResource::collection($this->timeSlots),
             'single_time_slots' => AppLibrary::timeSlots($this->timeSlots),
             'order_setup'       => new SimpleOrderSetupResource($this->orderSetup),
+            'zone_id'           => $this->zone_id,
+            'zone'              => $this->whenLoaded('zone', function () {
+                if (!$this->zone) {
+                    return null;
+                }
+                return [
+                    'id'                    => $this->zone->id,
+                    'name'                  => $this->zone->name,
+                    'display_name'          => $this->zone->display_name,
+                    'base_delivery_fee'     => $this->zone->base_delivery_fee,
+                    'min_order_amount'      => $this->zone->min_order_amount,
+                    'free_delivery_above'   => $this->zone->free_delivery_above,
+                    'free_delivery_km'      => $this->zone->free_delivery_km,
+                    'extra_distance_charge' => $this->zone->extra_distance_charge,
+                    'peak_enabled'          => (int) $this->zone->peak_enabled,
+                    'peak_charge'           => $this->zone->peak_charge,
+                ];
+            }),
+            'delivery_zones'    => RestaurantDeliveryZoneResource::collection($this->whenLoaded('activeDeliveryZones')),
             'cuisines'          => SimpleCuisineResource::collection($this->cuisinesWithCuisineRelation),
             'reviews'           => SimpleReviewResource::collection($this->reviews),
             'favorite'          => (bool)$this->favorite

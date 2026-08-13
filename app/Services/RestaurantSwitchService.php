@@ -27,7 +27,7 @@ class RestaurantSwitchService
     public function index()
     {
         try {
-            return Restaurant::get();
+            return Restaurant::query()->get();
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);
@@ -43,6 +43,12 @@ class RestaurantSwitchService
             $user = Auth::user();
             $menu = $this->menuService->menu($user, $user->roles[0]);
             if (count($menu['restaurantPermission']) > 0 && $request->restaurant_id > 0) {
+                if ((int) ($user->myrole ?? 0) === \App\Enums\Role::ZONE_ADMIN && (int) ($user->zone_id ?? 0) > 0) {
+                    $allowed = Restaurant::query()->where('id', $request->restaurant_id)->exists();
+                    if (!$allowed) {
+                        throw new Exception('You can only switch into restaurants in your zone.', 422);
+                    }
+                }
                 return $this->defaultAccessService->storeOrUpdate(['restaurant_id' => $request->restaurant_id]);
             } elseif (count($menu['adminPermission']) > 0 && $request->restaurant_id == 0) {
                 return $this->defaultAccessService->storeOrUpdate(['restaurant_id' => $request->restaurant_id]);

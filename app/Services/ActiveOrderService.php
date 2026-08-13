@@ -77,6 +77,9 @@ class ActiveOrderService
     {
         try {
             if ($order->delivery_boy_id == Auth::user()->id) {
+                if ($order->status === OrderStatus::OUT_FOR_DELIVERY) {
+                    app(DeliveryOtpService::class)->ensure($order);
+                }
                 return $order;
             } else {
                 Log::info(trans('all.message.something_wrong'));
@@ -98,6 +101,7 @@ class ActiveOrderService
                 $order->is_received = Ask::YES;
                 $order->status      = OrderStatus::OUT_FOR_DELIVERY;
                 $order->save();
+                app(DeliveryOtpService::class)->ensure($order, true);
                 $this->statementCalculationService->restaurant($order);
 
                 OrderPlacedEmail::dispatch(['order_id' => $order->id, 'status' => OrderStatus::OUT_FOR_DELIVERY]);
@@ -107,6 +111,16 @@ class ActiveOrderService
                 RestaurantDeliveryBoyOrderPickedEmail::dispatch(['order_id' => $order->id]);
                 RestaurantDeliveryBoyOrderPickedSMS::dispatch(['order_id' => $order->id]);
                 RestaurantDeliveryBoyOrderPickedPushNotification::dispatch(['order_id' => $order->id]);
+
+                try {
+                    app(RealtimePublisher::class)->customerOrderStatus(
+                        $order->fresh(),
+                        'out_for_delivery',
+                        OrderStatus::PREPARED
+                    );
+                } catch (\Throwable $e) {
+                    Log::info('ActiveOrder receivedStatus realtime: ' . $e->getMessage());
+                }
             }
             return $order;
         } catch (Exception $exception) {
@@ -118,10 +132,13 @@ class ActiveOrderService
     /**
      * @throws Exception
      */
-    public function changeStatus(Order $order): Order
+    public function changeStatus(Order $order, ?string $deliveryOtp = null): Order
     {
         try {
             if ($order->delivery_boy_id == Auth::user()->id && $order->is_received == Ask::YES && $order->status === OrderStatus::OUT_FOR_DELIVERY) {
+                $otpService = app(DeliveryOtpService::class);
+                $otpService->assertValid($order, $deliveryOtp);
+                $otpService->markVerified($order);
                 $order->payment_status = PaymentStatus::PAID;
                 $order->status         = OrderStatus::DELIVERED;
                 $order->save();
@@ -131,6 +148,16 @@ class ActiveOrderService
                 OrderPlacedEmail::dispatch(['order_id' => $order->id, 'status' => OrderStatus::DELIVERED]);
                 OrderPlacedSMS::dispatch(['order_id' => $order->id, 'status' => OrderStatus::DELIVERED]);
                 OrderPlacedPushNotification::dispatch(['order_id' => $order->id, 'status' => OrderStatus::DELIVERED]);
+
+                try {
+                    app(RealtimePublisher::class)->customerOrderStatus(
+                        $order->fresh(),
+                        'complete',
+                        OrderStatus::OUT_FOR_DELIVERY
+                    );
+                } catch (\Throwable $e) {
+                    Log::info('ActiveOrder changeStatus realtime: ' . $e->getMessage());
+                }
             }
             return $order;
         } catch (Exception $exception) {

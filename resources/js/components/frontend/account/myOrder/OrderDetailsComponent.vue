@@ -41,6 +41,22 @@
                             </button>
                         </div>
                         <OrderStatusComponent :props="order" />
+                        <div
+                            v-if="showDeliveryOtp"
+                            class="mt-5 overflow-hidden rounded-2xl border-2 border-primary bg-gradient-to-br from-emerald-50 via-white to-amber-50"
+                        >
+                            <div class="p-4 text-center">
+                                <p class="text-xs font-bold uppercase tracking-[0.14em] text-primary mb-1">
+                                    {{ $t('label.your_delivery_otp') }}
+                                </p>
+                                <p class="text-3xl font-bold tracking-[0.35em] text-heading my-2">
+                                    {{ order.delivery_otp }}
+                                </p>
+                                <p class="text-xs leading-5 text-paragraph mb-0">
+                                    {{ $t('message.share_this_otp_with_rider') }}
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <div v-if="parseInt(order.status) === enums.orderStatusEnum.REJECTED"
@@ -256,61 +272,6 @@
                         </div>
                     </div>
 
-                    <div class="p-4" v-if="order.status === enums.orderStatusEnum.PENDING">
-                        <div
-                            class="mb-4 overflow-hidden rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 shadow-[0_8px_24px_rgba(245,158,11,0.18)]"
-                        >
-                            <div class="flex gap-3 p-4">
-                                <div
-                                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-md"
-                                    :class="canCancelOrder ? 'bg-amber-500' : 'bg-rose-500'"
-                                >
-                                    <i :class="canCancelOrder ? 'lab-line-clock' : 'lab-line-info-circle'" class="text-xl"></i>
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <p class="text-xs font-bold uppercase tracking-[0.12em]"
-                                       :class="canCancelOrder ? 'text-amber-700' : 'text-rose-700'">
-                                        {{ canCancelOrder ? $t('label.cancel_policy_title') : $t('label.cancel_window') }}
-                                    </p>
-                                    <p class="mt-1.5 text-sm leading-6 text-heading font-medium">
-                                        {{ canCancelOrder
-                                            ? $t('message.scan_menu_cancel_window')
-                                            : $t('message.scan_menu_cancel_closed') }}
-                                    </p>
-                                    <p class="mt-2 text-xs leading-5 text-paragraph">
-                                        {{ canCancelOrder
-                                            ? $t('message.scan_menu_cancel_hint_active')
-                                            : $t('message.scan_menu_cancel_hint_closed') }}
-                                    </p>
-                                    <p
-                                        v-if="canCancelOrder"
-                                        class="mt-3 inline-flex items-center gap-2 rounded-full bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-amber-800"
-                                    >
-                                        <span class="h-2 w-2 animate-pulse rounded-full bg-amber-500"></span>
-                                        {{ $t('label.time_left') }}: {{ cancelCountdown }}
-                                    </p>
-                                    <p
-                                        v-else
-                                        class="mt-3 inline-flex items-center gap-2 rounded-full bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-700"
-                                    >
-                                        {{ $t('message.scan_menu_cancel_closed') }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button
-                            @click="cancelOrder(enums.orderStatusEnum.CANCELED)"
-                            type="button"
-                            :disabled="!canCancelOrder"
-                            class="w-full rounded-3xl capitalize font-medium leading-6 py-3 text-white transition"
-                            :class="canCancelOrder
-                                ? 'bg-[#FB4E4E] hover:bg-[#e53e3e]'
-                                : 'cursor-not-allowed bg-gray-300 text-gray-500'"
-                        >
-                            {{ $t('button.cancel_order') }}
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -466,13 +427,12 @@ import { useAuthStore } from "../../../../stores/auth.js";
 import OrderDetailsMapComponent from "./OrderDetailsMapComponent.vue";
 import OrderStatusComponent from "../../components/OrderStatusComponent.vue";
 import { useModal } from "../../../../composables/modal.js";
-import VueSimpleAlert from "vue3-simple-alert";
 import { useFrontendReviewStore } from "../../../../stores/frontendReview.js";
 import { useFrontendMessageStore } from "../../../../stores/frontendMessage.js";
 import messageChannelTypeEnum from "../../../../enums/modules/messageChannelTypeEnum.js";
 import LoadingComponent from "../../../common/LoadingComponent.vue";
 import ENV from "../../../../config/env.js";
-import {isScanMenuOrder as orderIsScanMenu, resolvePaymentMethodLabel, SCAN_MENU_CANCEL_MS} from "../../../../utils/orderHelpers.js";
+import {isScanMenuOrder as orderIsScanMenu, resolvePaymentMethodLabel} from "../../../../utils/orderHelpers.js";
 import {subscribeCustomerOrderRealtime} from "../../../../composables/useCustomerOrderRealtime.js";
 
 export default {
@@ -535,8 +495,6 @@ export default {
             details: "",
             images: {},
             text: "",
-            nowTick: Date.now(),
-            cancelTimer: null,
             unsubscribeOrderRealtime: null,
         }
     },
@@ -547,39 +505,10 @@ export default {
         isScanMenuOrder: function () {
             return orderIsScanMenu(this.order);
         },
-        canCancelOrder: function () {
-            void this.nowTick;
-            const o = this.order;
-            if (!o || Number(o.status) !== this.enums.orderStatusEnum.PENDING) {
-                return false;
-            }
-            if (typeof o.can_cancel === 'boolean') {
-                // Prefer backend flag; still respect live countdown when expires_at present
-                if (!o.cancel_expires_at) {
-                    return o.can_cancel;
-                }
-            }
-            const expiresAt = o.cancel_expires_at
-                ? new Date(o.cancel_expires_at).getTime()
-                : (o.order_datetime_iso
-                    ? new Date(o.order_datetime_iso).getTime() + SCAN_MENU_CANCEL_MS
-                    : 0);
-            if (!expiresAt) return false;
-            return Date.now() <= expiresAt;
-        },
-        cancelCountdown: function () {
-            void this.nowTick;
-            const o = this.order;
-            if (!o) return '0:00';
-            const expiresAt = o.cancel_expires_at
-                ? new Date(o.cancel_expires_at).getTime()
-                : (o.order_datetime_iso
-                    ? new Date(o.order_datetime_iso).getTime() + SCAN_MENU_CANCEL_MS
-                    : 0);
-            const left = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
-            const m = Math.floor(left / 60);
-            const s = String(left % 60).padStart(2, '0');
-            return `${m}:${s}`;
+        showDeliveryOtp: function () {
+            return Number(this.order?.status) === this.enums.orderStatusEnum.OUT_FOR_DELIVERY
+                && Number(this.order?.order_type) === this.enums.orderTypeEnum.DELIVERY
+                && !!this.order?.delivery_otp;
         },
         paymentMethodLabel: function () {
             return resolvePaymentMethodLabel(this.order, (key) => this.$t(key));
@@ -645,7 +574,6 @@ export default {
                 }
 
                 this.loading.isActive = false;
-                this.startCancelTimer();
                 this.bindCustomerOrderRealtime();
                 if (res.data.data.restaurant_review_status) {
                     await this.frontendReviewStore.fetchRestaurantReview(this.$route.params.id).then(restaurantReviewRes => {
@@ -674,10 +602,6 @@ export default {
         }
     },
     beforeUnmount() {
-        if (this.cancelTimer) {
-            clearInterval(this.cancelTimer);
-            this.cancelTimer = null;
-        }
         if (typeof this.unsubscribeOrderRealtime === 'function') {
             this.unsubscribeOrderRealtime();
             this.unsubscribeOrderRealtime = null;
@@ -698,65 +622,12 @@ export default {
                 orderId,
                 t: (key) => this.$t(key),
                 onUpdate: () => {
-                    this.frontendOrderStore.view(orderId).then(() => {
-                        this.startCancelTimer();
-                    }).catch(() => {});
+                    this.frontendOrderStore.view(orderId).catch(() => {});
                 },
             });
         },
-        startCancelTimer() {
-            if (this.cancelTimer) {
-                clearInterval(this.cancelTimer);
-            }
-            if (Number(this.order?.status) !== this.enums.orderStatusEnum.PENDING) return;
-            this.nowTick = Date.now();
-            this.cancelTimer = setInterval(() => {
-                this.nowTick = Date.now();
-                if (!this.canCancelOrder && this.cancelTimer) {
-                    clearInterval(this.cancelTimer);
-                    this.cancelTimer = null;
-                }
-            }, 1000);
-        },
         textShortener: function (text, number) {
             return appService.textShortener(text, number);
-        },
-        cancelOrder: function (status) {
-            if (!this.canCancelOrder) {
-                alertService.error(this.$t('message.scan_menu_cancel_closed'));
-                return;
-            }
-            return new VueSimpleAlert.confirm(
-                this.$t('message.cancel_order_confirm_detail'),
-                this.$t('message.are_you_sure'),
-                "warning",
-                {
-                    confirmButtonText: this.$t('button.yes_cancel'),
-                    cancelButtonText: this.$t('button.no_cancel'),
-                    confirmButtonColor: "#1AB759",
-                    cancelButtonColor: "#E93C3C"
-                }
-            ).then((res) => {
-                try {
-                    this.loading.isActive = true;
-                    this.frontendOrderStore.cancel({
-                        id: this.$route.params.id,
-                        status: status
-                    }).then((res) => {
-                        this.loading.isActive = false;
-                        this.authStore.profile().then().catch();
-                        alertService.success(this.$t("message.change_order_successfully"))
-                    }).catch((err) => {
-                        this.loading.isActive = false;
-                        alertService.error(err.response.data.message);
-                    });
-                } catch (err) {
-                    this.loading.isActive = false;
-                    alertService.error(err.response.data.message);
-                }
-            }).catch((err) => {
-                this.loading.isActive = false;
-            })
         },
         saveRestaurantReview: function () {
             try {

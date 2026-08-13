@@ -109,12 +109,31 @@ class FrontendOrderService
                     $payload['address_id']   = null;
                 }
 
+                // Apply zone-resolved fee/zone id from OrderRequest::after (request bag), not only validated().
+                if ((int) ($payload['order_type'] ?? 0) === \App\Enums\OrderType::DELIVERY) {
+                    if ($request->has('delivery_fee')) {
+                        $payload['delivery_fee'] = $request->input('delivery_fee');
+                    }
+                    if ($request->has('extra_delivery_fee')) {
+                        $payload['extra_delivery_fee'] = $request->input('extra_delivery_fee');
+                    }
+                    if ($request->has('total')) {
+                        $payload['total'] = $request->input('total');
+                    }
+                    $payload['delivery_zone_id'] = $request->input('delivery_zone_id');
+                    if ($request->has('zone_id')) {
+                        $payload['zone_id'] = $request->input('zone_id');
+                    } elseif ($restaurant?->zone_id) {
+                        $payload['zone_id'] = $restaurant->zone_id;
+                    }
+                }
+
                 $this->frontendOrder = FrontendOrder::create(
                     $payload + [
                         'user_id'          => Auth::user()->id,
                         'status'           => OrderStatus::PENDING,
                         'order_datetime'   => date('Y-m-d H:i:s'),
-                        'preparation_time' => $restaurant->orderSetup?->food_preparation_time
+                        'preparation_time' => $restaurant->orderSetup?->food_preparation_time,
                     ]
                 );
 
@@ -198,6 +217,9 @@ class FrontendOrderService
     {
         try {
             if ($frontendOrder->user_id == Auth::user()->id) {
+                if ((int) $frontendOrder->status === OrderStatus::OUT_FOR_DELIVERY) {
+                    app(DeliveryOtpService::class)->ensure($frontendOrder);
+                }
                 return $frontendOrder->load('orderItems', 'user', 'address', 'restaurant', 'deliveryBoy', 'coupon', 'transaction', 'diningTable');
             }
             return [];
@@ -212,49 +234,6 @@ class FrontendOrderService
      */
     public function cancel(FrontendOrder $frontendOrder, OrderStatusRequest $request): FrontendOrder
     {
-        try {
-            if ($frontendOrder->user_id == Auth::user()->id) {
-                if ($request->status == OrderStatus::CANCELED) {
-                    if ($frontendOrder->status >= OrderStatus::ACCEPT) {
-                        throw new Exception(trans('all.message.order_accept'), 422);
-                    }
-
-                    // Guests can cancel only within the short window (2 minutes).
-                    if ($frontendOrder->order_datetime) {
-                        $expiresAt = \Carbon\Carbon::parse($frontendOrder->order_datetime)
-                            ->addMinutes(FrontendOrder::SCAN_MENU_CANCEL_MINUTES);
-                        if (\Carbon\Carbon::now()->gt($expiresAt)) {
-                            throw new Exception(trans('all.message.order_cancel_window_expired'), 422);
-                        }
-                    }
-
-                    if ($frontendOrder->transaction) {
-                        $paymentService = new PaymentService();
-                        $paymentService->cashBack($frontendOrder, 'credit', rand(111111111111111, 999999999999999));
-                    }
-
-                    $frontendOrder->status = $request->status;
-                    $frontendOrder->save();
-
-                    if (
-                        (int) $frontendOrder->order_type === \App\Enums\OrderType::DINING_TABLE
-                        && $frontendOrder->table_id
-                    ) {
-                        app(WaiterOrderService::class)->releaseTableIfIdle((int) $frontendOrder->table_id);
-                    }
-
-                    OrderPlacedEmail::dispatch(['order_id' => $frontendOrder->id, 'status' => $request->status]);
-                    OrderPlacedSMS::dispatch(['order_id' => $frontendOrder->id, 'status' => $request->status]);
-                    OrderPlacedPushNotification::dispatch(['order_id' => $frontendOrder->id, 'status' => $request->status]);
-                }
-            }
-            return $frontendOrder;
-        } catch (Exception $exception) {
-            Log::info($exception->getMessage());
-            throw new Exception(
-                $exception->getCode() === 422 ? $exception->getMessage() : QueryExceptionLibrary::message($exception),
-                422
-            );
-        }
+        throw new Exception(trans('all.message.order_cannot_be_canceled'), 422);
     }
 }

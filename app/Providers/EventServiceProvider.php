@@ -2,7 +2,16 @@
 
 namespace App\Providers;
 
-
+use App\Events\OrderPlacedSMS;
+use App\Events\OtpRequested;
+use App\Events\RestaurantDeliveryBoyOrderAcceptSMS;
+use App\Events\RestaurantDeliveryBoyOrderPickedSMS;
+use App\Events\RestaurantOrderReceivedSMS;
+use App\Listeners\SendOrderConfirmationSMS;
+use App\Listeners\SendOtpNotification;
+use App\Listeners\SendRestaurantDeliveryBoyOrderAcceptSMS;
+use App\Listeners\SendRestaurantDeliveryBoyOrderPickedSMS;
+use App\Listeners\SendRestaurantOrderSMS;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -17,7 +26,22 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         Registered::class => [
             SendEmailVerificationNotification::class,
-        ]
+        ],
+        OtpRequested::class => [
+            SendOtpNotification::class,
+        ],
+        OrderPlacedSMS::class => [
+            SendOrderConfirmationSMS::class,
+        ],
+        RestaurantOrderReceivedSMS::class => [
+            SendRestaurantOrderSMS::class,
+        ],
+        RestaurantDeliveryBoyOrderAcceptSMS::class => [
+            SendRestaurantDeliveryBoyOrderAcceptSMS::class,
+        ],
+        RestaurantDeliveryBoyOrderPickedSMS::class => [
+            SendRestaurantDeliveryBoyOrderPickedSMS::class,
+        ],
     ];
 
     /**
@@ -29,10 +53,10 @@ class EventServiceProvider extends ServiceProvider
     }
 
     /**
-     * Determine if events and listeners should be automatically discovered.
+     * Discover remaining email/push listeners under app/Listeners.
      */
     public function shouldDiscoverEvents(): bool
     {
-        return false;
+        return true;
     }
 }

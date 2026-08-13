@@ -39,7 +39,11 @@ class AvailableOrderService
 
             $deliveryLocation = Auth::user()?->deliveryLocation;
             if ($deliveryLocation) {
-                return Order::whereIn('status', [OrderStatus::PREPARING, OrderStatus::PREPARED])->where(['delivery_boy_id' => null, 'order_type' => OrderType::DELIVERY, 'delivery_boy_request' => Ask::YES])->where(function ($query) use ($requests) {
+                $riderZoneId = (int) (Auth::user()?->zone_id ?? 0);
+
+                return Order::whereIn('status', [OrderStatus::PREPARING, OrderStatus::PREPARED])->where(['delivery_boy_id' => null, 'order_type' => OrderType::DELIVERY, 'delivery_boy_request' => Ask::YES])->when($riderZoneId > 0, function ($query) use ($riderZoneId) {
+                    $query->where('zone_id', $riderZoneId);
+                })->where(function ($query) use ($requests) {
                     if (isset($requests['from_date']) && isset($requests['to_date'])) {
                         $first_date = Date('Y-m-d', strtotime($requests['from_date']));
                         $last_date  = Date('Y-m-d', strtotime($requests['to_date']));

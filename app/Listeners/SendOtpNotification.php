@@ -31,9 +31,13 @@ class SendOtpNotification
                     $event->info['phone'],
                     trans("all.message.your_code", ['number' => $event->info['token']])
                 );
+                return;
             }
+            Log::warning('OTP SMS not sent: gateway disabled or missing credentials', [
+                'gateway' => $this->gateway,
+            ]);
         } catch (Exception $e) {
-            Log::info($e->getMessage());
+            Log::warning('OTP SMS failed', ['error' => $e->getMessage(), 'gateway' => $this->gateway]);
         }
     }
 }

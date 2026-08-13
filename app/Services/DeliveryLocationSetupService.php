@@ -34,10 +34,22 @@ class DeliveryLocationSetupService
             if(Auth::user()->getRole?->id == Role::DELIVERY_BOY) {
                 $deliveryBoyLocation = DeliveryLocation::where('user_id', Auth::user()->id)->first();
                 if (!blank($deliveryBoyLocation)) {
-                    return tap($deliveryBoyLocation)->update($request->validated());
+                    $location = tap($deliveryBoyLocation)->update($request->validated());
                 } else {
-                    return DeliveryLocation::create($request->validated() + ['user_id' => Auth::user()->id]);
+                    $location = DeliveryLocation::create($request->validated() + ['user_id' => Auth::user()->id]);
                 }
+
+                $user = Auth::user();
+                $zoneId = app(ZoneService::class)->applyDetectedZoneId(
+                    $location->latitude !== null ? (float) $location->latitude : null,
+                    $location->longitude !== null ? (float) $location->longitude : null
+                );
+                if ((int) $user->zone_id !== (int) $zoneId) {
+                    $user->zone_id = $zoneId;
+                    $user->save();
+                }
+
+                return $location;
             } else {
                 Log::info(trans('message.role_exist'));
                 throw new Exception(trans('message.role_exist'), 422);

@@ -18,6 +18,24 @@ class SimpleRestaurantResource extends JsonResource
     {
         return [
             'id'                => $this->id,
+            'zone_id'           => $this->zone_id,
+            'zone'              => $this->whenLoaded('zone', function () {
+                if (!$this->zone) {
+                    return null;
+                }
+                return [
+                    'id'                    => $this->zone->id,
+                    'name'                  => $this->zone->name,
+                    'display_name'          => $this->zone->display_name,
+                    'base_delivery_fee'     => $this->zone->base_delivery_fee,
+                    'min_order_amount'      => $this->zone->min_order_amount,
+                    'free_delivery_above'   => $this->zone->free_delivery_above,
+                    'free_delivery_km'      => $this->zone->free_delivery_km,
+                    'extra_distance_charge' => $this->zone->extra_distance_charge,
+                    'peak_enabled'          => (int) $this->zone->peak_enabled,
+                    'peak_charge'           => $this->zone->peak_charge,
+                ];
+            }),
             'name'              => $this->name,
             'slug'              => $this->slug,
             'thumb'             => $this->image,

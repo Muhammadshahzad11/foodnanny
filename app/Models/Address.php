@@ -12,12 +12,13 @@ class Address extends Model
     use HasModelMeta;
 
     protected $table = "addresses";
-    protected $fillable = ['label', 'address', 'user_id', 'apartment', 'latitude', 'longitude', 'creator_type', 'creator_id', 'editor_type', 'editor_id'];
+    protected $fillable = ['label', 'address', 'user_id', 'zone_id', 'apartment', 'latitude', 'longitude', 'creator_type', 'creator_id', 'editor_type', 'editor_id'];
     protected $casts = [
         'id'           => 'integer',
         'label'        => 'string',
         'address'      => 'string',
         'user_id'      => 'integer',
+        'zone_id'      => 'integer',
         'apartment'    => 'string',
         'latitude'     => 'string',
         'longitude'    => 'string',

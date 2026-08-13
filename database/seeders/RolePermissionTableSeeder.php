@@ -226,5 +226,49 @@ class RolePermissionTableSeeder extends Seeder
                 'kitchen_cancel',
             ])->get());
         }
+
+        $zoneAdmin = Role::find(EnumRole::ZONE_ADMIN);
+        if ($zoneAdmin) {
+            $zoneAdmin->givePermissionTo(Permission::whereIn('name', [
+                'dashboard',
+                'restaurants',
+                'restaurants_create',
+                'restaurants_edit',
+                'restaurants_show',
+                'restaurant-owners',
+                'delivery-zones',
+                'online-orders',
+                'pos',
+                'pos-orders',
+                'items',
+                'items_create',
+                'items_edit',
+                'items_delete',
+                'items_show',
+                'customers',
+                'customers_show',
+                'delivery-boys',
+                'delivery-boys_create',
+                'delivery-boys_edit',
+                'delivery-boys_show',
+                'coupons',
+                'coupons_create',
+                'coupons_edit',
+                'coupons_delete',
+                'coupons_show',
+                'campaigns-and-offers',
+                'sales-report',
+                'items-report',
+                'payouts',
+                'payouts_show',
+                'employees',
+                'employees_create',
+                'employees_edit',
+                'employees_show',
+                'reviews',
+                'reviews_show',
+                'restaurant-settings',
+            ])->get());
+        }
     }
 }

@@ -33,6 +33,25 @@ const locationService = {
         });
     },
 
+    async getCurrentPositionReliable() {
+        try {
+            return await this.getCurrentPosition({
+                enableHighAccuracy: true,
+                timeout: 8000,
+                maximumAge: 300000,
+            });
+        } catch (e) {
+            if (e?.message === "geolocation_unsupported") {
+                throw e;
+            }
+            return await this.getCurrentPosition({
+                enableHighAccuracy: false,
+                timeout: 15000,
+                maximumAge: 300000,
+            });
+        }
+    },
+
     googleComponent(components, type, useShort = false) {
         const match = (components || []).find((c) => c.types?.includes(type));
         if (!match) return "";

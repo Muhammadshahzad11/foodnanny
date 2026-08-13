@@ -18,9 +18,12 @@ class SimpleAdminRestaurantResource extends JsonResource
     {
         return [
             'id'         => $this->id,
+            'zone_id'    => $this->zone_id,
             'name'       => $this->name,
             'email'      => $this->email,
-            'name_email' => $this->name . ' (' . $this->email . ')'
+            'name_email' => $this->name . ' (' . $this->email . ')',
+            'latitude'   => $this->latitude === null ? '' : $this->latitude,
+            'longitude'  => $this->longitude === null ? '' : $this->longitude,
         ];
     }
 }

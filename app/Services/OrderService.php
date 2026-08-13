@@ -75,7 +75,13 @@ class OrderService
             $orderColumn = $request->get('order_column') ?? 'id';
             $orderType   = $request->get('order_by') ?? 'desc';
 
-            return Order::with('transaction', 'orderItems')->where(['active' => Status::ACTIVE])->where(function ($query) use ($requests) {
+            $query = Order::with('transaction', 'orderItems')->where(['active' => Status::ACTIVE]);
+
+            if (($requests['channel'] ?? null) === 'online') {
+                $this->constrainOnlineCustomerOrders($query);
+            }
+
+            return $query->where(function ($query) use ($requests) {
                 if (isset($requests['from_date']) && isset($requests['to_date'])) {
                     $first_date = Date('Y-m-d', strtotime($requests['from_date']));
                     $last_date  = Date('Y-m-d', strtotime($requests['to_date']));
@@ -503,5 +509,27 @@ class OrderService
             DB::rollBack();
             throw new Exception(QueryExceptionLibrary::message($exception), 422);
         }
+    }
+
+    /**
+     * Customer website / app delivery & takeaway only — not POS, dine-in, or waiter.
+     */
+    public function constrainOnlineCustomerOrders($query)
+    {
+        return $query
+            ->where(function ($q) {
+                $q->whereIn('source', [Source::WEB, Source::APP, (string) Source::WEB, (string) Source::APP])
+                    ->orWhereIn('source', ['web', 'app', 'WEB', 'APP']);
+            })
+            ->whereIn('order_type', [OrderType::DELIVERY, OrderType::TAKEAWAY]);
+    }
+
+    public function isOnlineCustomerOrder(Order $order): bool
+    {
+        $source = is_numeric($order->source) ? (int) $order->source : strtolower((string) $order->source);
+        $onlineSource = in_array($source, [Source::WEB, Source::APP, 'web', 'app'], true);
+        $onlineType   = in_array((int) $order->order_type, [OrderType::DELIVERY, OrderType::TAKEAWAY], true);
+
+        return $onlineSource && $onlineType;
     }
 }

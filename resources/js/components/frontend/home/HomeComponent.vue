@@ -18,24 +18,25 @@
                             <div class="relative flex-1 min-w-0 h-12 sm:h-[60px] rounded-full shadow-[0_8px_24px_rgba(15,23,42,0.08)] bg-white border border-[#EFF0F6]">
                                 <button type="button" id="map-current-location"
                                         :title="$t('label.use_current_location') || 'Use current location'"
-                                        :disabled="locating"
+                                        :disabled="gpsBusy"
                                         @click.prevent="useCurrentLocation({navigate: false})"
                                         class="lab-line-gps text-xl flex-shrink-0 text-primary absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 z-[1] hover:scale-110 transition disabled:opacity-40"></button>
                                 <input id="map-autocomplete-input" type="search" v-model="modelLocation"
                                        ref="homeLocationName"
-                                       :placeholder="locating ? ($t('label.detecting_location') || 'Detecting your location…') : $t('label.enter_your_location')"
+                                       @input="onLocationTyped"
+                                       :placeholder="gpsBusy ? ($t('label.detecting_location') || 'Detecting your location…') : $t('label.enter_your_location')"
                                        autocomplete="off"
                                        class="w-full h-full rounded-full bg-transparent outline-none text-sm sm:text-base text-heading placeholder:text-[#A0A3BD] ltr:pl-12 ltr:pr-10 rtl:pr-12 rtl:pl-10">
-                                <button v-if="modelLocation && !locating"
+                                <button v-if="modelLocation"
                                         type="button"
                                         title="Clear location"
                                         @click.prevent="clearLocationInput"
                                         class="lab-fill-close-circle text-lg text-[#A0A3BD] hover:text-danger absolute top-1/2 -translate-y-1/2 ltr:right-3 rtl:left-3 z-[1]"></button>
                             </div>
                             <button type="submit"
-                                    :disabled="!canSearch || locating"
+                                    :disabled="!canSearch || searching"
                                     class="shrink-0 h-12 sm:h-[60px] min-w-[108px] sm:min-w-[128px] px-5 sm:px-7 rounded-full text-sm sm:text-base capitalize font-semibold text-white bg-primary shadow-[0_10px_24px_rgba(11,143,77,0.35)] transition active:scale-[0.97] hover:brightness-110 disabled:opacity-50 disabled:shadow-none disabled:active:scale-100">
-                                <span v-if="locating" class="inline-flex items-center gap-2">
+                                <span v-if="searching" class="inline-flex items-center gap-2">
                                     <span class="h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin"></span>
                                     …
                                 </span>
@@ -208,6 +209,9 @@ export default {
                 isActive: false,
             },
             locating: false,
+            gpsBusy: false,
+            searching: false,
+            gpsAutoCancelled: false,
             locationHint: '',
             modelLocation: null,
             position: {
@@ -239,6 +243,11 @@ export default {
             return;
         }
 
+        const allowAutoGps = !this.commonStore.manual_location_pick;
+        const gpsPromise = allowAutoGps
+            ? this.autoFillCurrentLocation({navigate: true})
+            : Promise.resolve();
+
         this.loading.isActive = true;
         await this.frontendAboutStepsStore.fetch({
             order_column: "sort",
@@ -262,8 +271,7 @@ export default {
         });
 
         await this.initPlacesAutocomplete();
-        // Auto-fill current GPS address into the search box (do not navigate yet).
-        await this.autoFillCurrentLocation();
+        await gpsPromise;
     },
     computed: {
         setting: function () {
@@ -324,6 +332,7 @@ export default {
             };
         },
         clearLocationInput() {
+            this.gpsAutoCancelled = true;
             this.modelLocation = null;
             this.locationHint = '';
             this.position = {
@@ -339,42 +348,76 @@ export default {
                 location: name || 'Current location',
                 latitude: lat,
                 longitude: lng,
-                city: area.city || null,
+                city: area.city || (name ? String(name).split(',')[0].trim() : null),
                 district: area.district || null,
                 state: area.state || null,
             };
             if (!this.commonStore.order_type) {
                 payload.order_type = 5; // Delivery
             }
+            payload.manual_location_pick = false;
             await this.commonStore.update(payload);
             this.$router.push({ name: 'frontend.restaurant' });
         },
-        async autoFillCurrentLocation() {
-            if (String(this.modelLocation || '').trim()) return;
+        onLocationTyped() {
+            this.gpsAutoCancelled = true;
+            this.locationHint = '';
+        },
+        async resolveGpsLocation() {
+            const coords = await locationService.getCurrentPositionReliable();
+            let geo = {
+                name: this.$t('label.current_location') || 'Current location',
+                city: '',
+                district: '',
+                state: '',
+            };
+            try {
+                geo = await locationService.reverseGeocode(coords.lat, coords.lng);
+            } catch (e) {
+                // Coords are enough; address label is optional.
+            }
+            const name = geo.name || 'Current location';
+            if (!this.gpsAutoCancelled) {
+                this.modelLocation = name;
+                this.applyCoords(coords.lat, coords.lng, name, geo);
+            }
+            return {coords, geo: {...geo, name}};
+        },
+        async autoFillCurrentLocation({navigate = true} = {}) {
+            if (this.commonStore.manual_location_pick || this.gpsAutoCancelled) {
+                return;
+            }
+            if (String(this.modelLocation || '').trim() && !navigate) return;
+            this.gpsBusy = true;
             this.locating = true;
             this.locationHint = this.$t('message.detecting_your_location') || 'Detecting your current location…';
             try {
-                const coords = await locationService.getCurrentPosition();
-                const geo = await locationService.reverseGeocode(coords.lat, coords.lng);
-                this.modelLocation = geo.name;
-                this.applyCoords(coords.lat, coords.lng, geo.name, geo);
-                this.locationHint = this.$t('message.location_auto_filled') || 'Current location filled. Edit or tap Search.';
+                const {coords, geo} = await this.resolveGpsLocation();
+                if (this.gpsAutoCancelled || this.commonStore.manual_location_pick) {
+                    return;
+                }
+                this.locationHint = '';
+                if (navigate) {
+                    await this.goToRestaurants(coords.lat, coords.lng, geo.name, geo);
+                }
             } catch (e) {
-                this.locationHint = this.$t('message.allow_location_or_type')
-                    || 'Allow location access, or type your address to search.';
+                if (!this.gpsAutoCancelled) {
+                    this.locationHint = this.$t('message.allow_location_or_type')
+                        || 'Allow location access, or type your address to search.';
+                }
             } finally {
+                this.gpsBusy = false;
                 this.locating = false;
             }
         },
         async useCurrentLocation({navigate = true} = {}) {
+            this.gpsAutoCancelled = false;
+            this.gpsBusy = true;
             this.locating = true;
             this.loading.isActive = navigate;
             this.locationHint = this.$t('message.detecting_your_location') || 'Detecting your current location…';
             try {
-                const coords = await locationService.getCurrentPosition();
-                const geo = await locationService.reverseGeocode(coords.lat, coords.lng);
-                this.modelLocation = geo.name;
-                this.applyCoords(coords.lat, coords.lng, geo.name, geo);
+                const {coords, geo} = await this.resolveGpsLocation();
                 this.locationHint = '';
                 if (navigate) {
                     await this.goToRestaurants(coords.lat, coords.lng, geo.name, geo);
@@ -387,13 +430,14 @@ export default {
                 this.locationHint = this.$t('message.allow_location_or_type')
                     || 'Allow location access, or type your address to search.';
             } finally {
+                this.gpsBusy = false;
                 this.locating = false;
                 this.loading.isActive = false;
             }
         },
         async searchLocation() {
-            if (this.locating) return;
-            this.locating = true;
+            this.gpsAutoCancelled = true;
+            this.searching = true;
             this.loading.isActive = true;
             try {
                 const typed = String(this.modelLocation || '').trim();
@@ -430,6 +474,7 @@ export default {
             } catch (e) {
                 alertService.error('Location not found. Try another address or use current location.');
             } finally {
+                this.searching = false;
                 this.locating = false;
                 this.loading.isActive = false;
             }

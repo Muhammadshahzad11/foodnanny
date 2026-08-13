@@ -11,6 +11,8 @@ use App\Http\Controllers\Frontend\ManifestController;
 use App\Http\Controllers\Admin\TaxController;
 use App\Http\Controllers\Admin\PrinterController;
 use App\Http\Controllers\Admin\KitchenStationController;
+use App\Http\Controllers\Admin\RestaurantDeliveryZoneController;
+use App\Http\Controllers\Admin\ZoneController;
 use App\Http\Controllers\Admin\ItemController;
 use App\Http\Controllers\Admin\AiController;
 use App\Http\Controllers\Admin\MailController;
@@ -553,6 +555,18 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::post('/approve/{restaurant}', [RestaurantController::class, 'approve']);
     });
 
+    Route::prefix('delivery-zone')->name('delivery-zone.')->group(function () {
+        Route::get('/', [ZoneController::class, 'index']);
+        Route::get('/show/{zone}', [ZoneController::class, 'show']);
+        Route::post('/', [ZoneController::class, 'store']);
+        Route::post('/update/{zone}', [ZoneController::class, 'update']);
+        Route::post('/deactivate/{zone}', [ZoneController::class, 'deactivate']);
+        Route::post('/{zone}/assign-restaurants', [ZoneController::class, 'assignRestaurants']);
+        Route::post('/{zone}/assign-admin', [ZoneController::class, 'assignAdmin']);
+        Route::post('/{zone}/assign-delivery-boys', [ZoneController::class, 'assignDeliveryBoys']);
+        Route::delete('/{zone}', [ZoneController::class, 'destroy']);
+    });
+
     Route::prefix('payout')->name('payout.')->group(function () {
         Route::get('/', [PayoutController::class, 'index']);
         Route::post('/', [PayoutController::class, 'store']);
@@ -625,7 +639,7 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::get('/', [ActiveOrderController::class, 'index']);
         Route::get('/show/{order}', [ActiveOrderController::class, 'show']);
         Route::get('/export', [ActiveOrderController::class, 'export']);
-        Route::get('/change-status/{order}', [ActiveOrderController::class, 'changeStatus']);
+        Route::match(['get', 'post'], '/change-status/{order}', [ActiveOrderController::class, 'changeStatus']);
         Route::get('/received-status/{order}', [ActiveOrderController::class, 'receivedStatus']);
     });
 

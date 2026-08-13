@@ -38,6 +38,8 @@ class OrderResource extends JsonResource
             'order_type'                  => $this->order_type,
             'order_datetime'              => AppLibrary::datetime($this->order_datetime),
             'status'                      => $this->status,
+            'requires_delivery_otp'       => (int) $this->order_type === \App\Enums\OrderType::DELIVERY
+                && (int) $this->status === \App\Enums\OrderStatus::OUT_FOR_DELIVERY,
             'is_advance_order'            => $this->is_advance_order,
             'status_name'                 => trans('order_status.' . $this->status),
             'customer'                    => new UserResource($this->user),

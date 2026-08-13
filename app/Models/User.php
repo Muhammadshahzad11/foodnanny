@@ -39,6 +39,7 @@ class User extends Authenticatable implements HasMedia
         'username',
         'phone',
         'restaurant_id',
+        'zone_id',
         'country_code',
         'is_guest',
         'status',
@@ -75,6 +76,7 @@ class User extends Authenticatable implements HasMedia
         'username'             => 'string',
         'phone'                => 'string',
         'restaurant_id'        => 'integer',
+        'zone_id'              => 'integer',
         'country_code'         => 'string',
         'is_guest'             => 'integer',
         'status'               => 'integer',
@@ -101,6 +103,11 @@ class User extends Authenticatable implements HasMedia
     public function addresses(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Address::class);
+    }
+
+    public function zone(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Zone::class)->withoutGlobalScopes();
     }
 
     public function getFirstNameAttribute(): string

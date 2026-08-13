@@ -6,10 +6,13 @@ use App\Enums\Ask;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentGateway;
+use App\Enums\Role as EnumRole;
 use App\Libraries\AppLibrary;
+use App\Services\DeliveryOtpService;
 use Carbon\Carbon;
 use Dipokhalder\Settings\Facades\Settings;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Auth;
 
 class OrderDetailsResource extends JsonResource
 {
@@ -81,9 +84,12 @@ class OrderDetailsResource extends JsonResource
             'status_name'                 => trans('order_status.' . $this->status),
             'reason'                      => $this->reason,
             'is_scan_menu_order'          => $this->resource->isScanMenuOrder(),
-            'cancel_window_seconds'       => $this->resource::SCAN_MENU_CANCEL_MINUTES * 60,
-            'cancel_expires_at'           => $this->cancelExpiresAt(),
-            'can_cancel'                  => $this->customerCanCancel(),
+            'cancel_window_seconds'       => 0,
+            'cancel_expires_at'           => null,
+            'can_cancel'                  => false,
+            'requires_delivery_otp'       => $this->requiresDeliveryOtp(),
+            'delivery_otp'                => $this->visibleDeliveryOtp(),
+            'delivery_otp_length'         => DeliveryOtpService::LENGTH,
             'updated_at'                  => AppLibrary::datetime($this->updated_at),
             'updated_at_iso'              => optional($this->updated_at)?->toIso8601String(),
             'restaurant_review_status'    => $this->restaurantReviewStatus(),
@@ -141,30 +147,28 @@ class OrderDetailsResource extends JsonResource
         return 'OPEN';
     }
 
-    private function cancelExpiresAt(): ?string
+    private function requiresDeliveryOtp(): bool
     {
-        if (!$this->order_datetime || (int) $this->status !== OrderStatus::PENDING) {
+        return (int) $this->order_type === OrderType::DELIVERY
+            && (int) $this->status === OrderStatus::OUT_FOR_DELIVERY;
+    }
+
+    private function visibleDeliveryOtp(): ?string
+    {
+        if (!$this->requiresDeliveryOtp() || blank($this->delivery_otp)) {
             return null;
         }
 
-        return Carbon::parse($this->order_datetime)
-            ->addMinutes($this->resource::SCAN_MENU_CANCEL_MINUTES)
-            ->toIso8601String();
-    }
-
-    private function customerCanCancel(): bool
-    {
-        if ((int) $this->status !== OrderStatus::PENDING) {
-            return false;
+        $user = Auth::user();
+        if (!$user) {
+            return null;
         }
 
-        if (!$this->order_datetime) {
-            return false;
+        if ((int) ($user->myrole ?? 0) === EnumRole::DELIVERY_BOY) {
+            return null;
         }
 
-        return Carbon::now()->lte(
-            Carbon::parse($this->order_datetime)->addMinutes($this->resource::SCAN_MENU_CANCEL_MINUTES)
-        );
+        return (string) $this->delivery_otp;
     }
 
     private function restaurantReviewStatus(): bool

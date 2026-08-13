@@ -7,6 +7,7 @@ use Exception;
 use Carbon\Carbon;
 use App\Enums\OtpType;
 use App\Events\OtpRequested;
+use App\Models\Restaurant;
 use Illuminate\Http\Request;
 use App\Models\OneTimePassword;
 use Illuminate\Support\Facades\DB;
@@ -159,6 +160,55 @@ class OtpManagerService
             Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);
         }
+    }
+
+    /**
+     * Restaurant-operation OTPs go to the phone on Restaurant Settings → My Restaurant.
+     * Falls back to the restaurant owner's user phone if the restaurant number is empty.
+     *
+     * @return array{country_code: string, phone: string}
+     * @throws Exception
+     */
+    public function resolveRestaurantSmsRecipient(?int $restaurantId): array
+    {
+        $restaurant = $restaurantId ? Restaurant::query()->with('user')->find($restaurantId) : null;
+
+        if ($restaurant && !blank($restaurant->phone)) {
+            return [
+                'country_code' => (string) ($restaurant->country_code ?: '91'),
+                'phone'        => (string) $restaurant->phone,
+            ];
+        }
+
+        $owner = $restaurant?->user;
+        if ($owner && !blank($owner->phone)) {
+            return [
+                'country_code' => (string) ($owner->country_code ?: '91'),
+                'phone'        => (string) $owner->phone,
+            ];
+        }
+
+        throw new Exception(
+            'Set a phone number in Restaurant Settings → My Restaurant so the owner can receive OTPs.',
+            422
+        );
+    }
+
+    /**
+     * Send an already-issued OTP over the live SMS gateway (2Factor).
+     */
+    public function dispatchSms(string $countryCode, string $phone, string $token): void
+    {
+        OtpRequested::dispatch([
+            'phone' => $phone,
+            'code'  => $countryCode,
+            'token' => $token,
+        ]);
+    }
+
+    public static function shouldExposeOtp(): bool
+    {
+        return filter_var(env('SHOW_OTP', false), FILTER_VALIDATE_BOOLEAN);
     }
 
 }

@@ -12,6 +12,7 @@ use App\Http\Requests\OrderStatusRequest;
 use App\Http\Requests\PaymentStatusRequest;
 use App\Http\Resources\ActiveOrderResource;
 use App\Http\Resources\OrderDetailsResource;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Routing\Controllers\HasMiddleware;
 
@@ -63,10 +64,11 @@ class ActiveOrderController extends AdminController implements HasMiddleware
         }
     }
 
-    public function changeStatus(Order $order): \Illuminate\Http\Response | OrderDetailsResource | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
+    public function changeStatus(Request $request, Order $order): \Illuminate\Http\Response | OrderDetailsResource | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
-            return new OrderDetailsResource($this->activeOrderService->changeStatus($order));
+            $otp = (string) ($request->input('delivery_otp') ?? $request->query('delivery_otp') ?? '');
+            return new OrderDetailsResource($this->activeOrderService->changeStatus($order, $otp));
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
         }

@@ -36,8 +36,7 @@ class GuestSignupController extends Controller
 
             if (Settings::group('site')->get('site_phone_verification') == Activity::ENABLE) {
                 $otp = $this->otpManagerService->phoneOTP($request);
-                // Temporary: expose OTP until SMS gateway credentials are configured.
-                if (filter_var(env('SHOW_OTP', true), FILTER_VALIDATE_BOOLEAN)) {
+                if (OtpManagerService::shouldExposeOtp()) {
                     $payload['otp'] = $otp;
                 }
             }

@@ -28,6 +28,7 @@ class RoleService
         EnumsRole::CHEF,
         EnumsRole::CASHIER,
         EnumsRole::MANAGER,
+        EnumsRole::ZONE_ADMIN,
     ];
 
     /**

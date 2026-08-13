@@ -268,7 +268,8 @@ export default {
                     order_column: 'id',
                     order_by: "desc",
                     order_serial_no: "",
-                    excepts: orderTypeEnum.POS,
+                    channel: 'online',
+                    excepts: orderTypeEnum.POS + '|' + orderTypeEnum.DINING_TABLE,
                     status: null,
                     from_date: "",
                     to_date: "",
@@ -471,7 +472,8 @@ export default {
             this.props.search.order_by        = "desc";
             this.props.search.order_serial_no = "";
             this.props.search.status          = null;
-            this.props.search.excepts         = orderTypeEnum.POS;
+            this.props.search.channel         = 'online';
+            this.props.search.excepts         = orderTypeEnum.POS + '|' + orderTypeEnum.DINING_TABLE;
             this.props.search.from_date       = "";
             this.props.search.to_date         = "";
             this.modelValue                   = null;

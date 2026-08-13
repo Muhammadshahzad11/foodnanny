@@ -149,18 +149,10 @@ export default {
     },
 
     /**
-     * Temporary OTP popup until SMS credentials are configured.
-     * Remove or gate this when real SMS delivery is enabled.
+     * Dummy OTP popup is disabled. Live OTP is sent by 2Factor SMS.
      */
     showOtp: function (otp) {
-        if (!otp) {
-            return Promise.resolve(false);
-        }
-        return VueSimpleAlert.alert(
-            `Your OTP is: ${otp}\n\nTemporary popup — SMS gateway credentials are not configured yet.`,
-            'OTP Code',
-            'info'
-        );
+        return Promise.resolve(false);
     },
 
     successFlip: function (status = null, message = "", position = "top-right") {

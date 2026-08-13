@@ -15,11 +15,22 @@ class RestaurantScope implements Scope
 
     public function apply(Builder $builder, Model $model): void
     {
-        if (!App::runningInConsole() && Auth::check()) {
-            if($this->restaurant() > 0) {
-                $field = sprintf('%s.%s', $builder->getQuery()->from, 'restaurant_id');
-                $builder->where($field, '=', $this->restaurant());
-            }
+        if (App::runningInConsole() || !Auth::check()) {
+            return;
+        }
+
+        if ($this->restaurant() > 0) {
+            $field = sprintf('%s.%s', $builder->getQuery()->from, 'restaurant_id');
+            $builder->where($field, '=', $this->restaurant());
+            return;
+        }
+
+        $zoneId = $this->zone();
+        if ($zoneId > 0) {
+            $field = sprintf('%s.%s', $builder->getQuery()->from, 'restaurant_id');
+            $builder->whereIn($field, function ($query) use ($zoneId) {
+                $query->select('id')->from('restaurants')->where('zone_id', $zoneId);
+            });
         }
     }
 }

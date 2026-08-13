@@ -59,7 +59,7 @@ class RestaurantService
             $orderColumn = $request->get('order_column') ?? 'id';
             $orderType   = $request->get('order_type') ?? 'desc';
 
-            return Restaurant::with('user', 'cuisines')->where(function ($query) use ($requests) {
+            return Restaurant::with('user', 'cuisines', 'zone')->where(function ($query) use ($requests) {
                 foreach ($requests as $key => $request) {
                     if (in_array($key, $this->restaurantFilter)) {
                         if ($key == "cuisine_id") {
@@ -89,7 +89,16 @@ class RestaurantService
     {
         try {
             DB::transaction(function () use ($request) {
-                $this->restaurant = Restaurant::create($request->validated() + ['slug' => Str::slug($request->name), 'apply' => Apply::ADMIN, 'terms_and_conditions' => Ask::YES]);
+                $payload = $request->validated() + ['slug' => Str::slug($request->name), 'apply' => Apply::ADMIN, 'terms_and_conditions' => Ask::YES];
+                if ((int) (Auth::user()?->myrole ?? 0) === EnumRole::ZONE_ADMIN && (int) (Auth::user()?->zone_id ?? 0) > 0) {
+                    $payload['zone_id'] = (int) Auth::user()->zone_id;
+                } else {
+                    $payload['zone_id'] = app(ZoneService::class)->applyDetectedZoneId(
+                        isset($payload['latitude']) ? (float) $payload['latitude'] : null,
+                        isset($payload['longitude']) ? (float) $payload['longitude'] : null
+                    );
+                }
+                $this->restaurant = Restaurant::create($payload);
                 OrderSetup::create([
                     'restaurant_id'                => $this->restaurant->id,
                     'food_preparation_time'        => 30,
@@ -133,6 +142,7 @@ class RestaurantService
                         'username'             => $this->username($request->email),
                         'password'             => bcrypt($request->password),
                         'restaurant_id'        => $restaurant->id,
+                        'zone_id'              => $restaurant->zone_id,
                         'email_verified_at'    => now(),
                         'status'               => Status::ACTIVE,
                         'country_code'         => $request->country_code,
@@ -148,6 +158,7 @@ class RestaurantService
                     $user->email        = $request->email;
                     $user->phone        = $request->phone;
                     $user->country_code = $request->country_code;
+                    $user->zone_id      = $restaurant->zone_id;
                     if ($request->password) {
                         $user->password = bcrypt($request->password);
                     }
@@ -170,6 +181,16 @@ class RestaurantService
         try {
             DB::transaction(function () use ($request, $restaurant) {
                 $this->restaurant = tap($restaurant)->update($request->validated() + ['slug' => Str::slug($request->name)]);
+                if ((int) (Auth::user()?->myrole ?? 0) !== EnumRole::ZONE_ADMIN) {
+                    $zoneId = app(ZoneService::class)->applyDetectedZoneId(
+                        $this->restaurant->latitude !== null ? (float) $this->restaurant->latitude : null,
+                        $this->restaurant->longitude !== null ? (float) $this->restaurant->longitude : null
+                    );
+                    if ((int) $this->restaurant->zone_id !== (int) $zoneId) {
+                        $this->restaurant->zone_id = $zoneId;
+                        $this->restaurant->save();
+                    }
+                }
                 if ($request->cuisine_id) {
                     $restaurant->cuisines()->delete();
                     foreach ($request->cuisine_id as $cuisine) {
@@ -186,7 +207,8 @@ class RestaurantService
                 // Keep owner login access in sync with restaurant platform status
                 if ($this->restaurant->user_id) {
                     User::where('id', $this->restaurant->user_id)->update([
-                        'status' => (int)$request->status === Status::ACTIVE ? Status::ACTIVE : Status::INACTIVE,
+                        'zone_id' => $this->restaurant->zone_id,
+                        'status'  => (int) $request->status === Status::ACTIVE ? Status::ACTIVE : Status::INACTIVE,
                     ]);
                 }
             });
@@ -337,8 +359,9 @@ class RestaurantService
             $radius   = (float) (Settings::group('site')->get('site_restaurant_search_radius') ?: 50);
 
             $query = Restaurant::query()
+                ->withoutGlobalScope(\App\Models\Scopes\ZoneScope::class)
                 ->where(['current_status' => Status::ACTIVE])
-                ->with('orderSetup', 'timeSlots')
+                ->with('orderSetup', 'timeSlots', 'activeDeliveryZones', 'zone')
                 ->withReviewRating()
                 ->with(['favorite' => fn($q) => $q->where('user_id', Auth::check() ? Auth::user()->id : 0)])
                 ->whereHas('orderSetup', function ($query) use ($requests) {
@@ -381,6 +404,14 @@ class RestaurantService
                 $query->orderBy($orderColumn, $orderType);
             }
 
+            $isDelivery  = isset($requests['delivery_order_type']) && (int) $requests['delivery_order_type'] === OrderType::DELIVERY;
+            $zoneService = app(ZoneService::class);
+            $zoneService->constrainRestaurants($query, $lat, $lng, [
+                'city'     => $city,
+                'district' => $district,
+                'state'    => $state,
+            ]);
+
             return $query
                 ->when(isset($requests['name']) && !blank($requests['name']), function ($q) use ($requests) {
                     $q->where(function ($inner) use ($requests) {
@@ -393,11 +424,48 @@ class RestaurantService
                 ->when(isset($requests['cuisine_id']) && $requests['cuisine_id'] > 0, function ($q) use ($requests) {
                     $q->whereHas('cuisines', fn($sub) => $sub->where(['cuisine_id' => $requests['cuisine_id']]));
                 })
-                ->$method($methodValue);
+                ->$method($methodValue)
+                ->when(
+                    $isDelivery && !$zoneService->hasActiveZones(),
+                    function ($results) use ($lat, $lng) {
+                        return $this->filterRestaurantsByPlatformZone($results, $lat, $lng);
+                    }
+                );
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);
         }
+    }
+
+    /**
+     * Legacy per-restaurant polygons. Used only when no platform zones exist.
+     */
+    protected function filterRestaurantsByPlatformZone($results, float $lat, float $lng)
+    {
+        $filter = function ($restaurant) use ($lat, $lng) {
+            $zones = $restaurant->activeDeliveryZones ?? collect();
+            if ($zones->isEmpty()) {
+                return true;
+            }
+            foreach ($zones as $zone) {
+                $polygon = is_array($zone->polygon) ? $zone->polygon : [];
+                if (\App\Libraries\GeoPolygon::contains($lat, $lng, $polygon)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        if ($results instanceof \Illuminate\Pagination\AbstractPaginator) {
+            $results->setCollection($results->getCollection()->filter($filter)->values());
+            return $results;
+        }
+
+        if ($results instanceof \Illuminate\Support\Collection) {
+            return $results->filter($filter)->values();
+        }
+
+        return $results;
     }
 
     /**
@@ -491,7 +559,7 @@ class RestaurantService
     public function showWithDetails(Restaurant $restaurant, Request $request)
     {
         try {
-            return Restaurant::with('media', 'cuisinesWithCuisineRelation', 'orderSetup', 'reviews', 'timeSlots', 'favorite')->withDistance($request)->with(['reviews' => fn($query) => $query->with('user')])->withReviewRating()->with(['favorite' => fn($query) => $query->where('user_id', Auth::check() ? Auth::user()->id : 0)])->where(['id' => $restaurant->id, 'status' => Status::ACTIVE])->first();
+            return Restaurant::withoutGlobalScope(\App\Models\Scopes\ZoneScope::class)->with('media', 'cuisinesWithCuisineRelation', 'orderSetup', 'reviews', 'timeSlots', 'favorite', 'activeDeliveryZones', 'zone')->withDistance($request)->with(['reviews' => fn($query) => $query->with('user')])->withReviewRating()->with(['favorite' => fn($query) => $query->where('user_id', Auth::check() ? Auth::user()->id : 0)])->where(['id' => $restaurant->id, 'status' => Status::ACTIVE])->first();
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);

@@ -93,6 +93,13 @@ class RoleTableSeeder extends Seeder
                 'created_at' => $now,
                 'updated_at' => $now,
             ],
+            [
+                'id'         => EnumRole::ZONE_ADMIN,
+                'name'       => 'Zone Admin',
+                'guard_name' => 'sanctum',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
         ]);
     }
 }

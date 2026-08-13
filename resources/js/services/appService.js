@@ -213,6 +213,93 @@ export default {
         distance           = distance * 1.609344
         return distance;
     },
+    /**
+     * Ray-casting point-in-polygon. polygon: [{lat,lng}, ...]
+     */
+    pointInPolygon: function (lat, lng, polygon) {
+        if (!Array.isArray(polygon) || polygon.length < 3) {
+            return false;
+        }
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const yi = parseFloat(polygon[i].lng ?? polygon[i].longitude);
+            const xi = parseFloat(polygon[i].lat ?? polygon[i].latitude);
+            const yj = parseFloat(polygon[j].lng ?? polygon[j].longitude);
+            const xj = parseFloat(polygon[j].lat ?? polygon[j].latitude);
+            const intersect = ((yi > lng) !== (yj > lng))
+                && (lat < ((xj - xi) * (lng - yi) / ((yj - yi) || 1e-12) + xi));
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    },
+    findMatchingDeliveryZone: function (lat, lng, zones) {
+        if (!Array.isArray(zones) || !zones.length) {
+            return null;
+        }
+        const sorted = [...zones].sort((a, b) => (a.id || 0) - (b.id || 0));
+        for (const zone of sorted) {
+            if (this.pointInPolygon(lat, lng, zone.polygon || [])) {
+                return zone;
+            }
+        }
+        return null;
+    },
+    calculateZoneDeliveryFee: function (zone, distanceKm, setting) {
+        const additional = parseFloat(zone.additional_delivery_charge ?? 0) || 0;
+        let min = zone.min_delivery_charge != null && zone.min_delivery_charge !== ''
+            ? parseFloat(zone.min_delivery_charge) : null;
+        let max = zone.max_delivery_charge != null && zone.max_delivery_charge !== ''
+            ? parseFloat(zone.max_delivery_charge) : null;
+        let perKm = zone.charge_per_km != null && zone.charge_per_km !== ''
+            ? parseFloat(zone.charge_per_km) : null;
+
+        const freeKm = parseFloat(setting.delivery_setup_free_delivery_kilometer || 0);
+        const basic = parseFloat(setting.delivery_setup_basic_delivery_fee || 0);
+        const globalPerKm = parseFloat(setting.delivery_setup_charge_per_kilo || 0);
+
+        if (perKm === null) perKm = globalPerKm;
+        if (min === null) min = basic;
+
+        const chargeType = parseInt(zone.charge_type, 10);
+        let fee;
+        if (chargeType === 5) {
+            fee = min + additional;
+        } else {
+            if (distanceKm > freeKm) {
+                fee = ((distanceKm - freeKm) * perKm) + min + additional;
+            } else {
+                fee = min + additional;
+            }
+            if (chargeType === 15 || max !== null) {
+                if (min !== null) fee = Math.max(fee, min + additional);
+                if (max !== null) fee = Math.min(fee, max);
+            }
+        }
+        return Math.max(0, fee);
+    },
+    calculatePlatformZoneFee: function (zone, distanceKm, subtotal) {
+        if (!zone) {
+            return 0;
+        }
+        const minOrder = parseFloat(zone.min_order_amount || 0);
+        if (minOrder > 0 && parseFloat(subtotal || 0) < minOrder) {
+            return null;
+        }
+        const freeAbove = parseFloat(zone.free_delivery_above || 0);
+        if (freeAbove > 0 && parseFloat(subtotal || 0) >= freeAbove) {
+            return 0;
+        }
+        let fee = parseFloat(zone.base_delivery_fee || 0);
+        const freeKm = parseFloat(zone.free_delivery_km || 0);
+        const perKm = parseFloat(zone.extra_distance_charge || 0);
+        if (distanceKm > freeKm && perKm > 0) {
+            fee += (distanceKm - freeKm) * perKm;
+        }
+        if (parseInt(zone.peak_enabled, 10) === 1) {
+            fee += parseFloat(zone.peak_charge || 0);
+        }
+        return Math.max(0, fee);
+    },
     campaignStatusClass: function (status) {
         if (status === campaignStatusEnum.PENDING) {
             return "db-table-badge text-orange-500 bg-orange-100";

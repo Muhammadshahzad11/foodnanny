@@ -21,7 +21,10 @@ class ActiveOrderResource extends JsonResource
             'order_serial_no'    => $this->order_serial_no,
             'order_datetime'     => AppLibrary::datetime($this->order_datetime),
             'total_amount_price' => AppLibrary::flatAmountFormat($this->total),
-            'status'             => $this->status,
+            'status'                  => $this->status,
+            'requires_delivery_otp'   => (int) $this->order_type === \App\Enums\OrderType::DELIVERY
+                && (int) $this->status === \App\Enums\OrderStatus::OUT_FOR_DELIVERY,
+            'delivery_otp_length'     => \App\Services\DeliveryOtpService::LENGTH,
         ];
     }
 }

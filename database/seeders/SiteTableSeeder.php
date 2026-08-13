@@ -43,7 +43,7 @@ class SiteTableSeeder extends Seeder
             'site_online_payment_gateway'                             => $envService->getValue('DEMO') ? Activity::ENABLE : Activity::DISABLE,
             'site_rider_tip'                                          => Activity::ENABLE,
             'site_cutlery'                                            => Activity::ENABLE,
-            'site_default_sms_gateway'                                => 1,
+            'site_default_sms_gateway'                                => 5,
             'site_default_storage'                                    => 1,
             'site_restaurant_search_radius'                           => 50000,
             'site_delivery_boy_order_radius'                          => 50000,

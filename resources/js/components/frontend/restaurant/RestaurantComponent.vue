@@ -19,7 +19,7 @@
         </div>
     </section>
 
-    <section v-if="search === null && (singleOffer && singleRestaurants.length > 0)" class="mb-5 sm:mb-8">
+    <section v-if="!outOfServiceArea && search === null && (singleOffer && singleRestaurants.length > 0)" class="mb-5 sm:mb-8">
         <div v-if="singleOfferShowHide" class="container">
             <div class="p-4 sm:p-6 rounded-2xl bg-primary/5">
                 <div class="mb-4 sm:-mb-11 flex items-center gap-3">
@@ -48,7 +48,7 @@
         </div>
     </section>
 
-    <section v-if="search === null && offerAndCampaigns.length > 0" class="mb-9 sm:mb-12">
+    <section v-if="!outOfServiceArea && search === null && offerAndCampaigns.length > 0" class="mb-9 sm:mb-12">
         <div v-if="offerAndCampaignsShowHide" class="container">
             <Swiper :dir="displayMode" :loop="false" :speed="1000" :navigation="true" :modules="modules"
                     :breakpoints="offerBreakPoints" class="middle-navigate">
@@ -112,10 +112,47 @@
         <div class="container">
             <div class="w-full py-10 flex flex-col items-center justify-center text-center">
                 <img class="w-40" :src="setting.image_restaurant" alt="empty">
-                <h3 class="text-lg text-gray-300">{{ $t('message.not_the_restaurant_yet') }}</h3>
+                <h3 class="text-lg font-semibold text-heading mb-2">
+                    {{ outOfServiceArea ? $t('label.service_unavailable') : $t('message.not_the_restaurant_yet') }}
+                </h3>
+                <p class="text-sm text-gray-400 max-w-md">
+                    {{ outOfServiceArea ? $t('message.not_available_in_your_location') : '' }}
+                </p>
             </div>
         </div>
     </section>
+
+    <Teleport to="body">
+        <div id="service-unavailable-modal"
+             :class="showServiceModal ? 'modal-active' : ''"
+             class="fixed inset-0 z-[120] p-3 w-screen h-dvh overflow-y-auto bg-black/55 transition-all duration-300 opacity-0 invisible flex items-center justify-center">
+            <div class="max-w-md w-full rounded-2xl mx-auto bg-white shadow-2xl transition-all duration-300">
+                <div class="flex items-center justify-between gap-4 py-4 px-6 border-b border-gray-100">
+                    <h3 class="text-lg font-semibold capitalize text-heading">{{ $t('label.service_unavailable') }}</h3>
+                    <button type="button" @click.prevent="closeServiceUnavailableModal"
+                            class="lab-line-circle-cross text-lg text-danger"></button>
+                </div>
+                <div class="px-6 pt-6 pb-7 text-center">
+                    <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                        <i class="lab-line-map text-2xl text-primary"></i>
+                    </div>
+                    <p class="text-sm text-paragraph mb-6 leading-relaxed">
+                        {{ outOfServiceMessage || $t('message.not_available_in_your_location') }}
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button type="button" @click.prevent="changeServiceLocation"
+                                class="flex-1 h-12 rounded-full border border-primary/20 bg-primary/5 text-primary text-sm font-medium capitalize hover:bg-primary/10 transition">
+                            {{ $t('button.change_location') }}
+                        </button>
+                        <button type="button" @click.prevent="closeServiceUnavailableModal"
+                                class="flex-1 h-12 rounded-full bg-primary text-white text-sm font-medium capitalize hover:brightness-110 transition">
+                            {{ $t('button.ok') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 </template>
 
 <script>
@@ -137,6 +174,7 @@ import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
 import {useFrontendOfferStore} from "../../../stores/frontendOffer.js";
 import {useFrontendCampaignStore} from "../../../stores/frontendCampaign.js";
 import TrackOrderComponent from "../components/TrackOrderComponent.vue";
+import {useModal} from "../../../composables/modal.js";
 
 
 export default {
@@ -156,6 +194,7 @@ export default {
         const frontendCuisineStore    = useFrontendCuisineStore();
         const frontendCampaignStore   = useFrontendCampaignStore();
         const frontendRestaurantStore = useFrontendRestaurantStore();
+        const {openModal, closeModal} = useModal();
 
         return {
             commonStore,
@@ -164,6 +203,8 @@ export default {
             frontendCuisineStore,
             frontendCampaignStore,
             frontendRestaurantStore,
+            openModal,
+            closeModal,
             modules: [Navigation],
         }
     },
@@ -206,6 +247,10 @@ export default {
                 640: {slidesPerView: 2, spaceBetween: 24},
                 768: {slidesPerView: 3, spaceBetween: 24}
             },
+            outOfServiceArea: false,
+            outOfServiceAlertKey: null,
+            outOfServiceMessage: '',
+            showServiceModal: false,
             form: {
                 paginate: 1,
                 page: 1,
@@ -307,8 +352,9 @@ export default {
             if (this.form.latitude && this.form.longitude) {
                 this.frontendRestaurantStore.fetch(this.form).then(res => {
                     this.mainLoading.isActive = false;
-                    this.totalRestaurant      = res.data.meta.total;
-                    this.lastPage             = res.data.meta.last_page;
+                    this.handleServiceArea(res);
+                    this.totalRestaurant      = res.data.meta?.total ?? res.data.data?.length ?? 0;
+                    this.lastPage             = res.data.meta?.last_page ?? 1;
 
                     for (let i = 0; i < res.data.data.length; i++) {
                         if (res.data.data[i].status === statusEnum.ACTIVE && res.data.data[i].availability === availabilityEnum.OPEN) {
@@ -323,7 +369,7 @@ export default {
                         }
                     }
 
-                    if (this.form.page < res.data.meta.last_page) {
+                    if (this.form.page < this.lastPage) {
                         this.form.page++;
                     }
                     this.autoCurl();
@@ -392,6 +438,39 @@ export default {
                     });
                 }
             }).catch();
+        },
+        handleServiceArea: function (res) {
+            const total = res.data.meta?.total ?? res.data.data?.length ?? 0;
+            const filteredEmpty = total === 0 && !this.form.name && !this.form.cuisine_id;
+            const out = !!res.data.out_of_service_area || filteredEmpty;
+            this.outOfServiceArea = out;
+            if (!out) {
+                this.outOfServiceAlertKey = null;
+                this.outOfServiceMessage = '';
+                this.closeServiceUnavailableModal();
+                return;
+            }
+            this.offerAndCampaigns = [];
+            this.frontendOfferStore.singleRestaurants = [];
+            this.frontendOfferStore.single = {};
+            this.outOfServiceMessage = res.data.message || this.$t('message.not_available_in_your_location');
+            const key = `${this.form.latitude},${this.form.longitude},${this.form.delivery_order_type}`;
+            if (this.outOfServiceAlertKey === key && this.showServiceModal) {
+                return;
+            }
+            this.outOfServiceAlertKey = key;
+            this.showServiceModal = true;
+            document.body?.classList.add('overflow-hidden');
+        },
+        closeServiceUnavailableModal: function () {
+            this.showServiceModal = false;
+            this.closeModal('service-unavailable-modal');
+            document.body?.classList.remove('overflow-hidden');
+        },
+        changeServiceLocation: function () {
+            this.closeServiceUnavailableModal();
+            this.commonStore.clearLocation();
+            this.$router.push({name: 'frontend.home'});
         },
         autoCurl: function () {
             if (this.activeRestaurants.length >= this.form.per_page || this.form.page === this.lastPage) {

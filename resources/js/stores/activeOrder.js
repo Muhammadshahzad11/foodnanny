@@ -60,7 +60,9 @@ export const useActiveOrderStore = defineStore('activeOrder', {
         },
         changeStatus: function (payload) {
             return new Promise((resolve, reject) => {
-                axios.get(`admin/active-order/change-status/${payload}`).then((res) => {
+                const id = typeof payload === 'object' ? payload.id : payload;
+                const otp = typeof payload === 'object' ? (payload.delivery_otp || '') : '';
+                axios.post(`admin/active-order/change-status/${id}`, { delivery_otp: otp }).then((res) => {
                     this.show = res.data.data;
                     resolve(res);
                 }).catch((err) => {

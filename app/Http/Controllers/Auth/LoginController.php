@@ -137,7 +137,7 @@ class LoginController extends Controller
             ];
 
             $otp = $this->otpManagerService->phoneOTP($request);
-            if (filter_var(env('SHOW_OTP', true), FILTER_VALIDATE_BOOLEAN)) {
+            if (OtpManagerService::shouldExposeOtp()) {
                 $payload['otp'] = $otp;
             }
 

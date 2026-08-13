@@ -6,6 +6,7 @@ use Exception;
 use App\Enums\Ask;
 use App\Models\User;
 use App\Enums\Role as EnumRole;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
@@ -36,7 +37,13 @@ class DeliveryBoyService
             $orderColumn = $request->get('order_column') ?? 'id';
             $orderType   = $request->get('order_type') ?? 'desc';
 
-            return User::with('media', 'addresses')->role(EnumRole::DELIVERY_BOY)->where(
+            $zoneId = ((int) (Auth::user()?->myrole ?? 0) === EnumRole::ZONE_ADMIN)
+                ? (int) (Auth::user()?->zone_id ?? 0)
+                : 0;
+
+            return User::with('media', 'addresses')->role(EnumRole::DELIVERY_BOY)->when($zoneId > 0, function ($query) use ($zoneId) {
+                $query->where('zone_id', $zoneId);
+            })->where(
                 function ($query) use ($requests) {
                     foreach ($requests as $key => $request) {
                         if (in_array($key, $this->userFilter)) {
@@ -68,6 +75,7 @@ class DeliveryBoyService
                     'username'             => $this->username($request->email),
                     'password'             => bcrypt($request->password),
                     'restaurant_id'        => $this->restaurantId,
+                    'zone_id'              => (int) (Auth::user()?->zone_id ?? $request->zone_id ?? 0) ?: null,
                     'status'               => $request->status,
                     'email_verified_at'    => now(),
                     'country_code'         => $request->country_code,

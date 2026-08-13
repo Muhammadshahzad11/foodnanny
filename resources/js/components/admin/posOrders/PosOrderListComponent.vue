@@ -567,12 +567,12 @@ export default {
             try {
                 // Step 2: generate OTP (order still not deleted)
                 const otpRes = await this.posOrderStore.requestDeleteOtp(id);
-                const otp = otpRes.data?.otp ? String(otpRes.data.otp) : '';
                 this.loading.isActive = false;
-
-                if (otp) {
-                    await alertService.showOtp(otp);
-                }
+                alertService.success(
+                    otpRes.data?.message
+                    || this.$t('message.otp_sent_to_restaurant_phone')
+                    || 'OTP sent to the restaurant phone.'
+                );
 
                 // Step 3: MUST enter OTP — cancel / empty = no delete
                 let entered = '';

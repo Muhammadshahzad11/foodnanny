@@ -49,7 +49,20 @@ class AddressService
     public function store(AddressRequest $request)
     {
         try {
-            return Address::create($request->validated() + ['user_id' => Auth::user()->id]);
+            $data = $request->validated() + ['user_id' => Auth::user()->id];
+            $zone = app(ZoneService::class)->detect(
+                isset($data['latitude']) ? (float) $data['latitude'] : null,
+                isset($data['longitude']) ? (float) $data['longitude'] : null
+            );
+            if ($zone) {
+                $data['zone_id'] = $zone->id;
+                $user = Auth::user();
+                if ($user && blank($user->zone_id)) {
+                    $user->zone_id = $zone->id;
+                    $user->save();
+                }
+            }
+            return Address::create($data);
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);
@@ -62,7 +75,20 @@ class AddressService
     public function update(AddressRequest $request, Address $address)
     {
         try {
-            return tap($address)->update($request->validated());
+            $data = $request->validated();
+            $zone = app(ZoneService::class)->detect(
+                isset($data['latitude']) ? (float) $data['latitude'] : null,
+                isset($data['longitude']) ? (float) $data['longitude'] : null
+            );
+            $data['zone_id'] = $zone?->id;
+            if ($zone) {
+                $user = Auth::user();
+                if ($user) {
+                    $user->zone_id = $zone->id;
+                    $user->save();
+                }
+            }
+            return tap($address)->update($data);
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);

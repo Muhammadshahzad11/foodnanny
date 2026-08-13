@@ -143,24 +143,6 @@
                         {{ order.table.name || order.table.table_number }}
                     </span>
                 </p>
-                <div
-                    v-if="isConfirmScanMenuOrder"
-                    class="mb-5 overflow-hidden rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 text-left"
-                >
-                    <div class="flex gap-3 p-3.5">
-                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">
-                            <i class="lab-line-clock text-lg"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold uppercase tracking-[0.12em] text-amber-700">
-                                {{ $t('label.cancel_policy_title') }}
-                            </p>
-                            <p class="mt-1 text-sm leading-5 text-heading font-medium">
-                                {{ $t('message.scan_menu_cancel_window') }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
                 <router-link @click.prevent="OrderModalClose('confirm-order')"
                              class="w-full rounded-3xl text-center font-medium leading-6 py-3 bg-primary text-white"
                              :to="{ name: 'frontend.myOrder.details', params: { id: order.id } }">
@@ -182,7 +164,6 @@ import {useFrontendCartStore} from "../../../../stores/frontendCart.js";
 import {useAuthStore} from "../../../../stores/auth.js";
 import PaginationBox from "../../../admin/components/pagination/PaginationBox.vue";
 import LoadingComponent from "../../../common/LoadingComponent.vue";
-import {isScanMenuOrder} from "../../../../utils/orderHelpers.js";
 
 export default {
     name: "MyOrderComponent",
@@ -244,9 +225,6 @@ export default {
         },
         order: function () {
             return this.frontendOrderStore.show;
-        },
-        isConfirmScanMenuOrder: function () {
-            return isScanMenuOrder(this.order);
         },
         activeOrders: function () {
             return this.frontendOrderStore.activeOrder;

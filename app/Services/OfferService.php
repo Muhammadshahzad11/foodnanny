@@ -284,6 +284,7 @@ class OfferService
     {
         return Offer::with(['media', 'translations', 'offerRestaurants' => fn($query) => $query->where(['status' => OfferStatus::APPROVE])->with(
             ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
+                ->tap(fn ($q) => app(ZoneService::class)->constrainRestaurants($q, (float) $request->latitude, (float) $request->longitude))
                 ->whereHas('orderSetup', function ($query) use ($request) {
                     if (isset($request->delivery_order_type)) {
                         if ($request->delivery_order_type == OrderType::DELIVERY) {
@@ -309,6 +310,7 @@ class OfferService
         return Offer::with(['translations', 'offerRestaurants' => fn($query) => $query->where(['status' => OfferStatus::APPROVE])->with(
             ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('orderSetup', 'timeSlots')
                 ->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
+                ->tap(fn ($q) => app(ZoneService::class)->constrainRestaurants($q, (float) $request->latitude, (float) $request->longitude))
                 ->withDistance($request)
                 ->withReviewRating()
                 ->with(['favorite' => fn($query) => $query->where('user_id', Auth::check() ? Auth::user()->id : 0)])
@@ -337,6 +339,7 @@ class OfferService
         return Offer::with(['translations', 'offerRestaurants' => fn($query) => $query->where(['status' => OfferStatus::APPROVE])->with(
             ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('orderSetup')
                 ->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
+                ->tap(fn ($q) => app(ZoneService::class)->constrainRestaurants($q, (float) $request->latitude, (float) $request->longitude))
                 ->withDistance($request)
                 ->withReviewRating()
                 ->whereHas('orderSetup', function ($query) use ($request) {
@@ -366,6 +369,7 @@ class OfferService
         $offers      = Offer::with(['offerRestaurants' => fn($query) => $query->where(['status' => OfferStatus::APPROVE])->with(
             ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('orderSetup')
                 ->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
+                ->tap(fn ($q) => app(ZoneService::class)->constrainRestaurants($q, (float) $request->latitude, (float) $request->longitude))
                 ->withDistance($request)
                 ->withReviewRating()
             ])

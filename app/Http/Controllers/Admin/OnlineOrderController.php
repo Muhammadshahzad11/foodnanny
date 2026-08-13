@@ -50,6 +50,7 @@ class OnlineOrderController extends AdminController implements HasMiddleware
     public function index(PaginateRequest $request): \Illuminate\Http\Response | \Illuminate\Http\Resources\Json\AnonymousResourceCollection | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            $request->merge(['channel' => 'online']);
             return OrderResource::collection($this->orderService->list($request));
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
@@ -68,6 +69,7 @@ class OnlineOrderController extends AdminController implements HasMiddleware
     public function export(PaginateRequest $request): \Illuminate\Http\Response | \Symfony\Component\HttpFoundation\BinaryFileResponse | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            $request->merge(['channel' => 'online']);
             return Excel::download(new OrderExport($this->orderService, $request), 'Online-Order.xlsx');
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);

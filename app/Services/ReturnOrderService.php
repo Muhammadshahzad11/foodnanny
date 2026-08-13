@@ -83,6 +83,7 @@ class ReturnOrderService
                 $order->status = OrderStatus::OUT_FOR_DELIVERY;
                 $order->reason = null;
                 $order->save();
+                app(DeliveryOtpService::class)->ensure($order, true);
             });
         } catch (Exception $exception) {
             Log::error($exception->getMessage());

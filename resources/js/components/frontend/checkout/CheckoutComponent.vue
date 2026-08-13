@@ -868,12 +868,24 @@ export default {
             const hasCoords = !Number.isNaN(addressLat) && !Number.isNaN(addressLng)
                 && !Number.isNaN(restaurantLat) && !Number.isNaN(restaurantLng);
 
-            // Allow address when coords are incomplete (manual testing without maps)
-            const withinRadius = !hasCoords
-                || appService.distance(addressLat, addressLng, restaurantLat, restaurantLng)
-                    <= this.setting.site_delivery_boy_order_radius;
+            const platformZone = this.restaurant.zone || null;
+            const zones = Array.isArray(this.restaurant.delivery_zones) ? this.restaurant.delivery_zones : [];
+            let withinService = true;
 
-            if (withinRadius) {
+            if (platformZone && this.restaurant.zone_id) {
+                withinService = !address.zone_id || Number(address.zone_id) === Number(this.restaurant.zone_id);
+            } else if (zones.length > 0) {
+                if (hasCoords) {
+                    withinService = !!appService.findMatchingDeliveryZone(addressLat, addressLng, zones);
+                }
+            } else {
+                // Legacy: circular radius when restaurant has no active zones
+                withinService = !hasCoords
+                    || appService.distance(addressLat, addressLng, restaurantLat, restaurantLng)
+                        <= this.setting.site_delivery_boy_order_radius;
+            }
+
+            if (withinService) {
                 this.localAddress                  = address;
                 this.checkoutProps.form.address_id = address.id;
                 this.deliveryChargeCalculation();
@@ -926,8 +938,29 @@ export default {
         deliveryChargeCalculation: function () {
             if (this.checkoutProps.form.order_type === orderTypeEnum.DELIVERY) {
                 if ((typeof this.localAddress.latitude !== 'undefined' && this.localAddress.latitude !== '') && (typeof this.localAddress.longitude !== 'undefined' && this.localAddress.longitude !== '') && (typeof this.restaurant.latitude !== 'undefined' && this.restaurant.latitude !== '') && (typeof this.restaurant.longitude !== 'undefined' && this.restaurant.longitude !== '')) {
-                    const distance = appService.distance(parseFloat(this.localAddress.latitude), parseFloat(this.localAddress.longitude), parseFloat(this.restaurant.latitude), parseFloat(this.restaurant.longitude));
-                    if (distance > this.setting.delivery_setup_free_delivery_kilometer) {
+                    const addressLat = parseFloat(this.localAddress.latitude);
+                    const addressLng = parseFloat(this.localAddress.longitude);
+                    const restaurantLat = parseFloat(this.restaurant.latitude);
+                    const restaurantLng = parseFloat(this.restaurant.longitude);
+                    const distance = appService.distance(addressLat, addressLng, restaurantLat, restaurantLng);
+                    const platformZone = this.restaurant.zone || null;
+                    const zones = Array.isArray(this.restaurant.delivery_zones) ? this.restaurant.delivery_zones : [];
+
+                    if (platformZone) {
+                        const fee = appService.calculatePlatformZoneFee(
+                            platformZone,
+                            distance,
+                            this.checkoutProps.form.subtotal || this.subtotal || 0
+                        );
+                        this.checkoutProps.form.delivery_fee = fee == null ? 0 : fee;
+                    } else if (zones.length > 0) {
+                        const zone = appService.findMatchingDeliveryZone(addressLat, addressLng, zones);
+                        if (zone) {
+                            this.checkoutProps.form.delivery_fee = appService.calculateZoneDeliveryFee(zone, distance, this.setting);
+                        } else {
+                            this.checkoutProps.form.delivery_fee = 0;
+                        }
+                    } else if (distance > this.setting.delivery_setup_free_delivery_kilometer) {
                         let extraDistance                    = distance - parseFloat(this.setting.delivery_setup_free_delivery_kilometer);
                         this.checkoutProps.form.delivery_fee = (extraDistance * parseFloat(this.setting.delivery_setup_charge_per_kilo) + parseFloat(this.setting.delivery_setup_basic_delivery_fee));
                     } else {

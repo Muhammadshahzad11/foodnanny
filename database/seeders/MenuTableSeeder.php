@@ -81,11 +81,21 @@ class MenuTableSeeder extends Seeder
                 'updated_at' => now()
             ],
             [
+                'name'       => 'Delivery Zones',
+                'language'   => 'delivery_zones',
+                'url'        => 'delivery-zones',
+                'icon'       => 'lab lab-line-delivery-setup',
+                'priority'   => 31,
+                'status'     => 1,
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
                 'name'       => 'Cuisines',
                 'language'   => 'cuisines',
                 'url'        => 'cuisines',
                 'icon'       => 'lab lab-line-cuisine',
-                'priority'   => 31,
+                'priority'   => 32,
                 'status'     => 1,
                 'created_at' => now(),
                 'updated_at' => now()

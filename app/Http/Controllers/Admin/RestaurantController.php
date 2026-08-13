@@ -41,7 +41,7 @@ class RestaurantController extends AdminController implements HasMiddleware
             new Middleware('permission:restaurants_delete', only: ['destroy']),
             new Middleware('permission:restaurants_show', only: ['changeImage']),
             new Middleware('permission:restaurants_show', only: ['changeLogo']),
-            new Middleware('permission:payouts|payouts_create|restaurant-owners', only: ['allRestaurant']),
+            new Middleware('permission:payouts|payouts_create|restaurant-owners|delivery-zones|restaurants', only: ['allRestaurant']),
             new Middleware('permission:restaurants_show', only: ['show'])
         ];
     }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\ZoneScope;
 use App\Traits\HasModelMeta;
 use Spatie\MediaLibrary\HasMedia;
 use Illuminate\Database\Eloquent\Model;
@@ -18,7 +19,7 @@ class Restaurant extends Model implements HasMedia
     use HasModelMeta;
 
     protected $table = "restaurants";
-    protected $fillable = ['name', 'slug', 'email', 'country_code', 'phone', 'latitude', 'longitude', 'user_id', 'city', 'state', 'zip_code', 'address', 'status', 'current_status', 'apply', 'balance', 'online_commission', 'pos_commission', 'terms_and_conditions', 'creator_type', 'creator_id', 'editor_type', 'editor_id'];
+    protected $fillable = ['name', 'slug', 'email', 'country_code', 'phone', 'latitude', 'longitude', 'user_id', 'zone_id', 'city', 'state', 'zip_code', 'address', 'status', 'current_status', 'apply', 'balance', 'online_commission', 'pos_commission', 'terms_and_conditions', 'creator_type', 'creator_id', 'editor_type', 'editor_id'];
     protected $casts = [
         'id'                   => 'integer',
         'name'                 => 'string',
@@ -29,6 +30,7 @@ class Restaurant extends Model implements HasMedia
         'latitude'             => 'string',
         'longitude'            => 'string',
         'user_id'              => 'integer',
+        'zone_id'              => 'integer',
         'city'                 => 'string',
         'state'                => 'string',
         'zip_code'             => 'string',
@@ -64,9 +66,20 @@ class Restaurant extends Model implements HasMedia
         return asset('images/default/restaurant/logo.png');
     }
 
+    protected static function boot(): void
+    {
+        parent::boot();
+        static::addGlobalScope(new ZoneScope());
+    }
+
     public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function zone(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Zone::class)->withoutGlobalScopes();
     }
 
     public function cuisines(): \Illuminate\Database\Eloquent\Relations\HasMany
@@ -92,6 +105,20 @@ class Restaurant extends Model implements HasMedia
     public function orderSetup(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(FrontendOrderSetup::class, 'restaurant_id', 'id');
+    }
+
+    public function deliveryZones(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(RestaurantDeliveryZone::class, 'restaurant_id', 'id')
+            ->withoutGlobalScopes();
+    }
+
+    public function activeDeliveryZones(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(RestaurantDeliveryZone::class, 'restaurant_id', 'id')
+            ->withoutGlobalScopes()
+            ->where('status', \App\Enums\Status::ACTIVE)
+            ->orderBy('id');
     }
 
     public function timeSlots(): \Illuminate\Database\Eloquent\Relations\HasMany

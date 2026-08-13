@@ -247,6 +247,7 @@ class CampaignService
     {
         return Campaign::with(['translations', 'media', 'campaignRestaurants' => fn($query) => $query->where(['status' => CampaignStatus::APPROVE])->with(
             ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
+                ->tap(fn ($q) => app(ZoneService::class)->constrainRestaurants($q, (float) $request->latitude, (float) $request->longitude))
                 ->whereHas('orderSetup', function ($query) use ($request) {
                     if (isset($request->delivery_order_type)) {
                         if ($request->delivery_order_type == OrderType::DELIVERY) {
@@ -270,6 +271,7 @@ class CampaignService
         return Campaign::with(['translations', 'campaignRestaurants' => fn($query) => $query->where(['status' => CampaignStatus::APPROVE])->with(
             ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('orderSetup')
                 ->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
+                ->tap(fn ($q) => app(ZoneService::class)->constrainRestaurants($q, (float) $request->latitude, (float) $request->longitude))
                 ->withDistance($request)
                 ->withReviewRating()
                 ->whereHas('orderSetup', function ($query) use ($request) {

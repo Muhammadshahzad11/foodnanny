@@ -15,7 +15,9 @@ use App\Models\OrderSetup;
 use App\Models\ItemCategory;
 use App\Models\ItemAttribute;
 use App\Models\ItemVariation;
+use App\Models\RestaurantDeliveryZone;
 use App\Observers\TaxObserver;
+use App\Observers\RestaurantDeliveryZoneObserver;
 use App\Observers\ItemObserver;
 use App\Observers\OrderObserver;
 use App\Observers\RestaurantTableObserver;
@@ -53,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
     {
         OrderSetup::observe(OrderSetupObserver::class);
         Tax::observe(TaxObserver::class);
+        RestaurantDeliveryZone::observe(RestaurantDeliveryZoneObserver::class);
         RestaurantTable::observe(RestaurantTableObserver::class);
         Coupon::observe(CouponObserver::class);
         ItemCategory::observe(ItemCategoryObserver::class);

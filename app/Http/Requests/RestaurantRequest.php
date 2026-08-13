@@ -38,7 +38,8 @@ class RestaurantRequest extends FormRequest
             'status'            => ['required', 'numeric', 'max:24'],
             'cuisine_id[]'      => ['nullable', 'numeric', 'max_digits:10'],
             'online_commission' => ['nullable', 'numeric', 'max:100'],
-            'pos_commission'    => ['nullable', 'numeric', 'max:100']
+            'pos_commission'    => ['nullable', 'numeric', 'max:100'],
+            'zone_id'           => ['nullable', 'integer', 'exists:zones,id'],
         ];
     }
 }

@@ -91,6 +91,15 @@ class PermissionTableSeeder extends Seeder
                 ]
             ],
             [
+                'title'      => 'Delivery Zones',
+                'name'       => 'delivery-zones',
+                'type'       => PermissionType::ADMIN,
+                'guard_name' => 'sanctum',
+                'url'        => 'delivery-zones',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
                 'title'      => 'Cuisines',
                 'name'       => 'cuisines',
                 'type'       => PermissionType::ADMIN,

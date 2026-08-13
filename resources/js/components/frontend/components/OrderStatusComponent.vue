@@ -80,17 +80,6 @@
         <p v-if="statusNum === enums.orderStatusEnum.PENDING" class="text-xs text-center">
             {{ $t("message.we_received_your_order") }}
         </p>
-        <div
-            v-if="showScanMenuCancelNotice"
-            class="mt-4 mx-auto max-w-md overflow-hidden rounded-2xl border-2 border-amber-400 bg-amber-50 text-left"
-        >
-            <div class="flex gap-2.5 p-3">
-                <i class="lab-line-clock text-lg text-amber-600 mt-0.5"></i>
-                <p class="text-xs leading-5 text-heading font-medium">
-                    {{ $t('message.scan_menu_cancel_window') }}
-                </p>
-            </div>
-        </div>
         <p v-if="statusNum === enums.orderStatusEnum.ACCEPT" class="text-xs text-center">
             {{ $t("message.restaurant_has_accepted_your_order") }}
         </p>
@@ -118,7 +107,6 @@
 import orderStatusEnum from "../../../enums/modules/orderStatusEnum.js";
 import orderTypeEnum from "../../../enums/modules/orderTypeEnum.js";
 import { useFrontendSettingStore } from "../../../stores/frontendSetting.js";
-import { isScanMenuOrder } from "../../../utils/orderHelpers.js";
 
 export default {
     name: "OrderStatusComponent",
@@ -164,9 +152,6 @@ export default {
         isDining() {
             return this.orderTypeNum === orderTypeEnum.DINING_TABLE;
         },
-        showScanMenuCancelNotice() {
-            return this.statusNum === orderStatusEnum.PENDING;
-        },
         isDelivered() {
             return this.statusNum === orderStatusEnum.DELIVERED;
         },
@@ -190,6 +175,11 @@ export default {
                     label: this.$t('label.track_on_the_way'),
                     icon: 'lab lab-fill-on-the-way',
                 });
+                steps.push({
+                    status: 'otp',
+                    label: this.$t('label.track_otp'),
+                    icon: 'lab lab-fill-lock',
+                });
             }
             steps.push({
                 status: orderStatusEnum.DELIVERED,
@@ -201,6 +191,9 @@ export default {
     },
     methods: {
         isStepReached(stepStatus) {
+            if (stepStatus === 'otp') {
+                return this.statusNum >= orderStatusEnum.OUT_FOR_DELIVERY;
+            }
             return this.statusNum >= parseInt(stepStatus, 10);
         },
         formatIso(iso) {
