@@ -1129,6 +1129,7 @@ Route::prefix('frontend')->name('frontend.')->middleware(['installed', 'apiKey',
         Route::post('/', [FrontendOrderController::class, 'store']);
         Route::get('/show/{frontendOrder}', [FrontendOrderController::class, 'show']);
         Route::post('/cancel/{frontendOrder}', [FrontendOrderController::class, 'cancel']);
+        Route::post('/confirm-cod/{frontendOrder}', [FrontendOrderController::class, 'confirmCashOnDelivery']);
     });
 
     Route::prefix('restaurant-review')->name('restaurant-review.')->middleware(['auth:sanctum'])->group(function () {

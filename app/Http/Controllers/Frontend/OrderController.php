@@ -57,4 +57,13 @@ class OrderController extends Controller
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
         }
     }
+
+    public function confirmCashOnDelivery(FrontendOrder $frontendOrder): \Illuminate\Foundation\Application|\Illuminate\Http\Response|OrderDetailsResource|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            return new OrderDetailsResource($this->frontendOrderService->confirmCashOnDelivery($frontendOrder));
+        } catch (Exception $exception) {
+            return response(['status' => false, 'message' => $exception->getMessage()], $exception->getCode() >= 400 ? (int) $exception->getCode() : 422);
+        }
+    }
 }

@@ -4,9 +4,14 @@ namespace App\Services;
 
 
 use Exception;
+use App\Enums\Ask;
+use App\Enums\Source;
 use App\Enums\Status;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
+use App\Enums\PaymentGateway;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Restaurant;
 use App\Models\FrontendOrder;
 use App\Events\OrderPlacedSMS;
@@ -23,6 +28,10 @@ use App\Http\Requests\PaginateRequest;
 use App\Libraries\QueryExceptionLibrary;
 use App\Http\Requests\OrderStatusRequest;
 use App\Events\OrderPlacedPushNotification;
+use App\Events\RestaurantOrderReceivedEmail;
+use App\Events\RestaurantOrderReceivedSMS;
+use App\Events\RestaurantOrderReceivedPushNotification;
+use App\Services\KitchenOrderService;
 
 class FrontendOrderService
 {
@@ -140,27 +149,28 @@ class FrontendOrderService
 
                 $i            = 0;
                 $itemsArray   = [];
-                $requestItems = json_decode($request->items);
+                $requestItems = $this->decodeOrderItems($request->items);
 
                 if (!blank($requestItems)) {
                     foreach ($requestItems as $item) {
+                        $item = is_array($item) ? (object) $item : $item;
                         $itemsArray[$i] = [
                             'order_id'             => $this->frontendOrder->id,
                             'restaurant_id'        => $request->restaurant_id,
-                            'item_id'              => $item->item_id,
-                            'quantity'             => $item->quantity,
-                            'discount'             => (float)$item->discount,
-                            'tax_name'             => $item->tax_name,
-                            'tax_rate'             => $item->tax_rate,
-                            'tax_type'             => $item->tax_type,
-                            'tax_amount'           => $item->tax_amount,
-                            'price'                => $item->item_price,
-                            'item_variations'      => json_encode($item->item_variations),
-                            'item_extras'          => json_encode($item->item_extras),
-                            'instruction'          => $item->instruction,
-                            'item_variation_total' => $item->item_variation_total,
-                            'item_extra_total'     => $item->item_extra_total,
-                            'total_price'          => $item->total_price,
+                            'item_id'              => $item->item_id ?? null,
+                            'quantity'             => $item->quantity ?? 1,
+                            'discount'             => (float) ($item->discount ?? 0),
+                            'tax_name'             => $item->tax_name ?? null,
+                            'tax_rate'             => $item->tax_rate ?? 0,
+                            'tax_type'             => $item->tax_type ?? null,
+                            'tax_amount'           => $item->tax_amount ?? 0,
+                            'price'                => $item->item_price ?? $item->price ?? 0,
+                            'item_variations'      => json_encode($item->item_variations ?? []),
+                            'item_extras'          => json_encode($item->item_extras ?? []),
+                            'instruction'          => $item->instruction ?? null,
+                            'item_variation_total' => $item->item_variation_total ?? 0,
+                            'item_extra_total'     => $item->item_extra_total ?? 0,
+                            'total_price'          => $item->total_price ?? 0,
                             'status'               => Status::INACTIVE,
                             'created_at'           => now(),
                             'updated_at'           => now()
@@ -203,12 +213,141 @@ class FrontendOrderService
                     ]);
                 }
             });
-            return $this->frontendOrder;
+
+            // Customer app places COD via API and never hits the web payment success URL.
+            // Activate immediately so restaurant Online Orders / kitchen / my-orders see it.
+            // Website COD still goes through /payment/.../success (source=WEB stays inactive until then).
+            try {
+                $this->activateAppCashOnDeliveryOrder($this->frontendOrder);
+            } catch (\Throwable $e) {
+                Log::info('App COD activate after place: ' . $e->getMessage());
+            }
+
+            try {
+                return $this->frontendOrder->fresh([
+                    'orderItems', 'user', 'address', 'restaurant', 'deliveryBoy', 'coupon', 'transaction', 'diningTable'
+                ]) ?? $this->frontendOrder;
+            } catch (\Throwable $e) {
+                Log::info('Order store fresh load: ' . $e->getMessage());
+                return $this->frontendOrder;
+            }
         } catch (Exception $exception) {
             DB::rollBack();
             Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);
         }
+    }
+
+    /**
+     * Activate a placed APP + COD order (mirrors Cashondelivery payment success).
+     */
+    public function activateAppCashOnDeliveryOrder(FrontendOrder $frontendOrder): FrontendOrder
+    {
+        $source  = (int) $frontendOrder->source;
+        $payMethod = (int) $frontendOrder->payment_method;
+
+        if ($source !== Source::APP || $payMethod !== PaymentGateway::CASH_ON_DELIVERY) {
+            return $frontendOrder;
+        }
+
+        if ((int) $frontendOrder->active === Ask::YES || (int) $frontendOrder->active === Status::ACTIVE) {
+            return $frontendOrder;
+        }
+
+        return $this->activatePlacedCustomerOrder($frontendOrder);
+    }
+
+    /**
+     * Mark order + items active, notify kitchen/restaurant/customer (same as payment.successful).
+     */
+    public function activatePlacedCustomerOrder(FrontendOrder $frontendOrder): FrontendOrder
+    {
+        DB::transaction(function () use ($frontendOrder) {
+            $frontendOrder->refresh();
+            if ((int) $frontendOrder->active === Ask::YES || (int) $frontendOrder->active === Status::ACTIVE) {
+                return;
+            }
+
+            $frontendOrder->active = Ask::YES;
+            $frontendOrder->save();
+
+            OrderItem::where(['order_id' => $frontendOrder->id, 'status' => Status::INACTIVE])
+                ->update(['status' => Status::ACTIVE]);
+        });
+
+        $frontendOrder->refresh();
+
+        try {
+            $order = Order::query()->find($frontendOrder->id);
+            if ($order) {
+                app(KitchenOrderService::class)->publishIfEligible($order);
+            }
+        } catch (\Throwable $e) {
+            Log::info('App COD kitchen notify: ' . $e->getMessage());
+        }
+
+        try {
+            if (in_array((int) $frontendOrder->order_type, [
+                OrderType::DELIVERY,
+                OrderType::TAKEAWAY,
+                OrderType::DINING_TABLE,
+            ], true)) {
+                OrderPlacedEmail::dispatch(['order_id' => $frontendOrder->id, 'status' => OrderStatus::PENDING]);
+                OrderPlacedSMS::dispatch(['order_id' => $frontendOrder->id, 'status' => OrderStatus::PENDING]);
+                OrderPlacedPushNotification::dispatch(['order_id' => $frontendOrder->id, 'status' => OrderStatus::PENDING]);
+            }
+
+            RestaurantOrderReceivedEmail::dispatch(['order_id' => $frontendOrder->id]);
+            RestaurantOrderReceivedSMS::dispatch(['order_id' => $frontendOrder->id]);
+            RestaurantOrderReceivedPushNotification::dispatch(['order_id' => $frontendOrder->id]);
+        } catch (\Throwable $e) {
+            Log::info('App COD order notify: ' . $e->getMessage());
+        }
+
+        return $frontendOrder;
+    }
+
+    /**
+     * Explicit confirm for mobile (COD). Idempotent if already active.
+     *
+     * @throws Exception
+     */
+    public function confirmCashOnDelivery(FrontendOrder $frontendOrder): FrontendOrder
+    {
+        if ((int) $frontendOrder->user_id !== (int) Auth::id()) {
+            throw new Exception(trans('all.message.permission_denied'), 403);
+        }
+
+        if ((int) $frontendOrder->payment_method !== PaymentGateway::CASH_ON_DELIVERY) {
+            throw new Exception(trans('all.message.something_wrong'), 422);
+        }
+
+        if ((int) $frontendOrder->active === Ask::YES || (int) $frontendOrder->active === Status::ACTIVE) {
+            return $frontendOrder->load('orderItems', 'user', 'address', 'restaurant', 'deliveryBoy', 'coupon', 'transaction', 'diningTable');
+        }
+
+        return $this->activatePlacedCustomerOrder($frontendOrder)->load(
+            'orderItems', 'user', 'address', 'restaurant', 'deliveryBoy', 'coupon', 'transaction', 'diningTable'
+        );
+    }
+
+    /**
+     * Accept items as JSON string (web) or array (Flutter / application/json).
+     */
+    private function decodeOrderItems(mixed $items): array
+    {
+        if (is_array($items)) {
+            return array_values($items);
+        }
+
+        if (is_string($items) && $items !== '') {
+            $decoded = json_decode($items);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        return [];
     }
 
     /**

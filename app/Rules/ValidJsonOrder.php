@@ -26,12 +26,21 @@ class ValidJsonOrder implements Rule
      */
     public function passes($attribute, $value): bool
     {
-
-        $requestItems = json_decode($value);
-        if (count($requestItems) == 0) {
+        // Website often sends a JSON string; Flutter / JSON APIs send a native array.
+        if (is_array($value)) {
+            $requestItems = $value;
+        } elseif (is_string($value)) {
+            $requestItems = json_decode($value, true);
+        } else {
             $this->message = 'This :attribute must be json.';
             return false;
         }
+
+        if (!is_array($requestItems) || count($requestItems) === 0) {
+            $this->message = 'This :attribute must be json.';
+            return false;
+        }
+
         return true;
     }
 

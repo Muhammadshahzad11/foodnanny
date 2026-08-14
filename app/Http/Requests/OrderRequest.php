@@ -22,6 +22,18 @@ class OrderRequest extends FormRequest
         return true;
     }
 
+    /**
+     * Flutter sends items as a JSON array; website often sends a JSON string.
+     * Normalize to a JSON string so downstream json_decode() keeps working.
+     */
+    protected function prepareForValidation(): void
+    {
+        $items = $this->input('items');
+        if (is_array($items)) {
+            $this->merge(['items' => json_encode($items)]);
+        }
+    }
+
     public function rules(): array
     {
         $orderType = (int) $this->input('order_type');
@@ -52,7 +64,7 @@ class OrderRequest extends FormRequest
             'rider_tip'          => ['required', 'numeric'],
             'table_id'           => $isDining ? ['required', 'integer', 'exists:restaurant_tables,id'] : ['nullable', 'integer'],
             'qr_token'           => $isDining ? ['required', 'string', 'size:64'] : ['nullable', 'string'],
-            'items'              => ['required', 'json', new ValidJsonOrder],
+            'items'              => ['required', new ValidJsonOrder],
         ];
     }
 
