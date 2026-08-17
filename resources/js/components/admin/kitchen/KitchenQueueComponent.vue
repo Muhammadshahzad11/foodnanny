@@ -511,7 +511,8 @@ export default {
         },
         canComplete(order) {
             return this.permissionChecker('kitchen_ready')
-                && order.status === orderStatusEnum.PREPARED;
+                && order.status === orderStatusEnum.PREPARED
+                && Number(order.order_type) !== orderTypeEnum.DELIVERY;
         },
         canReject(order) {
             return this.permissionChecker('kitchen_reject')

@@ -42,7 +42,7 @@ class SimpleRestaurantResource extends JsonResource
             'preparation_time'  => $this->orderSetup?->food_preparation_time,
             'rating_star'       => $this->rating_star == null ? 0 : (double)$this->rating_star,
             'rating_star_count' => $this->rating_star_count == null ? 0 : $this->rating_star_count,
-            'distance'          => $this->distance,
+            'distance'          => $this->distance !== null ? round((float) $this->distance, 1) : null,
             'status'            => $this->status,
             'favorite'          => (bool)$this->favorite,
             'availability'      => AppLibrary::availability($this->timeSlots),

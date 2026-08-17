@@ -20,8 +20,10 @@ import 'swiper/css/bundle';
 import './echo.js';
 import VueApexCharts from "vue3-apexcharts";
 import {syncSilentPrintFromUrl} from "./services/printPreference.js";
+import {listenForUserGesture} from "./services/notificationSound.js";
 
 syncSilentPrintFromUrl();
+listenForUserGesture();
 
 // Capture PWA install prompt before Vue mounts (browser may fire early)
 window.__ctcPwa = window.__ctcPwa || { deferredPrompt: null, installed: false };
@@ -65,17 +67,28 @@ app.use(VueSimpleAlert)
 app.use(VueApexCharts);
 app.use(Toast, {
     position: "top-right",
-    timeout: 2000,
+    // Small, quick toasts: POS staff act on dozens of these per hour.
+    timeout: 1500,
     closeOnClick: true,
-    pauseOnFocusLoss: true,
-    pauseOnHover: true,
-    draggable: true,
-    draggablePercent: 0.6,
-    showCloseButtonOnHover: false,
-    hideProgressBar: false,
-    closeButton: "button",
+    pauseOnFocusLoss: false,
+    pauseOnHover: false,
+    draggable: false,
+    showCloseButtonOnHover: true,
+    hideProgressBar: true,
+    closeButton: false,
     icon: true,
     rtl: false,
-    containerClassName: "app-toast-container",
+    maxToasts: 3,
+    newestOnTop: true,
+    transition: "Vue-Toastification__fade",
+    containerClassName: "app-toast-container app-toast-compact",
+    // Repeating the same message (add to cart, status change) must not stack up.
+    filterBeforeCreate: (toast, toasts) => {
+        if (toast.type === 'error') {
+            return toast;
+        }
+        const duplicate = toasts.some((t) => t.type === toast.type && t.content === toast.content);
+        return duplicate ? false : toast;
+    },
 })
 app.mount('#app');

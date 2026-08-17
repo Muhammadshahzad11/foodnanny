@@ -194,26 +194,6 @@ export const useAuthStore = defineStore("auth", {
                 }
             });
         },
-        guestLoginVerify: function (payload) {
-            return new Promise((resolve, reject) => {
-                axios.post('auth/guest-signup/verify', payload).then(res => {
-                    this.status = true;
-                    this.token = res.data.token;
-                    this.info = res.data.user;
-                    this.adminMenu = res.data.admin_menu;
-                    this.restaurantMenu = res.data.restaurant_menu;
-                    this.adminPermission = res.data.admin_permission;
-                    this.restaurantPermission = res.data.restaurant_permission;
-                    this.permission = res.data.permission;
-                    this.defaultPermission = Object.keys(res.data.admin_default_permission).length > 0 ? res.data.admin_default_permission : res.data.restaurant_default_permission;
-                    this.adminDefaultPermission = res.data.admin_default_permission;
-                    this.restaurantDefaultPermission = res.data.restaurant_default_permission;
-                    resolve(res);
-                }).catch((err) => {
-                    reject(err);
-                });
-            });
-        },
         refreshMenus: function () {
             return new Promise((resolve, reject) => {
                 axios.get('auth/menus').then((res) => {

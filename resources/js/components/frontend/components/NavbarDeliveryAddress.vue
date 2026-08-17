@@ -100,6 +100,8 @@ export default {
     async mounted() {
         this.modelLocation = this.commonStore.location;
         await this.commonStore.update({edit_address_id: null});
+        // Always wire autocomplete / current-location button, even if GPS is denied.
+        await this.mainMap();
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -107,13 +109,12 @@ export default {
                         lat: position.coords.latitude,
                         lng: position.coords.longitude,
                     };
-                    this.mainMap();
-                }, () => {
-                    alert('The Geolocation service failed.');
-                }
+                },
+                () => {
+                    // Permission denied or unavailable — user can still type an address.
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
-        } else {
-            alert("Your browser doesn't support geolocation.");
         }
     },
     methods: {
@@ -121,10 +122,14 @@ export default {
             if (ENV.GOOGLE_MAP_KEY) {
                 const Places       = await google.maps.importLibrary("places")
                 let input          = document.getElementById('nav-map-autocomplete-input');
-                const autocomplete = new Places.Autocomplete(input);
+                const autocomplete = new Places.Autocomplete(input, {
+                    fields: ['address_components', 'formatted_address', 'geometry', 'name'],
+                    componentRestrictions: { country: 'in' },
+                });
                 autocomplete.addListener('place_changed', () => {
                     const place          = autocomplete.getPlace();
-                    this.modelLocation   = this.$refs.locationName.value;
+                    if (!place?.geometry?.location) return;
+                    this.modelLocation   = place.formatted_address || this.$refs.locationName?.value;
                     this.currentLocation = {
                         lat: place.geometry.location.lat(),
                         lng: place.geometry.location.lng()
@@ -150,13 +155,20 @@ export default {
                                         this.contentLoading.isActive = false;
                                         this.modelLocation           = res.results[0].formatted_address;
                                         this.setPosition();
+                                    } else {
+                                        this.contentLoading.isActive = false;
                                     }
+                                }).catch(() => {
+                                    this.contentLoading.isActive = false;
                                 });
                             }, () => {
+                                this.contentLoading.isActive = false;
                                 alert('The Geolocation service failed.');
-                            }
+                            },
+                            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                         );
                     } else {
+                        this.contentLoading.isActive = false;
                         alert("Your browser doesn't support geolocation.");
                     }
                 });

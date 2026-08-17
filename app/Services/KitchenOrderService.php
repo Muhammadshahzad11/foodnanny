@@ -418,6 +418,10 @@ class KitchenOrderService
             $order->kitchen_ready_by = Auth::id();
             $order->save();
 
+            // Generate once when a delivery first becomes ready. Rider pickup
+            // must reuse this code so the customer's displayed OTP stays valid.
+            app(DeliveryOtpService::class)->ensure($order);
+
             $this->bumpItemKitchenStatus($order, KitchenItemStatus::READY);
 
             return ['elapsed_seconds' => $elapsed];
@@ -436,6 +440,10 @@ class KitchenOrderService
 
             if ((int) $order->status !== OrderStatus::PREPARED) {
                 throw new Exception(trans('all.message.kitchen_invalid_transition'), 422);
+            }
+
+            if ((int) $order->order_type === OrderType::DELIVERY) {
+                throw new Exception(trans('all.message.delivery_must_be_completed_by_rider'), 422);
             }
 
             $order->status = OrderStatus::DELIVERED;

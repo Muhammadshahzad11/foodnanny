@@ -88,7 +88,8 @@ export const useCommonStore = defineStore('common', {
                 state: null,
                 search_restaurant: null,
                 cuisine_id: null,
-                manual_location_pick: true,
+                // Allow auto GPS again on the next visit after clearing.
+                manual_location_pick: false,
             });
         }
     }

@@ -72,7 +72,7 @@ export const useActiveOrderStore = defineStore('activeOrder', {
         },
         receivedStatus: function (payload) {
             return new Promise((resolve, reject) => {
-                axios.get(`admin/active-order/received-status/${payload}`).then(res => {
+                axios.post(`admin/active-order/received-status/${payload}`).then(res => {
                     this.show = res.data.data;
                     resolve(res);
                 }).catch((err) => {

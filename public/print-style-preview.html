@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Print style preview</title>
+<style>
+  body { background:#111; margin:0; padding:24px; font-family: Arial, sans-serif; }
+  .wrap { display:flex; gap:28px; align-items:flex-start; justify-content:center; flex-wrap:wrap; }
+  .paper { background:#f4f4f4; box-shadow:0 0 22px rgba(255,255,255,.25); border-radius:3px; }
+  .cap { color:#bbb; font-size:12px; text-align:center; margin-bottom:8px; }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 80mm;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #000;
+    font-family: "Helvetica Neue", Arial, "DejaVu Sans", sans-serif;
+    font-size: 12px;
+    line-height: 1.3;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page { size: 80mm auto; margin: 0; }
+  .sheet {
+    width: 72mm;
+    max-width: 72mm;
+    margin: 0 auto;
+    padding: 2mm 2mm 5mm;
+  }
+  .c { text-align: center; }
+  .l { text-align: left; }
+  .r { text-align: right; }
+  .b { font-weight: 700; }
+
+  /* Header */
+  .shop { font-size: 14px; font-weight: 600; }
+  .doc-title { font-size: 18px; font-weight: 700; letter-spacing: .3px; margin-bottom: 1px; }
+  .kot-title { font-size: 22px; font-weight: 700; letter-spacing: 4px; }
+  .kot-shop { font-size: 14px; font-weight: 700; margin-top: -1px; }
+
+  .rule { border-top: 1px solid #000; margin: 4px 0; }
+  .rule-dash { border-top: 1px dashed #000; margin: 4px 0; }
+
+  /* Name line + two-up meta rows (Date | Bill#, Time | Table) */
+  .name { font-size: 12.5px; }
+  table.meta { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.meta td { font-size: 12px; padding: 1px 0; vertical-align: top; }
+  table.meta td.r { text-align: right; }
+
+  /* Item grid — rules above and below the header row only */
+  table.grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.grid th, table.grid td {
+    font-size: 12px;
+    padding: 2px 0;
+    vertical-align: top;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  table.grid th { font-weight: 700; }
+  table.grid thead th {
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    padding: 3px 0;
+  }
+  table.grid tbody tr:first-child td { padding-top: 4px; }
+  table.grid td.qty, table.grid td.price, table.grid td.amt,
+  table.grid th.qty, table.grid th.price, table.grid th.amt { text-align: right; }
+
+  /* Totals */
+  table.tot { width: 100%; border-collapse: collapse; }
+  table.tot td { font-size: 12px; padding: 1.5px 0; }
+  table.tot td.amt { text-align: right; }
+  table.tot tr.grand td {
+    font-size: 16px;
+    font-weight: 700;
+    padding: 3px 0 1px;
+  }
+  .mod { font-size: 10.5px; padding-left: 8px; }
+  .note { margin-top: 4px; font-weight: 700; font-size: 11.5px; white-space: pre-wrap; }
+  .thanks { margin-top: 4px; text-align: center; font-size: 12.5px; font-weight: 700; line-height: 1.35; }
+  .powered { margin-top: 4px; text-align: center; font-size: 11px; font-weight: 400; }
+  .hint {
+    position: fixed; top: 8px; left: 8px; right: 8px;
+    background: #111; color: #fff; font-family: sans-serif;
+    font-size: 13px; font-weight: 700; padding: 10px 12px; border-radius: 8px;
+    z-index: 9;
+  }
+  @media print {
+    .hint { display: none !important; }
+    html, body { width: 80mm; }
+  }
+
+  .sheet { padding: 6mm 4mm; }
+</style></head>
+<body>
+  <div class="wrap">
+    <div><div class="cap">TAX INVOICE (80mm)</div><div class="paper">
+      
+      <div class="sheet">
+        <div class="c shop">Restaurant</div>
+        <div class="c doc-title">TAX INVOICE</div>
+        <div class="rule"></div>
+        <div class="name">Name: <span class="b">Abhi</span></div>
+        <div class="rule-dash"></div>
+        <table class="meta">
+          <tr>
+            <td>Date: 4/6/2025</td>
+            <td class="r">Bill#: OFF-000034</td>
+          </tr>
+          <tr>
+            <td>Time: 12.02 am</td>
+            <td class="r">Table: Table 1</td>
+          </tr>
+          
+        </table>
+        <table class="grid">
+          <thead><tr><th class="l">Item</th><th class="qty">Qty</th><th class="price">Price</th><th class="amt">Amt</th></tr></thead>
+          <tbody><tr>
+          <td style="width:40%">Fried Rice + Paneer Chilli + Coke</td>
+          <td class="qty" style="width:12%">2</td>
+          <td class="price" style="width:24%">₹238.90</td>
+          <td class="amt" style="width:24%">₹508.00</td>
+        </tr><tr>
+          <td style="width:40%">Tea</td>
+          <td class="qty" style="width:12%">1</td>
+          <td class="price" style="width:24%">₹39.00</td>
+          <td class="amt" style="width:24%">₹39.00</td>
+        </tr><tr>
+          <td style="width:40%">Veg Seekh Kabab (6 pcs)</td>
+          <td class="qty" style="width:12%">1</td>
+          <td class="price" style="width:24%">₹249.00</td>
+          <td class="amt" style="width:24%">₹249.00</td>
+        </tr></tbody>
+        </table>
+        <div class="rule"></div>
+        <table class="tot"><tr><td>Total Qty 4</td><td class="amt">Sub Total. ₹336.00</td></tr><tr><td>CGST (2.5%)</td><td class="amt">₹22.15</td></tr><tr><td>SGST (2.5%)</td><td class="amt">₹22.15</td></tr><tr><td>Round Off</td><td class="amt">-₹0.30</td></tr></table>
+        <div class="rule"></div>
+        <table class="tot"><tr class="grand"><td>Grand Total</td><td class="amt">₹380.00</td></tr><tr><td>Payment</td><td class="amt">CASH</td></tr></table>
+        <div class="rule"></div>
+        <div class="thanks">Thank you for dining with us!<br>Visit again.</div>
+        <div class="powered">Powered by bilizava</div>
+        <div class="rule-dash"></div>
+      </div>
+    </div></div>
+    <div><div class="cap">KOT (80mm)</div><div class="paper">
+      
+      <div class="sheet">
+        <div class="c kot-title">KOT</div>
+        <div class="c kot-shop">Restaurant</div>
+        <div class="rule"></div>
+        <table class="meta">
+          <tr><td>Table: Table 1</td><td class="r">Dine In</td></tr>
+          <tr><td>4/6/2026 12 01 am</td><td class="r">KOT - 15</td></tr>
+        </table>
+        <table class="grid">
+          <thead><tr><th class="l">ITEM</th><th class="qty">QTY</th></tr></thead>
+          <tbody>
+          <tr>
+            <td style="width:82%">1. Fried Rice + Paneer Chilli + Coke</td>
+            <td class="qty" style="width:18%">2</td>
+          </tr>
+          <tr>
+            <td style="width:82%">2. Tea</td>
+            <td class="qty" style="width:18%">1</td>
+          </tr>
+          <tr>
+            <td style="width:82%">3. Veg Seekh Kabab (6 pcs)</td>
+            <td class="qty" style="width:18%">1</td>
+          </tr></tbody>
+        </table>
+        <div class="rule"></div>
+        <div class="r">Total: 4 items</div>
+        
+        <div class="powered">— Powered by bilizava</div>
+        <div class="rule-dash"></div>
+      </div>
+    </div></div>
+  </div>
+</body></html>

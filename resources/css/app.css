@@ -666,6 +666,70 @@ input[type="search"]::-webkit-search-results-decoration { display: none; }
     top: 5.5rem !important;
 }
 
+/* Compact toasts — the default library size is a full-width banner that
+   covers POS controls and animates for 750ms on every action. */
+.app-toast-compact {
+    width: auto !important;
+    max-width: 20rem;
+    padding: 0 !important;
+}
+.app-toast-compact .Vue-Toastification__toast {
+    min-height: 0;
+    max-width: 20rem;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.35;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.app-toast-compact .Vue-Toastification__toast-body {
+    font-size: 13px;
+    line-height: 1.35;
+}
+.app-toast-compact .Vue-Toastification__icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    align-self: center;
+}
+.app-toast-compact .Vue-Toastification__close-button {
+    font-size: 16px;
+    align-self: center;
+    opacity: .6;
+}
+.app-toast-compact .Vue-Toastification__fade-enter-active,
+.app-toast-compact .Vue-Toastification__fade-leave-active {
+    animation-duration: 160ms !important;
+    transition-duration: 160ms !important;
+}
+
+/* New order needs to be impossible to miss, so it opts out of compact sizing. */
+.app-toast-compact .Vue-Toastification__toast.toast-new-order {
+    max-width: 24rem;
+    padding: 14px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+    border-left: 6px solid rgba(255, 255, 255, .85);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+    animation: newOrderPulse 1.1s ease-in-out 3;
+}
+.app-toast-compact .Vue-Toastification__toast.toast-new-order .Vue-Toastification__toast-body {
+    font-size: 15px;
+    font-weight: 700;
+}
+.app-toast-compact .Vue-Toastification__toast.toast-new-order .Vue-Toastification__icon {
+    width: 22px;
+    height: 22px;
+}
+
+@keyframes newOrderPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+}
+
 /* Module 8 — PWA standalone polish */
 @media (display-mode: standalone) {
     body {

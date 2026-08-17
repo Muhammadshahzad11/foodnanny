@@ -477,7 +477,7 @@ class RestaurantService
     }
 
     /**
-     * Add a selectable distance column (miles) for sorting.
+     * Add a selectable distance column (kilometers) for sorting.
      */
     protected function applyDistanceSelect($query, float $lat, float $lng): void
     {
@@ -487,10 +487,10 @@ class RestaurantService
             return;
         }
 
-        // Haversine in miles — works on SQLite / drivers without GeoScope.
+        // Haversine in kilometers — works on SQLite / drivers without GeoScope.
         $query->select('restaurants.*')
             ->selectRaw(
-                '(3959 * acos(MIN(1, MAX(-1,
+                '(6371 * acos(MIN(1, MAX(-1,
                     cos(radians(?)) * cos(radians(CAST(restaurants.latitude AS FLOAT)))
                     * cos(radians(CAST(restaurants.longitude AS FLOAT)) - radians(?))
                     + sin(radians(?)) * sin(radians(CAST(restaurants.latitude AS FLOAT)))
@@ -500,7 +500,7 @@ class RestaurantService
     }
 
     /**
-     * Limit results to a radius around lat/lng.
+     * Limit results to a radius around lat/lng (kilometers).
      */
     protected function applyNearbyConstraint($query, float $lat, float $lng, float $radius, bool $asOrWhere): void
     {
@@ -514,7 +514,7 @@ class RestaurantService
                 $near->withinDistanceOf($lat, $lng, $radius);
             } else {
                 $near->whereRaw(
-                    '(3959 * acos(MIN(1, MAX(-1,
+                    '(6371 * acos(MIN(1, MAX(-1,
                         cos(radians(?)) * cos(radians(CAST(restaurants.latitude AS FLOAT)))
                         * cos(radians(CAST(restaurants.longitude AS FLOAT)) - radians(?))
                         + sin(radians(?)) * sin(radians(CAST(restaurants.latitude AS FLOAT)))

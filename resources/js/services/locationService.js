@@ -20,13 +20,15 @@ const locationService = {
                     resolve({
                         lat: position.coords.latitude,
                         lng: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
                     });
                 },
                 () => reject(new Error("geolocation_failed")),
                 {
                     enableHighAccuracy: true,
                     timeout: 15000,
-                    maximumAge: 60000,
+                    // Prefer a fresh fix — stale cache is a common cause of "wrong city".
+                    maximumAge: 0,
                     ...options,
                 }
             );
@@ -37,17 +39,18 @@ const locationService = {
         try {
             return await this.getCurrentPosition({
                 enableHighAccuracy: true,
-                timeout: 8000,
-                maximumAge: 300000,
+                timeout: 10000,
+                maximumAge: 0,
             });
         } catch (e) {
             if (e?.message === "geolocation_unsupported") {
                 throw e;
             }
+            // Second attempt: allow a short cache + network location as fallback.
             return await this.getCurrentPosition({
                 enableHighAccuracy: false,
                 timeout: 15000,
-                maximumAge: 300000,
+                maximumAge: 30000,
             });
         }
     },
@@ -104,6 +107,21 @@ const locationService = {
         return { city: "", district: "", state: "" };
     },
 
+    /**
+     * Prefer a result that has a city/locality over an ultra-specific street-only hit.
+     */
+    pickBestGeocodeResult(results = []) {
+        if (!results?.length) return null;
+        const withCity = results.find((r) =>
+            (r.address_components || []).some((c) =>
+                c.types?.includes("locality")
+                || c.types?.includes("postal_town")
+                || c.types?.includes("administrative_area_level_2")
+            )
+        );
+        return withCity || results[0];
+    },
+
     async reverseGeocode(lat, lng) {
         if (this.hasGoogleMaps()) {
             try {
@@ -111,8 +129,8 @@ const locationService = {
                 const res = await geocoder.geocode({
                     location: new google.maps.LatLng(lat, lng),
                 });
-                if (res.results?.length) {
-                    const place = res.results[0];
+                const place = this.pickBestGeocodeResult(res.results);
+                if (place) {
                     const area = this.areaFromPlace(place);
                     return {
                         name: place.formatted_address,
@@ -129,7 +147,7 @@ const locationService = {
         const res = await fetch(url, {
             headers: {
                 Accept: "application/json",
-                "User-Agent": "FoodNanny/1.0 (local-dev)",
+                "User-Agent": "FoodNanny/1.0",
             },
         });
         if (!res.ok) {
@@ -153,9 +171,12 @@ const locationService = {
         if (this.hasGoogleMaps() && google.maps.Geocoder) {
             try {
                 const geocoder = new google.maps.Geocoder();
-                const res = await geocoder.geocode({ address: q });
-                if (res.results?.length) {
-                    const place = res.results[0];
+                const res = await geocoder.geocode({
+                    address: q,
+                    componentRestrictions: { country: "in" },
+                });
+                const place = this.pickBestGeocodeResult(res.results);
+                if (place) {
                     return {
                         name: place.formatted_address,
                         address: place.formatted_address,
@@ -169,11 +190,11 @@ const locationService = {
             }
         }
 
-        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&q=${encodeURIComponent(q)}`;
+        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=in&q=${encodeURIComponent(q)}`;
         const res = await fetch(url, {
             headers: {
                 Accept: "application/json",
-                "User-Agent": "FoodNanny/1.0 (local-dev)",
+                "User-Agent": "FoodNanny/1.0",
             },
         });
         if (!res.ok) {

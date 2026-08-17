@@ -12,6 +12,7 @@ use App\Events\OrderPlacedSMS;
 use App\Events\OrderPlacedEmail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Http\Requests\PaginateRequest;
 use App\Libraries\QueryExceptionLibrary;
 use App\Events\OrderPlacedPushNotification;
@@ -98,10 +99,24 @@ class ActiveOrderService
     {
         try {
             if ($order->delivery_boy_id == Auth::user()->id && $order->is_received == Ask::NO) {
-                $order->is_received = Ask::YES;
-                $order->status      = OrderStatus::OUT_FOR_DELIVERY;
-                $order->save();
-                app(DeliveryOtpService::class)->ensure($order, true);
+                $order = DB::transaction(function () use ($order) {
+                    /** @var Order $locked */
+                    $locked = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+                    if ($locked->delivery_boy_id != Auth::id() || $locked->is_received != Ask::NO) {
+                        throw new Exception(trans('all.message.something_wrong'), 422);
+                    }
+
+                    $locked->is_received = Ask::YES;
+                    $locked->status      = OrderStatus::OUT_FOR_DELIVERY;
+                    $locked->save();
+
+                    // Do not rotate an OTP the customer may already be viewing.
+                    app(DeliveryOtpService::class)->ensure($locked);
+
+                    return $locked;
+                }, 3);
+
                 $this->statementCalculationService->restaurant($order);
 
                 OrderPlacedEmail::dispatch(['order_id' => $order->id, 'status' => OrderStatus::OUT_FOR_DELIVERY]);

@@ -66,8 +66,12 @@ class ActiveOrderController extends AdminController implements HasMiddleware
 
     public function changeStatus(Request $request, Order $order): \Illuminate\Http\Response | OrderDetailsResource | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
     {
+        $validated = $request->validate([
+            'delivery_otp' => ['required', 'digits:' . \App\Services\DeliveryOtpService::LENGTH],
+        ]);
+
         try {
-            $otp = (string) ($request->input('delivery_otp') ?? $request->query('delivery_otp') ?? '');
+            $otp = (string) $validated['delivery_otp'];
             return new OrderDetailsResource($this->activeOrderService->changeStatus($order, $otp));
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);

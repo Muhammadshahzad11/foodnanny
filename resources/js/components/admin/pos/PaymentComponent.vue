@@ -190,6 +190,7 @@ import KitchenTicketPrintSheet from "../kitchen/KitchenTicketPrintSheet.vue";
 import SimplePrintSetupModal from "./SimplePrintSetupModal.vue";
 import {printKot, printReceipt, PrintUnavailableError} from "../../../services/printService.js";
 import {
+    isPrintPreviewOn,
     isSilentPrintReady,
 } from "../../../services/printPreference.js";
 import {sendViaLocalBridge, probeLocalAgentInfo, localAgentSetupUrl} from "../../../services/localPrintBridge.js";
@@ -462,6 +463,12 @@ export default {
             // Legacy Browser Popup jobs only (manual select) — not used for Direct Print auto mode
             const browserJobs = jobs.filter((j) => j.mode === 'browser_popup' || j.status === 'pending_browser');
             if (browserJobs.length > 0) {
+                // Preview OFF + Browser Popup printer has no silent path: tell the operator
+                // instead of forcing the Chrome dialog they switched off.
+                if (!isPrintPreviewOn() && !isSilentPrintReady()) {
+                    alertService.error(this.$t('message.print_preview_off_browser_printer'));
+                    return;
+                }
                 if (expected.kot && !done.kot) {
                     try {
                         const kotJob = browserJobs.find((j) => j.type === 'kot') || {};

@@ -210,6 +210,11 @@ class RealtimePublisher
             EnumRole::MANAGER,
         ]));
 
+        // Platform admins watch new orders and failures, not every kitchen step
+        if (in_array($action, ['created', 'reject', 'cancel'], true)) {
+            $recipients = $recipients->merge($this->platformAdmins());
+        }
+
         $recipients = $recipients->unique('id')->values();
 
         $tableId = $order->table_id ? (int) $order->table_id : null;
@@ -312,22 +317,31 @@ class RealtimePublisher
         };
     }
 
+    protected function platformAdmins(): Collection
+    {
+        return User::query()
+            ->whereHas('roles', fn ($q) => $q->where('id', EnumRole::ADMIN))
+            ->get();
+    }
+
     protected function restaurantStaff(int $restaurantId, array $roleIds): Collection
     {
         if ($restaurantId <= 0) {
             return collect();
         }
 
+        $restaurantRoleIds = array_filter($roleIds, fn ($id) => (int) $id !== EnumRole::ADMIN);
         $query = User::query()->where('restaurant_id', $restaurantId);
 
-        $roleNames = Role::query()->whereIn('id', array_filter($roleIds, fn ($id) => (int) $id !== EnumRole::ADMIN))->pluck('name');
+        $roleNames = Role::query()->whereIn('id', $restaurantRoleIds)->pluck('name');
         if ($roleNames->isNotEmpty()) {
             $query->whereHas('roles', function ($q) use ($roleNames) {
                 $q->whereIn('name', $roleNames);
             });
         }
 
-        $users = $query->get();
+        // Asking only for admins must not sweep in every user of the restaurant.
+        $users = empty($restaurantRoleIds) ? collect() : $query->get();
 
         if (in_array(EnumRole::ADMIN, $roleIds, true)) {
             $adminRole = Role::query()->find(EnumRole::ADMIN);

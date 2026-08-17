@@ -255,11 +255,12 @@
 
                     <div class="form-col-12 sm:form-col-6">
                         <label for="site_restaurant_search_radius" class="db-field-title required">
-                            {{ $t("label.restaurant_search_radius") }}
+                            {{ $t("label.restaurant_search_radius") }} (km)
                         </label>
                         <input v-on:keypress="floatNumber($event)" v-model="form.site_restaurant_search_radius"
                                v-bind:class="errors.site_restaurant_search_radius ? 'invalid' : ''" type="text"
-                               id="site_restaurant_search_radius" class="db-field-control"/>
+                               id="site_restaurant_search_radius" class="db-field-control"
+                               placeholder="e.g. 50"/>
                         <small class="db-field-alert" v-if="errors.site_restaurant_search_radius">
                             {{ errors.site_restaurant_search_radius[0] }}
                         </small>
@@ -267,11 +268,12 @@
 
                     <div class="form-col-12 sm:form-col-6">
                         <label for="site_delivery_boy_order_radius" class="db-field-title required">
-                            {{ $t("label.delivery_boy_order_radius") }}
+                            {{ $t("label.delivery_boy_order_radius") }} (km)
                         </label>
                         <input v-on:keypress="floatNumber($event)" v-model="form.site_delivery_boy_order_radius"
                                v-bind:class="errors.site_delivery_boy_order_radius ? 'invalid' : ''" type="text"
-                               id="site_delivery_boy_order_radius" class="db-field-control"/>
+                               id="site_delivery_boy_order_radius" class="db-field-control"
+                               placeholder="e.g. 15"/>
                         <small class="db-field-alert" v-if="errors.site_delivery_boy_order_radius">
                             {{ errors.site_delivery_boy_order_radius[0] }}
                         </small>

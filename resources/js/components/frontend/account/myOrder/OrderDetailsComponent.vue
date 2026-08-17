@@ -480,6 +480,8 @@ export default {
             images: {},
             text: "",
             unsubscribeOrderRealtime: null,
+            orderRefreshTimer: null,
+            orderRefreshInFlight: false,
         }
     },
     computed: {
@@ -579,14 +581,51 @@ export default {
                 this.loading.isActive = false;
             })
         }
+        this.startOrderRefreshFallback();
+        window.addEventListener('focus', this.refreshOrderIfVisible);
+        document.addEventListener('visibilitychange', this.refreshOrderIfVisible);
     },
     beforeUnmount() {
         if (typeof this.unsubscribeOrderRealtime === 'function') {
             this.unsubscribeOrderRealtime();
             this.unsubscribeOrderRealtime = null;
         }
+        if (this.orderRefreshTimer) {
+            clearInterval(this.orderRefreshTimer);
+            this.orderRefreshTimer = null;
+        }
+        window.removeEventListener('focus', this.refreshOrderIfVisible);
+        document.removeEventListener('visibilitychange', this.refreshOrderIfVisible);
     },
     methods: {
+        isOrderTerminal() {
+            return [
+                orderStatusEnum.DELIVERED,
+                orderStatusEnum.CANCELED,
+                orderStatusEnum.REJECTED,
+                orderStatusEnum.RETURNED,
+            ].includes(Number(this.order?.status));
+        },
+        async refreshOrderIfVisible() {
+            if (document.hidden || this.isOrderTerminal() || this.orderRefreshInFlight) return;
+            const orderId = this.$route.params.id;
+            if (!orderId) return;
+
+            this.orderRefreshInFlight = true;
+            try {
+                await this.frontendOrderStore.view(orderId);
+            } catch (e) {
+                // Realtime/polling are best-effort; keep the current view on failure.
+            } finally {
+                this.orderRefreshInFlight = false;
+            }
+        },
+        startOrderRefreshFallback() {
+            if (this.orderRefreshTimer) clearInterval(this.orderRefreshTimer);
+            // Pusher provides immediate updates. Polling repairs a missed event
+            // and refreshes the OTP after status changes or network reconnects.
+            this.orderRefreshTimer = setInterval(this.refreshOrderIfVisible, 20000);
+        },
         bindCustomerOrderRealtime() {
             if (typeof this.unsubscribeOrderRealtime === 'function') {
                 this.unsubscribeOrderRealtime();
@@ -601,7 +640,7 @@ export default {
                 orderId,
                 t: (key) => this.$t(key),
                 onUpdate: () => {
-                    this.frontendOrderStore.view(orderId).catch(() => {});
+                    this.refreshOrderIfVisible();
                 },
             });
         },

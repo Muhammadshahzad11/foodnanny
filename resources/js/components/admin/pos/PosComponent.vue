@@ -1244,7 +1244,12 @@ export default {
                     }
                     try {
                         await printKotIframe(job.payload, job.printer || '');
-                    } catch (e) {}
+                    } catch (e) {
+                        if (e?.code === 'PRINT_UNAVAILABLE') {
+                            alertService.error(this.$t('message.print_preview_off_browser_printer'));
+                            return;
+                        }
+                    }
                 }
                 if (job.type === 'invoice' && job.payload) {
                     try {

@@ -28,28 +28,14 @@ class RestaurantOrderPushNotificationBuilder
     public function send(): void
     {
         if (!blank($this->order)) {
-            $restaurantOwner = User::role(Role::RESTAURANT_OWNER)->where(['restaurant_id' => $this->order->restaurant_id])->first();
-
-            $i           = 0;
-            $fcmTokenArrays = [];
-            if (!blank($restaurantOwner)) {
-                if(!blank($restaurantOwner->web_token)) {
-                    $fcmTokenArrays[$i] = $restaurantOwner->web_token;
-                    $i++;
-                }
-
-                if(!blank($restaurantOwner->device_token)) {
-                    $fcmTokenArrays[$i] = $restaurantOwner->device_token;
-                    $i++;
-                }
-            }
+            $fcmTokenArrays = $this->recipientTokens();
 
             if (count($fcmTokenArrays) > 0) {
                 try {
                     $notificationAlert = NotificationAlert::where(['language' => 'restaurant_owner_new_order_message'])->first();
                     if ($notificationAlert && $notificationAlert->push_notification == SwitchBox::ON) {
                         $pushNotification = (object)[
-                            'title'       => 'New order confirmation',
+                            'title'       => 'New order ' . $this->orderReference(),
                             'description' => $notificationAlert->push_notification_message,
                             'order_id'    => $this->orderId
                         ];
@@ -61,6 +47,39 @@ class RestaurantOrderPushNotificationBuilder
                 }
             }
         }
+    }
+
+    protected function orderReference(): string
+    {
+        $serial = trim((string) ($this->order->order_serial_no ?? ''));
+
+        return $serial !== '' ? '#' . $serial : '';
+    }
+
+    /**
+     * Everyone who runs the counter needs the alert, not just the first owner:
+     * owners and managers of the restaurant plus platform admins.
+     *
+     * @return string[]
+     */
+    protected function recipientTokens(): array
+    {
+        $staff = User::query()
+            ->whereHas('roles', fn ($q) => $q->whereIn('id', [Role::RESTAURANT_OWNER, Role::MANAGER]))
+            ->where('restaurant_id', $this->order->restaurant_id)
+            ->get();
+
+        $admins = User::query()
+            ->whereHas('roles', fn ($q) => $q->where('id', Role::ADMIN))
+            ->get();
+
+        return $staff->merge($admins)
+            ->unique('id')
+            ->flatMap(fn (User $user) => [$user->web_token, $user->device_token])
+            ->filter(fn ($token) => filled($token))
+            ->unique()
+            ->values()
+            ->all();
     }
 
 }

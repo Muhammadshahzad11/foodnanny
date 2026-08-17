@@ -2,7 +2,6 @@ const LoginComponent                       = () => import("../../components/fron
 const LoginVerifyComponent                 = () => import("../../components/frontend/auth/LoginVerifyComponent.vue");
 const ForgotPasswordComponent              = () => import("../../components/frontend/auth/ForgotPasswordComponent.vue");
 const SignupPhoneComponent                 = () => import("../../components/frontend/auth/SignupPhoneComponent.vue");
-const GuestLoginComponent                  = () => import("../../components/frontend/auth/GuestLoginComponent.vue");
 const DeliveryBoyPhoneComponent            = () => import("../../components/frontend/auth/DeliveryBoyPhoneComponent.vue");
 const DeliveryBoyVerifyComponent           = () => import("../../components/frontend/auth/DeliveryBoyVerifyComponent.vue");
 const DeliveryBoyRegisterComponent         = () => import("../../components/frontend/auth/DeliveryBoyRegisterComponent.vue");
@@ -13,7 +12,6 @@ const RestaurantInfoComponent              = () => import("../../components/fron
 const RestaurantThankYouComponent          = () => import("../../components/frontend/auth/RestaurantThankYouComponent.vue");
 const SignupVerifyComponent                = () => import("../../components/frontend/auth/SignupVerifyComponent.vue");
 const SignupRegisterComponent              = () => import("../../components/frontend/auth/SignupRegisterComponent.vue");
-const GuestVerifyComponent                 = () => import("../../components/frontend/auth/GuestVerifyComponent.vue");
 const ForgotPasswordEmailVerifyComponent   = () => import("../../components/frontend/auth/ForgotPasswordEmailVerifyComponent.vue");
 const ForgotPasswordResetPasswordComponent = () => import("../../components/frontend/auth/ForgotPasswordResetPasswordComponent.vue");
 
@@ -92,26 +90,6 @@ export default [
         path: '/signup/register',
         component: SignupRegisterComponent,
         name: 'auth.signupRegister',
-        meta: {
-            template: "frontend",
-            auth: false,
-            mode: "main"
-        }
-    },
-    {
-        path: '/guest-login',
-        component: GuestLoginComponent,
-        name: 'auth.guestLogin',
-        meta: {
-            template: "frontend",
-            auth: false,
-            mode: "main"
-        }
-    },
-    {
-        path: '/guest-login/verify',
-        component: GuestVerifyComponent,
-        name: 'auth.guestLoginVerify',
         meta: {
             template: "frontend",
             auth: false,

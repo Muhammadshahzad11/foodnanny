@@ -389,8 +389,8 @@ class ZoneService
 
     /**
      * Restrict a restaurant query to the platform zone(s) for this pin / city.
-     * Inside a polygon → that zone. City search (e.g. Hyderabad) → all matching zones.
-     * Far away with no city match → empty.
+     * Inside a polygon → that zone (+ unassigned restaurants).
+     * Outside all zones → only restaurants not locked to a zone (still filtered by radius).
      */
     public function constrainRestaurants($query, ?float $lat, ?float $lng, array $area = []): bool
     {
@@ -402,11 +402,15 @@ class ZoneService
         $table = method_exists($query, 'getModel') ? $query->getModel()->getTable() : 'restaurants';
 
         if (empty($ids)) {
-            $query->whereRaw('1 = 0');
+            // Pin is outside mapped zones — still show restaurants that are not zone-locked.
+            $query->whereNull($table . '.zone_id');
             return false;
         }
 
-        $query->whereIn($table . '.zone_id', $ids);
+        $query->where(function ($q) use ($ids, $table) {
+            $q->whereIn($table . '.zone_id', $ids)
+                ->orWhereNull($table . '.zone_id');
+        });
 
         return true;
     }

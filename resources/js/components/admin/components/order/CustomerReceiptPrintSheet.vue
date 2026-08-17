@@ -5,52 +5,40 @@
             <div class="bill-center">
                 <img v-if="restaurant?.logo" :src="restaurant.logo" alt="" class="bill-logo"/>
                 <div class="bill-name">{{ restaurant?.name || 'Restaurant' }}</div>
-                <div v-if="restaurant?.address" class="bill-addr">{{ restaurant.address }}</div>
-                <div v-if="cityLine" class="bill-addr">{{ cityLine }}</div>
-                <div v-if="restaurant?.phone" class="bill-addr">
-                    ph: {{ (restaurant.country_code || '') + restaurant.phone }}
-                </div>
+                <div class="bill-doc-title">TAX INVOICE</div>
             </div>
 
             <div class="bill-line"></div>
 
-            <div class="bill-row">
-                <span>Name:</span>
-                <span>{{ customerDisplay }}</span>
-            </div>
+            <div class="bill-nameline">Name: <strong>{{ customerDisplay }}</strong></div>
 
-            <div class="bill-grid">
-                <div>
-                    <div>Date: {{ orderDate }}</div>
-                    <div>Time: {{ orderTime }}</div>
-                    <div v-if="cashierName">Cashier: {{ cashierName }}</div>
-                    <div v-if="order?.token">
-                        Token No.: <strong>{{ order.token }}</strong>
-                    </div>
-                    <div v-if="tableLabel">
-                        Table No: <strong>{{ tableLabel }}</strong>
-                    </div>
-                </div>
-                <div class="bill-right">
-                    <div class="bill-type-badge"><strong>{{ orderTypeLabel }}</strong></div>
-                    <div>Bill No.: {{ order?.order_serial_no }}</div>
-                </div>
+            <div class="bill-dash"></div>
+
+            <div class="bill-row bill-meta">
+                <span>Date: {{ orderDate }}</span>
+                <span class="bill-right">Bill#: {{ order?.order_serial_no }}</span>
+            </div>
+            <div class="bill-row bill-meta">
+                <span>Time: {{ orderTime }}</span>
+                <span class="bill-right">{{ tableLabel ? 'Table: ' + tableLabel : orderTypeLabel }}</span>
+            </div>
+            <div v-if="cashierName" class="bill-row bill-meta">
+                <span>Cashier: {{ cashierName }}</span>
+                <span class="bill-right">{{ tableLabel ? orderTypeLabel : '' }}</span>
             </div>
 
             <div class="bill-line"></div>
 
             <div class="bill-row bill-head">
-                <span class="b-no">No.</span>
                 <span class="b-item">Item</span>
-                <span class="b-qty">Qty.</span>
+                <span class="b-qty">Qty</span>
                 <span class="b-price">Price</span>
-                <span class="b-amt">Amount</span>
+                <span class="b-amt">Amt</span>
             </div>
             <div class="bill-line"></div>
 
             <div v-for="(item, idx) in normalizedItems" :key="idx" class="bill-item">
                 <div class="bill-row">
-                    <span class="b-no">{{ idx + 1 }}</span>
                     <span class="b-item">{{ item.name }}</span>
                     <span class="b-qty">{{ item.quantity }}</span>
                     <span class="b-price">{{ item.unitPrice }}</span>
@@ -64,28 +52,47 @@
             <div class="bill-line"></div>
 
             <div class="bill-row">
-                <span>Total Qty: {{ totalQty }}</span>
-                <span>Sub Total {{ subtotalLabel }}</span>
+                <span>Total Qty {{ totalQty }}</span>
+                <span class="bill-right">Sub Total. {{ subtotalLabel }}</span>
             </div>
             <div v-if="hasDiscount" class="bill-row">
-                <span></span>
-                <span>Discount {{ discountLabel }}</span>
+                <span>Discount</span>
+                <span class="bill-right">- {{ discountLabel }}</span>
             </div>
-            <div v-if="hasTax" class="bill-row">
-                <span></span>
-                <span>Tax {{ taxLabel }}</span>
-            </div>
-            <div class="bill-row bill-grand">
-                <span></span>
-                <span>Grand Total {{ totalLabel }}</span>
-            </div>
-
-            <div v-if="paymentLabel" class="bill-row" style="margin-top:4px">
-                <span>Payment: {{ paymentLabel }}</span>
+            <template v-if="hasTax">
+                <div class="bill-row">
+                    <span>CGST{{ gstHalfLabel }}</span>
+                    <span class="bill-right">{{ halfTaxLabel }}</span>
+                </div>
+                <div class="bill-row">
+                    <span>SGST{{ gstHalfLabel }}</span>
+                    <span class="bill-right">{{ halfTaxLabel }}</span>
+                </div>
+            </template>
+            <div v-if="hasRoundOff" class="bill-row">
+                <span>Round Off</span>
+                <span class="bill-right">{{ roundOffLabel }}</span>
             </div>
 
             <div class="bill-line"></div>
-            <div class="bill-center bill-thanks">Thank You | Visit Again...!!!</div>
+
+            <div class="bill-row bill-grand">
+                <span>Grand Total</span>
+                <span class="bill-right">{{ totalLabel }}</span>
+            </div>
+            <div v-if="paymentLabel" class="bill-row">
+                <span>Payment</span>
+                <span class="bill-right">{{ paymentLabelUpper }}</span>
+            </div>
+
+            <div class="bill-line"></div>
+            <div class="bill-center bill-thanks">
+                Thank you for dining with us!<br>Visit again.
+            </div>
+            <div v-if="poweredBy" class="bill-center bill-powered">
+                {{ $t('label.powered_by') }} {{ poweredBy }}
+            </div>
+            <div class="bill-dash"></div>
         </div>
     </div>
 </template>
@@ -170,6 +177,41 @@ export default {
         hasTax() {
             return parseFloat(this.order?.total_tax || 0) > 0;
         },
+        paymentLabelUpper() {
+            return String(this.paymentLabel || '').toUpperCase();
+        },
+        poweredBy() {
+            return String(this.setting?.company_name || '').trim();
+        },
+        /** Tax is stored as one GST figure; the bill shows it as CGST + SGST halves. */
+        gstRate() {
+            const rates = (this.items || [])
+                .map((i) => parseFloat(i.tax_rate || 0))
+                .filter((r) => r > 0);
+            return rates.length ? rates[0] : 0;
+        },
+        gstHalfLabel() {
+            if (!(this.gstRate > 0)) return '';
+            const half = (this.gstRate / 2).toFixed(2).replace(/\.?0+$/, '');
+            return ` (${half}%)`;
+        },
+        halfTaxLabel() {
+            return this.money(parseFloat(this.order?.total_tax || 0) / 2);
+        },
+        roundOffAmount() {
+            const num = (v) => parseFloat(v || 0) || 0;
+            const o = this.order || {};
+            const computed = num(o.subtotal) - num(o.discount) + num(o.total_tax)
+                + num(o.delivery_fee) + num(o.service_fee) + num(o.rider_tip);
+            return Math.round((num(o.total) - computed) * 100) / 100;
+        },
+        hasRoundOff() {
+            return Math.abs(this.roundOffAmount) >= 0.01;
+        },
+        roundOffLabel() {
+            const value = this.roundOffAmount;
+            return (value < 0 ? '-' : '') + this.money(Math.abs(value));
+        },
         totalQty() {
             return (this.items || []).reduce((s, i) => s + parseFloat(i.quantity || 0), 0);
         },
@@ -247,7 +289,7 @@ export default {
     max-width: 100%;
     margin: 0 auto;
     padding: 2mm;
-    font-family: "Courier New", Courier, ui-monospace, monospace;
+    font-family: "Helvetica Neue", Arial, "DejaVu Sans", sans-serif;
     color: #000;
     font-size: 11px;
     line-height: 1.3;
@@ -262,56 +304,57 @@ export default {
     display: block;
 }
 .bill-name {
-    font-size: 13px;
-    font-weight: 800;
-    text-transform: uppercase;
+    font-size: 14px;
+    font-weight: 600;
+}
+.bill-doc-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: .3px;
 }
 .bill-addr { font-size: 10px; }
 .bill-line {
     border-top: 1px solid #000;
-    margin: 5px 0;
+    margin: 4px 0;
 }
+.bill-dash {
+    border-top: 1px dashed #000;
+    margin: 4px 0;
+}
+.bill-nameline { font-size: 12.5px; }
 .bill-row {
     display: flex;
     justify-content: space-between;
     gap: 4px;
+    font-size: 12px;
 }
-.bill-grid {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: 4px;
-}
+.bill-meta { padding: 1px 0; }
 .bill-right { text-align: right; }
-.bill-type-badge {
-    display: inline-block;
-    font-size: 13px;
-    font-weight: 900;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    border: 2px solid #000;
-    padding: 2px 8px;
-    margin-bottom: 3px;
-}
 .bill-head { font-weight: 700; }
-.b-no { width: 8%; flex-shrink: 0; }
 .b-item { width: 40%; }
 .b-qty { width: 12%; text-align: right; }
-.b-price { width: 18%; text-align: right; }
-.b-amt { width: 22%; text-align: right; }
-.bill-item { margin: 3px 0; }
+.b-price { width: 24%; text-align: right; }
+.b-amt { width: 24%; text-align: right; }
+.bill-item { margin: 2px 0; }
 .bill-mod {
-    margin-left: 8%;
-    font-size: 10px;
+    margin-left: 8px;
+    font-size: 10.5px;
 }
 .bill-grand {
-    font-weight: 800;
-    font-size: 12px;
-    margin-top: 2px;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 2px 0 1px;
 }
 .bill-thanks {
-    margin-top: 6px;
+    margin-top: 4px;
+    font-size: 12.5px;
     font-weight: 700;
+    line-height: 1.35;
+}
+.bill-powered {
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 400;
 }
 
 @media print {

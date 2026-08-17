@@ -65,7 +65,6 @@ use App\Http\Controllers\Admin\RestaurantTableQrController;
 use App\Http\Controllers\Admin\SmsGatewayController;
 use App\Http\Controllers\Admin\AiAgentController;
 use App\Http\Controllers\Admin\SubscriberController;
-use App\Http\Controllers\Auth\GuestSignupController;
 use App\Http\Controllers\Frontend\ProfileController;
 use App\Http\Controllers\Frontend\SettingController;
 use App\Http\Controllers\Admin\ActiveOrderController;
@@ -174,11 +173,6 @@ Route::prefix('auth')->middleware(['installed', 'apiKey', 'localization'])->name
         Route::post('/phone', [DeliveryBoySignupController::class, 'phone'])->middleware('throttle:otp-send');
         Route::post('/verify', [DeliveryBoySignupController::class, 'verify'])->middleware('throttle:otp-verify');
         Route::post('/register-delivery-boy', [DeliveryBoySignupController::class, 'register'])->middleware('throttle:request-verify');
-    });
-
-    Route::prefix('guest-signup')->name('guest-signup.')->group(function () {
-        Route::post('/phone', [GuestSignupController::class, 'phone'])->middleware('throttle:otp-send');
-        Route::post('/verify', [GuestSignupController::class, 'verify'])->middleware('throttle:otp-verify');
     });
 
     Route::prefix('forgot-password')->name('forgot-password.')->group(function () {
@@ -639,8 +633,9 @@ Route::prefix('admin')->name('admin.')->middleware(['installed', 'apiKey', 'loca
         Route::get('/', [ActiveOrderController::class, 'index']);
         Route::get('/show/{order}', [ActiveOrderController::class, 'show']);
         Route::get('/export', [ActiveOrderController::class, 'export']);
-        Route::match(['get', 'post'], '/change-status/{order}', [ActiveOrderController::class, 'changeStatus']);
-        Route::get('/received-status/{order}', [ActiveOrderController::class, 'receivedStatus']);
+        Route::post('/change-status/{order}', [ActiveOrderController::class, 'changeStatus'])
+            ->middleware('throttle:10,1');
+        Route::post('/received-status/{order}', [ActiveOrderController::class, 'receivedStatus']);
     });
 
     Route::prefix('push-notification')->name('push-notification.')->group(function () {

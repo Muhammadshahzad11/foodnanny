@@ -113,8 +113,13 @@ export default {
 
     error: function (message = "Error", position = "top-right") {
         const toast = useToast();
+        // Errors must be readable: they outlive the quick success toasts and
+        // hold while the pointer is over them.
         toast.error(message, {
             position: position,
+            timeout: 5000,
+            pauseOnHover: true,
+            closeButton: "button",
         });
     },
 
@@ -146,6 +151,26 @@ export default {
             return toast.warning(content, options);
         }
         return toast.info(content, options);
+    },
+
+    /**
+     * New order arrived — large, long-lived and clickable, unlike the routine
+     * status toasts.
+     */
+    newOrderAlert: function (message = "New order", meta = {}) {
+        const toast = useToast();
+        const content = buildStatusContent(message, meta.orderSerial, meta.orderUrl);
+
+        return toast.success(content, {
+            position: "top-right",
+            timeout: Number(meta.timeout) > 0 ? Number(meta.timeout) : 12000,
+            toastClassName: "toast-new-order",
+            closeOnClick: false,
+            closeButton: "button",
+            pauseOnHover: true,
+            pauseOnFocusLoss: true,
+            hideProgressBar: false,
+        });
     },
 
     /**

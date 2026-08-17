@@ -82,11 +82,6 @@
                 {{ $t('button.signup') }}
             </router-link>
         </div>
-        <p class="uppercase text-xs my-4 text-center text-paragraph">{{ $t('label.or') }}</p>
-        <router-link :to="{ name: 'auth.guestLogin', query: $route.query }"
-                     class="w-full h-12 leading-[46px] text-center font-medium rounded-full border border-primary text-primary">
-            {{ $t('button.login_as_guest') }}
-        </router-link>
     </form>
 
     <div v-if="demo === 'true' || demo === 'TRUE' || demo === 'True' || demo === '1' || demo === 1"

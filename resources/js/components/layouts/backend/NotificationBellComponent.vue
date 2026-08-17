@@ -26,14 +26,35 @@
         >
             <div class="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100">
                 <h3 class="text-sm font-semibold text-heading">{{ $t('label.notifications') }}</h3>
-                <button
-                    v-if="unreadCount > 0"
-                    type="button"
-                    class="text-xs font-medium text-primary"
-                    @click.stop.prevent="markAll"
-                >
-                    {{ $t('button.mark_all_read') }}
-                </button>
+                <div class="flex items-center gap-3">
+                    <button
+                        type="button"
+                        class="w-7 h-7 rounded-lg flex items-center justify-center transition"
+                        :class="soundEnabled ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-[#A0A3BD]'"
+                        :title="soundEnabled ? $t('label.notification_sound_on') : $t('label.notification_sound_off')"
+                        @click.stop.prevent="toggleSound"
+                    >
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M11 5 6 9H2v6h4l5 4V5z"/>
+                            <template v-if="soundEnabled">
+                                <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+                                <path d="M18.5 5.5a9 9 0 0 1 0 13"/>
+                            </template>
+                            <template v-else>
+                                <path d="M22 9l-6 6"/>
+                                <path d="M16 9l6 6"/>
+                            </template>
+                        </svg>
+                    </button>
+                    <button
+                        v-if="unreadCount > 0"
+                        type="button"
+                        class="text-xs font-medium text-primary"
+                        @click.stop.prevent="markAll"
+                    >
+                        {{ $t('button.mark_all_read') }}
+                    </button>
+                </div>
             </div>
 
             <ul class="flex-auto overflow-y-auto thin-scrolling max-h-[50vh]">
@@ -100,6 +121,9 @@ export default {
         },
         unreadCount() {
             return this.inboxStore.unreadCount || 0;
+        },
+        soundEnabled() {
+            return !!this.inboxStore.soundEnabled;
         }
     },
     mounted() {
@@ -109,6 +133,9 @@ export default {
         document.removeEventListener('click', this.onDocClick);
     },
     methods: {
+        toggleSound() {
+            this.inboxStore.toggleSound();
+        },
         toggle() {
             this.open = !this.open;
             if (this.open) {

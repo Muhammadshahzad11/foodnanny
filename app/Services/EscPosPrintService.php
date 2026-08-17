@@ -60,60 +60,70 @@ class EscPosPrintService
         $line  = str_repeat('-', $width);
         $rows  = [];
 
-        // Logo is binary — added in buildKotDocument. Text header:
-        $rows[] = $this->center($payload['copy'] ?? 'KITCHEN KOT', $width);
+        // First two non-dash lines are printed double-size/centred by buildKotDocument.
+        $rows[] = $this->center($payload['copy'] ?? 'KOT', $width);
         $rows[] = $this->center($this->ascii((string) ($payload['restaurant'] ?? '')), $width);
-        if (!empty($payload['tagline'])) {
-            $rows[] = $this->center($this->ascii((string) $payload['tagline']), $width);
-        }
-        $rows[] = $line;
-        $rows[] = 'KOT#: ' . ($payload['kot_no'] ?? $payload['ticket_no'] ?? '');
-        $rows[] = 'Order: ' . ($payload['order_serial_no'] ?? '');
-        $rows[] = 'Type: ' . ($payload['order_type_label'] ?? '');
-        $rows[] = 'Station: ' . ($payload['station'] ?? '-');
-        $rows[] = 'Table: ' . ($payload['table_no'] ?? ($payload['table']['number'] ?? '-'));
-        $rows[] = 'Time: ' . ($payload['order_time'] ?? '');
         $rows[] = $line;
 
+        $table = (string) ($payload['table_no'] ?? ($payload['table']['number'] ?? ''));
+        $left  = $table !== '' && $table !== '-'
+            ? 'Table: ' . $table
+            : (!empty($payload['counter']) ? $this->ascii((string) $payload['counter']) . ' Counter' : 'Counter');
+        $rows[] = $this->pair($left, $this->ascii((string) ($payload['order_type_label'] ?? '')), $width);
+
+        $stamp  = trim(((string) ($payload['order_date'] ?? '')) . ' ' . ((string) ($payload['order_time'] ?? '')));
+        $ticket = (string) ($payload['ticket_no'] ?? ($payload['kot_no'] ? 'KOT - ' . $payload['kot_no'] : ''));
+        $rows[] = $this->pair($stamp, $ticket, $width);
+        if (!empty($payload['station'])) {
+            $rows[] = $this->pair('Station', $this->ascii((string) $payload['station']), $width);
+        }
+
+        $rows[] = $line;
+        $rows[] = $this->pair('ITEM', 'QTY', $width);
+        $rows[] = $line;
+
+        $index = 0;
         foreach ($payload['items'] ?? [] as $item) {
+            $index++;
             $qty  = (int) ($item['quantity'] ?? 1);
             $name = $this->ascii((string) ($item['name'] ?? 'Item'));
+
             if (!empty($item['change_label']) || !empty($item['direction'])) {
-                $dir = strtoupper((string) ($item['direction'] ?? ''));
-                if ($dir === 'REMOVE') {
-                    $rows[] = $name;
-                    $rows[] = 'REMOVE: ' . $qty;
-                } elseif ($dir === 'ADD') {
-                    $rows[] = $name;
-                    $rows[] = 'ADD: ' . $qty;
-                } else {
-                    $rows[] = $name;
-                    $rows[] = $this->ascii((string) $item['change_label']);
+                $dir   = strtoupper((string) ($item['direction'] ?? ''));
+                $label = $dir === 'REMOVE' || $dir === 'ADD'
+                    ? $dir . ': ' . $qty
+                    : $this->ascii((string) $item['change_label']);
+                foreach ($this->numberedRows($index, $name, $label, $width) as $row) {
+                    $rows[] = $row;
                 }
             } else {
-                $rows[] = $qty . ' x ' . $name;
+                foreach ($this->numberedRows($index, $name, (string) $qty, $width) as $row) {
+                    $rows[] = $row;
+                }
             }
+
             foreach ($item['variation_lines'] ?? [] as $v) {
-                $rows[] = '  - ' . $this->ascii((string) $v);
+                $rows[] = '   - ' . $this->ascii((string) $v);
             }
             foreach ($item['extra_lines'] ?? [] as $e) {
-                $rows[] = '  + ' . $this->ascii((string) $e);
+                $rows[] = '   + ' . $this->ascii((string) $e);
             }
             if (!empty($item['instruction'])) {
-                $rows[] = '  * ' . $this->ascii((string) $item['instruction']);
+                $rows[] = '   * ' . $this->ascii((string) $item['instruction']);
             }
         }
 
         $rows[] = $line;
-        $rows[] = 'Qty: ' . ($payload['total_qty'] ?? 0);
+        $rows[] = $this->pair('', 'Total: ' . ($payload['total_qty'] ?? 0) . ' items', $width);
         if (!empty($payload['special_note'])) {
-            $rows[] = 'Note: ' . $this->ascii((string) $payload['special_note']);
+            $rows[] = '';
+            foreach ($this->wrapWords('NOTE: ' . $this->ascii((string) $payload['special_note']), $width) as $w) {
+                $rows[] = $w;
+            }
         }
-        $rows[] = $this->center($payload['printed_at'] ?? now()->format('h:i A, d-m-Y'), $width);
         if (!empty($payload['powered_by'])) {
             $rows[] = '';
-            $rows[] = $this->center('Powered by', $width);
-            $rows[] = $this->center($this->ascii((string) $payload['powered_by']), $width);
+            $rows[] = $this->center('Powered by ' . $this->ascii((string) $payload['powered_by']), $width);
         }
         $rows[] = '';
         $rows[] = '';
@@ -123,6 +133,59 @@ class EscPosPrintService
         return implode("\n", $rows);
     }
 
+    /**
+     * "1. Item name" on the left with a right-aligned value, wrapping long names.
+     *
+     * @return string[]
+     */
+    protected function numberedRows(int $index, string $name, string $right, int $width): array
+    {
+        $prefix   = $index . '. ';
+        $bodyWide = max(8, $width - $this->visibleLen($right) - 1);
+        $wrapped  = $this->wrapWords($prefix . $name, $bodyWide);
+        if (!$wrapped) {
+            return [$this->pair($prefix, $right, $width)];
+        }
+
+        $rows   = [];
+        $rows[] = $this->pair(array_shift($wrapped), $right, $width);
+        foreach ($wrapped as $extra) {
+            $rows[] = '   ' . $extra;
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Fixed-width invoice item row: name | qty | price | amount.
+     *
+     * @return string[]
+     */
+    protected function invoiceItemRows(string $name, string $qty, string $price, string $amount, int $width): array
+    {
+        $amtW   = min(11, max(8, (int) floor($width * 0.24)));
+        $priceW = min(10, max(7, (int) floor($width * 0.21)));
+        $qtyW   = 4;
+        $nameW  = max(10, $width - $amtW - $priceW - $qtyW);
+
+        $wrapped = $this->wrapWords($name, $nameW);
+        if (!$wrapped) {
+            $wrapped = [''];
+        }
+
+        $rows = [];
+        $rows[] = str_pad($this->clipLine(array_shift($wrapped), $nameW), $nameW)
+            . str_pad($qty, $qtyW, ' ', STR_PAD_LEFT)
+            . str_pad($price, $priceW, ' ', STR_PAD_LEFT)
+            . str_pad($amount, $amtW, ' ', STR_PAD_LEFT);
+
+        foreach ($wrapped as $extra) {
+            $rows[] = '  ' . $extra;
+        }
+
+        return $rows;
+    }
+
     public function renderInvoiceText(Printer $printer, array $payload): string
     {
         $width = $this->effectiveWidth($printer);
@@ -130,30 +193,65 @@ class EscPosPrintService
         $rows  = [];
 
         $rows[] = $this->center($this->ascii((string) ($payload['restaurant'] ?? 'INVOICE')), $width);
+        $rows[] = $this->center('TAX INVOICE', $width);
         if (!empty($payload['tagline'])) {
             foreach ($this->wrapWords($this->ascii((string) $payload['tagline']), $width) as $w) {
                 $rows[] = $this->center($w, $width);
             }
         }
         if (!empty($payload['phone'])) {
-            $rows[] = $this->center('Tel: ' . $this->ascii((string) $payload['phone']), $width);
+            $rows[] = $this->center('ph: ' . $this->ascii((string) $payload['phone']), $width);
         }
         $rows[] = $line;
-        $rows[] = $this->pair('Bill#', (string) ($payload['order_serial_no'] ?? ''), $width);
-        $rows[] = $this->pair('Type', (string) ($payload['order_type_label'] ?? ''), $width);
-        $rows[] = $this->pair('Table', (string) ($payload['table_no'] ?? '-'), $width);
-        $rows[] = $this->pair('Cashier', $this->ascii((string) ($payload['biller'] ?? '')), $width);
-        $rows[] = $this->pair('Time', (string) ($payload['order_datetime'] ?? ''), $width);
+
+        $customer = trim($this->ascii((string) ($payload['customer'] ?? '')));
+        $rows[] = 'Name: ' . ($customer !== '' ? $customer : 'Walk-in');
+        $rows[] = str_repeat('- ', (int) floor($width / 2));
+
+        $date      = (string) ($payload['order_date'] ?? $payload['order_datetime'] ?? '');
+        $time      = (string) ($payload['order_time'] ?? '');
+        $table     = (string) ($payload['table_no'] ?? '');
+        $typeLabel = $this->ascii((string) ($payload['order_type_label'] ?? ''));
+
+        $rows[] = $this->pair('Date: ' . $date, 'Bill#: ' . ($payload['order_serial_no'] ?? ''), $width);
+        $rows[] = $this->pair(
+            'Time: ' . $time,
+            $table !== '' && $table !== '-' ? 'Table: ' . $table : $typeLabel,
+            $width
+        );
+        if (!empty($payload['biller'])) {
+            $rows[] = $this->pair(
+                'Cashier: ' . $this->ascii((string) $payload['biller']),
+                $table !== '' && $table !== '-' ? $typeLabel : '',
+                $width
+            );
+        }
+
         $rows[] = $line;
-        $rows[] = $this->pair('ITEM', 'AMOUNT', $width);
+        foreach ($this->invoiceItemRows('Item', 'Qty', 'Price', 'Amt', $width) as $row) {
+            $rows[] = $row;
+        }
         $rows[] = $line;
 
+        $totalQty = 0;
         foreach ($payload['items'] ?? [] as $item) {
             $name = $this->ascii((string) ($item['name'] ?? 'Item'));
             $qty  = (int) ($item['quantity'] ?? 1);
-            $amt  = $this->thermalMoney($item['total_price'] ?? $item['price'] ?? 0);
-            // One line: "1x Garden Salad..........Rs.6.16"
-            $rows[] = $this->pair($qty . 'x ' . $name, $amt, $width);
+            $totalQty += $qty;
+
+            $unit = $item['price'] ?? null;
+            $amt  = $item['total_price'] ?? $item['price'] ?? 0;
+
+            foreach ($this->invoiceItemRows(
+                $name,
+                (string) $qty,
+                $unit === null ? '' : $this->moneyNumber($unit),
+                $this->moneyNumber($amt),
+                $width
+            ) as $row) {
+                $rows[] = $row;
+            }
+
             foreach ($item['variation_lines'] ?? [] as $v) {
                 $rows[] = '  ' . $this->ascii((string) $v);
             }
@@ -163,25 +261,44 @@ class EscPosPrintService
         }
 
         $rows[] = $line;
-        if (isset($payload['subtotal'])) {
-            $rows[] = $this->pair('Subtotal', $this->thermalMoney($payload['subtotal']), $width);
+
+        $subtotal = (float) $this->moneyNumber($payload['subtotal'] ?? 0);
+        $tax      = (float) $this->moneyNumber($payload['tax'] ?? 0);
+        $discount = (float) $this->moneyNumber($payload['discount'] ?? 0);
+        $total    = (float) $this->moneyNumber($payload['total'] ?? 0);
+
+        $rows[] = $this->pair(
+            'Total Qty ' . ($payload['total_qty'] ?? $totalQty),
+            'Sub Total. ' . $this->thermalMoney($subtotal),
+            $width
+        );
+        if ($discount > 0) {
+            $rows[] = $this->pair('Discount', '-' . $this->thermalMoney($discount), $width);
         }
-        if (isset($payload['tax'])) {
-            $rows[] = $this->pair('Tax', $this->thermalMoney($payload['tax']), $width);
+        if ($tax > 0) {
+            // Stored as one GST figure — printed as the usual CGST + SGST halves.
+            $half  = $tax / 2;
+            $label = $this->gstHalfLabel($payload);
+            $rows[] = $this->pair('CGST' . $label, $this->thermalMoney($half), $width);
+            $rows[] = $this->pair('SGST' . $label, $this->thermalMoney($tax - $half), $width);
         }
-        if (isset($payload['discount']) && (float) $this->moneyNumber($payload['discount']) > 0) {
-            $rows[] = $this->pair('Discount', $this->thermalMoney($payload['discount']), $width);
+
+        $roundOff = round($total - ($subtotal - $discount + $tax), 2);
+        if (abs($roundOff) >= 0.01) {
+            $rows[] = $this->pair('Round Off', ($roundOff < 0 ? '-' : '') . $this->thermalMoney(abs($roundOff)), $width);
         }
-        if (isset($payload['total'])) {
-            $rows[] = $this->pair('TOTAL', $this->thermalMoney($payload['total']), $width);
+
+        $rows[] = $line;
+        $rows[] = $this->pair('GRAND TOTAL', $this->thermalMoney($total), $width);
+        if (!empty($payload['payment_label'])) {
+            $rows[] = $this->pair('Payment', strtoupper($this->ascii((string) $payload['payment_label'])), $width);
         }
         $rows[] = $line;
-        $rows[] = $this->center('Thank You | Visit Again!', $width);
+        $rows[] = $this->center('Thank you for dining with us!', $width);
+        $rows[] = $this->center('Visit again.', $width);
         if (!empty($payload['powered_by'])) {
             $rows[] = '';
-            $rows[] = $this->center(str_repeat('-', min(30, $width)), $width);
-            $rows[] = $this->center('Powered by', $width);
-            $rows[] = $this->center($this->ascii((string) $payload['powered_by']), $width);
+            $rows[] = $this->center('Powered by ' . $this->ascii((string) $payload['powered_by']), $width);
         }
         // Extra blank lines so footer is not cut off by the autocutter
         $rows[] = '';
@@ -191,6 +308,20 @@ class EscPosPrintService
         $rows[] = '';
 
         return implode("\n", $rows);
+    }
+
+    /**
+     * " (2.5%)" when the GST rate is known, otherwise no rate in the label.
+     */
+    protected function gstHalfLabel(array $payload): string
+    {
+        $rate = (float) ($payload['gst_rate'] ?? 0);
+        if ($rate <= 0) {
+            return '';
+        }
+        $half = rtrim(rtrim(number_format($rate / 2, 2, '.', ''), '0'), '.');
+
+        return ' (' . $half . '%)';
     }
 
     /**
@@ -329,7 +460,7 @@ class EscPosPrintService
                 $printedHeader++;
                 continue;
             }
-            if (preg_match('/^\d+\s+x\s+/', $line)) {
+            if (preg_match('/^\d+\s*(x|\.)\s+/', $line)) {
                 $out .= "\x1B\x45\x01\x1D\x21\x01";
                 $out .= $this->emitLine($this->clipLine($line, $width));
                 $out .= "\x1D\x21\x00\x1B\x45\x00";

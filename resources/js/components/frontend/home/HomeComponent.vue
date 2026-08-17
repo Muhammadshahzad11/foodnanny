@@ -238,7 +238,9 @@ export default {
         }
     },
     async mounted() {
-        if (this.commonStore.location) {
+        // If we have a saved location label but no coordinates, treat it as incomplete and re-detect.
+        const hasCoords = this.commonStore.latitude != null && this.commonStore.longitude != null;
+        if (this.commonStore.location && hasCoords) {
             await this.$router.push({name: 'frontend.restaurant'});
             return;
         }
@@ -302,6 +304,7 @@ export default {
                 if (!input) return;
                 const autocomplete = new Places.Autocomplete(input, {
                     fields: ['address_components', 'formatted_address', 'geometry', 'name'],
+                    componentRestrictions: { country: 'in' },
                 });
                 autocomplete.addListener('place_changed', () => {
                     const place = autocomplete.getPlace();

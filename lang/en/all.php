@@ -172,6 +172,7 @@ return [
         'order_cannot_be_canceled'                                   => 'Orders cannot be cancelled after they are placed.',
         'delivery_otp_required'                                      => 'Enter the customer OTP to complete this delivery.',
         'invalid_delivery_otp'                                       => 'Invalid delivery OTP. Ask the customer for the code on their order.',
+        'delivery_must_be_completed_by_rider'                         => 'Delivery orders must be completed by the assigned rider using the customer OTP.',
         'feature_disable'                                            => 'This feature is disabled for the demo.',
         'time_slot_exist'                                            => 'Time slots already exist.',
         'default_time_slots_generated'                               => 'Default time slots generated successfully.',

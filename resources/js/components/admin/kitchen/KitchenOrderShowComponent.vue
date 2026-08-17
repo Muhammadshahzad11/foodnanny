@@ -88,6 +88,7 @@
 import LoadingComponent from "../../common/LoadingComponent.vue";
 import {useKitchenOrderStore} from "../../../stores/kitchenOrder.js";
 import orderStatusEnum from "../../../enums/modules/orderStatusEnum.js";
+import orderTypeEnum from "../../../enums/modules/orderTypeEnum.js";
 import kitchenPriorityEnum from "../../../enums/modules/kitchenPriorityEnum.js";
 import alertService from "../../../services/alertService.js";
 import appService from "../../../services/appService.js";
@@ -96,7 +97,7 @@ export default {
     name: "KitchenOrderShowComponent",
     components: {LoadingComponent},
     setup() {
-        return {kitchenOrderStore: useKitchenOrderStore(), orderStatusEnum, kitchenPriorityEnum};
+        return {kitchenOrderStore: useKitchenOrderStore(), orderStatusEnum, orderTypeEnum, kitchenPriorityEnum};
     },
     data() {
         return {
@@ -161,7 +162,8 @@ export default {
         },
         canComplete() {
             return this.permissionChecker('kitchen_ready')
-                && this.order.status === orderStatusEnum.PREPARED;
+                && this.order.status === orderStatusEnum.PREPARED
+                && Number(this.order.order_type) !== orderTypeEnum.DELIVERY;
         },
         canReject() {
             return this.permissionChecker('kitchen_reject')

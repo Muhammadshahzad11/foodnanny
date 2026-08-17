@@ -1,6 +1,7 @@
 import ENV from "../config/env.js";
 import alertService from "../services/alertService.js";
 import orderStatusEnum from "../enums/modules/orderStatusEnum.js";
+import {playNotificationSound as playSound} from "../services/notificationSound.js";
 
 const SOUND_PREF_KEY = 'customer_order_sound_enabled';
 const DEDUPE_PREFIX = 'customer_order_status_alert:';
@@ -29,13 +30,7 @@ export function getCustomerOrderSoundEnabled() {
 
 function playNotificationSound() {
     if (!isSoundEnabled()) return;
-    try {
-        const audio = new Audio('/audio/notification.mp3');
-        audio.volume = 0.7;
-        audio.play().catch(() => {});
-    } catch (e) {
-        // ignore autoplay blocks
-    }
+    playSound({volume: 0.7, force: true});
 }
 
 function dedupeKey(orderId, status) {

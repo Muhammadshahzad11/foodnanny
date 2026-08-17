@@ -26,6 +26,10 @@ class FirebaseService
                 'Authorization' => 'Bearer ' . $accessToken,
                 'Content-Type'  => 'application/json',
             ];
+            // New orders / rider assignments must ring and wake the device.
+            $isUrgent = in_array($topicName, ['new-order', 'delivery-boy-order'], true);
+            $channelId = $isUrgent ? 'new_order' : 'order_updates';
+
             foreach ($fcmTokens as $fcmToken) {
                 $payload = [
                     'message' => [
@@ -44,10 +48,35 @@ class FirebaseService
                             "order_status" => (string)$orderStatus,
                             "url"          => (string)$redirectUrl
                         ],
+                        'android'      => [
+                            'priority'     => 'high',
+                            'notification' => [
+                                'sound'       => 'default',
+                                'channel_id'  => $channelId,
+                                'default_vibrate_timings' => true,
+                                'notification_priority'   => $isUrgent ? 'PRIORITY_MAX' : 'PRIORITY_HIGH',
+                            ],
+                        ],
+                        'apns'         => [
+                            'headers' => [
+                                'apns-priority' => '10',
+                            ],
+                            'payload' => [
+                                'aps' => [
+                                    'sound'             => 'default',
+                                    'content-available' => 1,
+                                    'interruption-level' => $isUrgent ? 'time-sensitive' : 'active',
+                                ],
+                            ],
+                        ],
                         'webpush'      => [
                             "headers" => [
                                 "Urgency" => "high"
-                            ]
+                            ],
+                            "notification" => [
+                                "requireInteraction" => $isUrgent,
+                                "vibrate"            => [200, 100, 200],
+                            ],
                         ]
                     ]
                 ];

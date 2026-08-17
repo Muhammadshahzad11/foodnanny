@@ -292,7 +292,7 @@ export default {
                         biller: 'Cashier',
                         items: [{ name: 'Printer configuration OK', quantity: 1 }],
                         total_qty: 1,
-                    }, printer.name || 'TVS');
+                    }, printer.name || 'TVS', {force: true});
                     return;
                 }
 
@@ -329,7 +329,7 @@ export default {
                     biller: 'Cashier',
                     items: [{ name: 'Printer configuration OK', quantity: 1 }],
                     total_qty: 1,
-                }, printer.name || 'TVS');
+                }, printer.name || 'TVS', {force: true});
             } catch (err) {
                 this.loading.isActive = false;
                 alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));

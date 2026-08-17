@@ -452,6 +452,24 @@ class KotRoutingService
         ];
     }
 
+    /**
+     * POS payments are stored on the POS detail; online orders use the gateway.
+     */
+    protected function paymentLabel(Order $order): string
+    {
+        $posMethod = $order->posDetail?->payment_method;
+        if ($posMethod !== null && $posMethod !== '') {
+            $label = trans('pos_payment_method.' . (int) $posMethod);
+            if (is_string($label) && !str_starts_with($label, 'pos_payment_method.')) {
+                return $label;
+            }
+        }
+
+        $label = trans('payment_gateway.' . (int) $order->payment_method);
+
+        return is_string($label) && !str_starts_with($label, 'payment_gateway.') ? $label : '';
+    }
+
     protected function restaurantTagline(Order $order): ?string
     {
         $restaurant = $order->restaurant;
@@ -568,6 +586,12 @@ class KotRoutingService
             ];
         })->values()->all();
 
+        // Single GST rate is the norm; used only to label the CGST/SGST halves.
+        $gstRate = (float) ($order->orderItems
+            ->pluck('tax_rate')
+            ->filter(fn ($rate) => (float) $rate > 0)
+            ->first() ?? 0);
+
         return [
             'restaurant'       => $order->restaurant?->name,
             'logo_url'         => $order->restaurant?->logo,
@@ -583,9 +607,14 @@ class KotRoutingService
             'customer_address' => $order->customer_address,
             'delivery_note'    => $order->delivery_note,
             'order_datetime'   => AppLibrary::datetime($order->order_datetime),
+            'order_date'       => AppLibrary::date($order->order_datetime),
+            'order_time'       => AppLibrary::time($order->order_datetime),
+            'payment_label'    => $this->paymentLabel($order),
             'items'            => $items,
+            'total_qty'        => (int) $order->orderItems->sum('quantity'),
             'subtotal'         => (float) $order->subtotal,
             'tax'              => (float) $order->total_tax,
+            'gst_rate'         => $gstRate,
             'discount'         => (float) $order->discount,
             'total'            => (float) $order->total,
             'invoice_qr'       => $printer ? ((int) $printer->invoice_qr_status === Ask::YES) : false,

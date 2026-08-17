@@ -9,7 +9,7 @@ return [
     'defaults' => [
         'lat-column' => 'latitude',
         'long-column' => 'longitude',
-        'units' => 'miles', // miles, kilometers or meters,
+        'units' => 'kilometers', // miles, kilometers or meters
     ],
 
     /*

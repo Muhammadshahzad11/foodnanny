@@ -1,13 +1,13 @@
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 let config = {
-        apiKey: "AIzaSyAEotcEUmJoyZlBJzpsA1c3gZw2bsVoE08",
-        authDomain: "foodnanny-27d2c.firebaseapp.com",
-        projectId: "foodnanny-27d2c",
-        storageBucket: "foodnanny-27d2c.firebasestorage.app",
-        messagingSenderId: "24639567330",
-        appId: "1:24639567330:web:d535c6ed8bf0dcf2d6b5bb",
-        measurementId: "G-K95FZ49B6E",
+        apiKey: "AIzaSyBINiUJUOYBSKvXaItoUAVTT-zBYtmn934",
+        authDomain: "ctocfoods-6aa0c.firebaseapp.com",
+        projectId: "ctocfoods-6aa0c",
+        storageBucket: "ctocfoods-6aa0c.firebasestorage.app",
+        messagingSenderId: "73684103673",
+        appId: "1:73684103673:web:176a1f8d9f0cb418ec0d28",
+        measurementId: "G-VLML26K20",
  };
 firebase.initializeApp(config);
 const messaging = firebase.messaging();
