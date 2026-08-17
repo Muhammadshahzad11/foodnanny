@@ -435,6 +435,7 @@ export default {
             }
         },
         posPermissionCheck: function () {
+            this.pos.permission = false;
             if (this.defaultAccessStore.lists?.restaurant_id) {
                 const permissions = this.authStore.restaurantPermission;
                 if (permissions.length > 0) {

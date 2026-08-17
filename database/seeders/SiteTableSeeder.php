@@ -40,6 +40,7 @@ class SiteTableSeeder extends Seeder
             'site_auto_localization'                                  => Activity::ENABLE,
             'site_auto_update'                                        => Activity::DISABLE,
             'site_cash_on_delivery'                                   => Activity::ENABLE,
+            'site_order_cancel'                                       => Activity::DISABLE,
             'site_online_payment_gateway'                             => $envService->getValue('DEMO') ? Activity::ENABLE : Activity::DISABLE,
             'site_rider_tip'                                          => Activity::ENABLE,
             'site_cutlery'                                            => Activity::ENABLE,

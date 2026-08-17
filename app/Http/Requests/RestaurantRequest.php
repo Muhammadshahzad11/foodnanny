@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\Ask;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -39,7 +40,26 @@ class RestaurantRequest extends FormRequest
             'cuisine_id[]'      => ['nullable', 'numeric', 'max_digits:10'],
             'online_commission' => ['nullable', 'numeric', 'max:100'],
             'pos_commission'    => ['nullable', 'numeric', 'max:100'],
-            'zone_id'           => ['nullable', 'integer', 'exists:zones,id'],
+            'zone_id'                       => ['nullable', 'integer', 'exists:zones,id'],
+            'show_important_notice'         => ['required', Rule::in([Ask::YES, Ask::NO])],
+            'important_notice'              => ['nullable', 'string', 'max:2000'],
+            'important_notice_emphasis'     => ['nullable', 'string', 'max:500'],
+            'show_highlights'               => ['required', Rule::in([Ask::YES, Ask::NO])],
+            'highlights'                    => ['nullable', 'array'],
+            'enable_pos'                    => ['required', Rule::in([Ask::YES, Ask::NO])],
+            'enable_kitchen'                => ['required', Rule::in([Ask::YES, Ask::NO])],
+            'enable_waiter'                 => ['required', Rule::in([Ask::YES, Ask::NO])],
+            'highlights.*.enabled'          => ['nullable', Rule::in([Ask::YES, Ask::NO])],
+            'highlights.*.title'            => ['nullable', 'string', 'max:80'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        foreach (['enable_pos', 'enable_kitchen', 'enable_waiter'] as $field) {
+            if ($this->exists($field) && $this->input($field) !== null && $this->input($field) !== '') {
+                $this->merge([$field => (int) $this->input($field)]);
+            }
+        }
     }
 }

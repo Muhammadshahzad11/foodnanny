@@ -63,7 +63,12 @@ class FrontendRestaurantDetailsResource extends JsonResource
                 )->values()
             ),
             'reviews'           => SimpleReviewResource::collection($this->reviews),
-            'favorite'          => (bool)$this->favorite
+            'favorite'          => (bool)$this->favorite,
+            'show_important_notice' => (int) ($this->show_important_notice ?? Ask::YES) === Ask::YES,
+            'important_notice'  => $this->important_notice ?: '',
+            'important_notice_emphasis' => $this->important_notice_emphasis ?: '',
+            'show_highlights'   => (int) ($this->show_highlights ?? Ask::YES) === Ask::YES,
+            'highlights'        => $this->resource->resolvedHighlights(),
         ];
     }
 }

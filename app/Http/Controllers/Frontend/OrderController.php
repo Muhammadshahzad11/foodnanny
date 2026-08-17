@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Frontend;
 
 
+use App\Enums\OrderStatus;
 use App\Http\Requests\OrderStatusRequest;
 use Exception;
 use App\Models\FrontendOrder;
@@ -52,6 +53,7 @@ class OrderController extends Controller
     public function cancel(FrontendOrder $frontendOrder, OrderStatusRequest $request): \Illuminate\Http\Response | OrderDetailsResource | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            $request->merge(['status' => OrderStatus::CANCELED]);
             return new OrderDetailsResource($this->frontendOrderService->cancel($frontendOrder, $request));
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);

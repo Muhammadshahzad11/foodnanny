@@ -143,7 +143,7 @@ export const useAuthStore = defineStore("auth", {
             return new Promise((resolve, reject) => {
                 axios.post('admin/permission-switch').then((res) => {
                     this.permission = res.data.data;
-                    resolve(res);
+                    this.refreshMenus().then(() => resolve(res)).catch(reject);
                 }).catch((err) => {
                     reject(err);
                 });

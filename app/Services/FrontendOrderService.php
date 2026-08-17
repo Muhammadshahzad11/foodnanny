@@ -214,13 +214,13 @@ class FrontendOrderService
                 }
             });
 
-            // Customer app places COD via API and never hits the web payment success URL.
-            // Activate immediately so restaurant Online Orders / kitchen / my-orders see it.
-            // Website COD still goes through /payment/.../success (source=WEB stays inactive until then).
+            // COD (web, PWA, app, QR) never reliably hits the payment-success URL from the mobile/app checkout.
+            // Activate immediately so restaurant Online Orders / kitchen / POS tables see it.
+            // Web payment success stays idempotent if it also runs later.
             try {
                 $this->activateAppCashOnDeliveryOrder($this->frontendOrder);
             } catch (\Throwable $e) {
-                Log::info('App COD activate after place: ' . $e->getMessage());
+                Log::info('COD activate after place: ' . $e->getMessage());
             }
 
             try {
@@ -239,14 +239,14 @@ class FrontendOrderService
     }
 
     /**
-     * Activate a placed APP + COD order (mirrors Cashondelivery payment success).
+     * Activate a placed WEB/APP + COD order (mirrors Cashondelivery payment success).
      */
     public function activateAppCashOnDeliveryOrder(FrontendOrder $frontendOrder): FrontendOrder
     {
-        $source  = (int) $frontendOrder->source;
+        $source    = (int) $frontendOrder->source;
         $payMethod = (int) $frontendOrder->payment_method;
 
-        if ($source !== Source::APP || $payMethod !== PaymentGateway::CASH_ON_DELIVERY) {
+        if (!in_array($source, [Source::WEB, Source::APP], true) || $payMethod !== PaymentGateway::CASH_ON_DELIVERY) {
             return $frontendOrder;
         }
 
@@ -375,6 +375,66 @@ class FrontendOrderService
      */
     public function cancel(FrontendOrder $frontendOrder, OrderStatusRequest $request): FrontendOrder
     {
-        throw new Exception(trans('all.message.order_cannot_be_canceled'), 422);
+        try {
+            if ((int) $frontendOrder->user_id !== (int) Auth::id()) {
+                throw new Exception(trans('all.message.permission_denied'), 403);
+            }
+
+            if (!$frontendOrder->customerCancelSettingEnabled()) {
+                throw new Exception(trans('all.message.order_cannot_be_canceled'), 422);
+            }
+
+            if (!$frontendOrder->customerCanCancel()) {
+                throw new Exception(trans('all.message.order_cancel_window_expired'), 422);
+            }
+
+            $previousStatus = (int) $frontendOrder->status;
+
+            DB::transaction(function () use ($frontendOrder, $request) {
+                $frontendOrder->status = OrderStatus::CANCELED;
+                if ($request->filled('reason')) {
+                    $frontendOrder->reason = $request->reason;
+                }
+                $frontendOrder->save();
+            });
+
+            $frontendOrder->refresh();
+
+            $order = Order::withoutGlobalScopes()->find($frontendOrder->id);
+            if ($order) {
+                if ((int) $order->table_id > 0) {
+                    try {
+                        app(WaiterOrderService::class)->releaseTableIfIdle((int) $order->table_id);
+                    } catch (\Throwable $e) {
+                        Log::info('Customer cancel table release: ' . $e->getMessage());
+                    }
+                }
+
+                try {
+                    app(RealtimePublisher::class)->kitchenOrder($order, 'cancel', $previousStatus);
+                } catch (\Throwable $e) {
+                    Log::info('Customer cancel realtime: ' . $e->getMessage());
+                }
+            }
+
+            return $frontendOrder->load(
+                'orderItems',
+                'user',
+                'address',
+                'restaurant',
+                'deliveryBoy',
+                'coupon',
+                'transaction',
+                'diningTable'
+            );
+        } catch (Exception $exception) {
+            Log::info($exception->getMessage());
+            throw new Exception(
+                $exception->getCode() === 422 || $exception->getCode() === 403
+                    ? $exception->getMessage()
+                    : QueryExceptionLibrary::message($exception),
+                $exception->getCode() === 403 ? 403 : 422
+            );
+        }
     }
 }

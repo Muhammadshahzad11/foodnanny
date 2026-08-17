@@ -40,7 +40,15 @@ class RestaurantResource extends JsonResource
             "pos_commission"         => $this->pos_commission === null ? '' : $this->pos_commission,
             "flat_pos_commission"    => $this->pos_commission === null ? '' : AppLibrary::flatAmountFormat($this->pos_commission),
             "cuisine_id"             => RestaurantCuisineResource::collection($this->cuisines),
-            "cuisine"                => AppLibrary::cuisineString($this->cuisines)
+            "cuisine"                => AppLibrary::cuisineString($this->cuisines),
+            "show_important_notice"  => $this->show_important_notice ?? \App\Enums\Ask::YES,
+            "important_notice"       => $this->important_notice ?? '',
+            "important_notice_emphasis" => $this->important_notice_emphasis ?? '',
+            "show_highlights"        => $this->show_highlights ?? \App\Enums\Ask::YES,
+            "highlights"             => $this->resource->normalizedHighlights(),
+            "enable_pos"             => $this->enable_pos ?? \App\Enums\Ask::YES,
+            "enable_kitchen"         => $this->enable_kitchen ?? \App\Enums\Ask::YES,
+            "enable_waiter"          => $this->enable_waiter ?? \App\Enums\Ask::YES,
         ];
     }
 }

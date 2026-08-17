@@ -54,7 +54,13 @@ class PosRunningOrderService
             ->with(['diningTable', 'waiter:id,name', 'orderItems.orderItem', 'user:id,name,phone'])
             ->withCount('orderItems')
             ->when($restaurantId > 0, fn ($q) => $q->where('restaurant_id', $restaurantId))
-            ->where('source', Source::POS)
+            ->where(function ($q) {
+                $q->where('source', Source::POS)
+                    ->orWhere(function ($inner) {
+                        $inner->where('order_type', OrderType::DINING_TABLE)
+                            ->whereIn('source', [Source::WEB, Source::APP, (string) Source::WEB, (string) Source::APP]);
+                    });
+            })
             ->where('payment_status', PaymentStatus::UNPAID)
             ->where('active', Ask::YES)
             ->whereNotIn('status', [

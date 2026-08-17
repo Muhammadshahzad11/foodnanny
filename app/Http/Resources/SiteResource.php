@@ -48,6 +48,7 @@ class SiteResource extends JsonResource
             'site_restaurant_search_radius'                           => $this->info['site_restaurant_search_radius'],
             'site_delivery_boy_order_radius'                          => $this->info['site_delivery_boy_order_radius'],
             'site_cash_on_delivery'                                   => $this->info['site_cash_on_delivery'],
+            'site_order_cancel'                                       => $this->info['site_order_cancel'] ?? \App\Enums\Activity::DISABLE,
             'site_service_fee'                                        => $this->info['site_service_fee'],
             'site_default_order_commission'                           => $this->info['site_default_order_commission'],
             'site_default_delivery_commission'                        => $this->info['site_default_delivery_commission'],

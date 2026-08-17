@@ -38,6 +38,7 @@ class PosOrderController extends AdminController implements HasMiddleware
     public static function middleware(): array
     {
         return [
+            new Middleware('restaurant.module:pos'),
             new Middleware('permission:pos-orders', only: ['index', 'export']),
             new Middleware('permission:pos-orders_delete', only: ['destroy', 'requestDeleteOtp', 'confirmDelete']),
             new Middleware('permission:pos-orders_show', only: ['show', 'changeStatus']),
@@ -49,6 +50,7 @@ class PosOrderController extends AdminController implements HasMiddleware
     public function index(PaginateRequest $request): \Illuminate\Http\Response | \Illuminate\Http\Resources\Json\AnonymousResourceCollection | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            $request->merge(['channel' => 'pos']);
             return OrderResource::collection($this->orderService->list($request));
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
@@ -135,6 +137,7 @@ class PosOrderController extends AdminController implements HasMiddleware
     public function export(PaginateRequest $request): \Illuminate\Http\Response | \Symfony\Component\HttpFoundation\BinaryFileResponse | \Illuminate\Contracts\Foundation\Application | \Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            $request->merge(['channel' => 'pos']);
             return Excel::download(new PosOrderExport($this->orderService, $request), 'POS-Order.xlsx');
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);

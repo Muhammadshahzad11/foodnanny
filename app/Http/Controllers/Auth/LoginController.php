@@ -20,6 +20,7 @@ use App\Services\DefaultAccessService;
 use App\Services\MenuService;
 use App\Services\OtpManagerService;
 use App\Services\PermissionService;
+use App\Services\RestaurantModuleService;
 use Dipokhalder\Settings\Facades\Settings;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -35,18 +36,21 @@ class LoginController extends Controller
     public PermissionService $permissionService;
     public MenuService $menuService;
     public OtpManagerService $otpManagerService;
+    public RestaurantModuleService $restaurantModuleService;
 
     public function __construct(
-        MenuService          $menuService,
-        PermissionService    $permissionService,
-        DefaultAccessService $defaultAccessService,
-        OtpManagerService    $otpManagerService
+        MenuService              $menuService,
+        PermissionService        $permissionService,
+        DefaultAccessService     $defaultAccessService,
+        OtpManagerService        $otpManagerService,
+        RestaurantModuleService  $restaurantModuleService
     )
     {
-        $this->menuService          = $menuService;
-        $this->permissionService    = $permissionService;
-        $this->defaultAccessService = $defaultAccessService;
-        $this->otpManagerService    = $otpManagerService;
+        $this->menuService              = $menuService;
+        $this->permissionService        = $permissionService;
+        $this->defaultAccessService     = $defaultAccessService;
+        $this->otpManagerService        = $otpManagerService;
+        $this->restaurantModuleService  = $restaurantModuleService;
     }
 
     /**
@@ -280,22 +284,6 @@ class LoginController extends Controller
         return new JsonResponse($this->buildPermissionPayload($user), 200);
     }
 
-    /**
-     * Active restaurant context comes from default_accesses (supports admin switch).
-     */
-    private function activeRestaurantId(): int
-    {
-        try {
-            $access = $this->defaultAccessService->show();
-            if (isset($access['restaurant_id'])) {
-                return (int) $access['restaurant_id'];
-            }
-        } catch (\Exception) {
-        }
-
-        return (int) (Auth::user()?->restaurant_id ?? 0);
-    }
-
     private function buildPermissionPayload($user): array
     {
         $permission      = $this->permissionService->allPermission($user, $user->roles[0]);
@@ -311,10 +299,8 @@ class LoginController extends Controller
             }
         });
 
-        $restaurantId = $this->activeRestaurantId();
-        if ($restaurantId === 0 && (int) $user->restaurant_id > 0) {
-            $restaurantId = (int) $user->restaurant_id;
-        }
+        $restaurantId = $this->restaurantModuleService->currentRestaurantId();
+        $restaurant   = $this->restaurantModuleService->currentRestaurant();
 
         $activePermission = $permission->filter(function ($p) use ($restaurantId) {
             if ($restaurantId == 0 && ($p->type == PermissionType::BOTH || $p->type == PermissionType::ADMIN)) {
@@ -325,9 +311,14 @@ class LoginController extends Controller
             }
         });
 
+        if ($restaurantId > 0) {
+            $activePermission     = $this->restaurantModuleService->denyDisabledModules($activePermission, $restaurant);
+            $restaurantPermission = $this->restaurantModuleService->denyDisabledModules($restaurantPermission, $restaurant);
+        }
+
         $adminPermission      = PermissionResource::collection($adminPermission);
         $restaurantPermission = PermissionResource::collection($restaurantPermission);
-        $menuServiceMenu      = $this->menuService->menu($user, $user->roles[0]);
+        $menuServiceMenu      = $this->menuService->menu($user, $user->roles[0], $restaurant);
 
         return [
             'admin_menu'                    => MenuResource::collection(collect($menuServiceMenu['adminPermission'])),

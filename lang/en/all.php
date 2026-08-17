@@ -195,6 +195,7 @@ return [
         'printer_test_browser_popup'                                 => 'Browser popup mode is ready. Use Test Print preview in the browser.',
         'printer_use_local_agent'                                    => 'Cloud server cannot reach the printer LAN. Use Local Print Agent on the POS PC.',
         'restaurant_already_approved'                                => 'This restaurant is already approved.',
+        'restaurant_module_disabled'                                 => 'This app is turned off for the restaurant.',
         'role_not_deletable'                                         => 'This role not deletable.',
         'order_already_accepted'                                     => 'This order already accepted.',
         'maximum_order_accepted'                                     => 'You can not accept this order, You already accepted the maximum order.',

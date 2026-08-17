@@ -210,6 +210,7 @@ import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
 import {useCountryCodeStore} from "../../../stores/countryCode.js";
 import {useCompanyStore} from "../../../stores/company.js";
 import VueSimpleAlert from "vue3-simple-alert";
+import {emptyRestaurantPageDisplay, normalizeRestaurantHighlights} from "../../../utils/restaurantPageDisplay.js";
 
 export default {
     name: "RestaurantListComponent",
@@ -280,7 +281,8 @@ export default {
                     status: statusEnum.ACTIVE,
                     apply: applyByEnum.ADMIN,
                     country_code: "",
-                    flag: ""
+                    flag: "",
+                    ...emptyRestaurantPageDisplay()
                 },
                 search: {
                     paginate: 1,
@@ -408,7 +410,15 @@ export default {
                 country_code: restaurant.country_code,
                 online_commission: restaurant.flat_online_commission,
                 pos_commission: restaurant.flat_pos_commission,
-                cuisine_id: this.cuisineUpdate(restaurant.cuisine_id)
+                cuisine_id: this.cuisineUpdate(restaurant.cuisine_id),
+                show_important_notice: restaurant.show_important_notice ?? emptyRestaurantPageDisplay().show_important_notice,
+                important_notice: restaurant.important_notice || "",
+                important_notice_emphasis: restaurant.important_notice_emphasis || "",
+                show_highlights: restaurant.show_highlights ?? emptyRestaurantPageDisplay().show_highlights,
+                highlights: normalizeRestaurantHighlights(restaurant.highlights),
+                enable_pos: restaurant.enable_pos ?? emptyRestaurantPageDisplay().enable_pos,
+                enable_kitchen: restaurant.enable_kitchen ?? emptyRestaurantPageDisplay().enable_kitchen,
+                enable_waiter: restaurant.enable_waiter ?? emptyRestaurantPageDisplay().enable_waiter,
             };
             this.countryCodeStore.fetchFind({country_code: restaurant.country_code}).then(res => {
                 this.props.form.flag = res.data.data.flag_emoji;

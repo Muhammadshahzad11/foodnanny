@@ -23,6 +23,7 @@ class KitchenController extends AdminController implements HasMiddleware
     public static function middleware(): array
     {
         return [
+            new Middleware('restaurant.module:kitchen'),
             new Middleware('permission:kitchen|kitchen_dashboard', only: ['dashboard']),
             new Middleware('permission:kitchen|kitchen_view', only: ['orders', 'orderShow']),
             new Middleware('permission:kitchen_accept', only: ['accept']),

@@ -78,6 +78,7 @@
                     <thead class="db-table-head">
                     <tr class="db-table-head-tr">
                         <th class="db-table-head-th">{{ $t('label.order_id') }}</th>
+                        <th class="db-table-head-th">{{ $t('label.order_type') }}</th>
                         <th class="db-table-head-th">{{ $t('label.customer') }}</th>
                         <th class="db-table-head-th">{{ $t('label.amount') }}</th>
                         <th class="db-table-head-th">{{ $t('label.date') }}</th>
@@ -92,6 +93,11 @@
                     <tr class="db-table-body-tr" v-for="order in orders" :key="order.id">
                         <td class="db-table-body-td">
                             {{ order.order_serial_no }}
+                        </td>
+                        <td class="db-table-body-td">
+                            <span :class="statusClass(order.order_type)">
+                                {{ enums.orderTypeEnumArray[order.order_type] || $t('label.pos') }}
+                            </span>
                         </td>
                         <td class="db-table-body-td">
                             {{ order.customer.name }}
@@ -145,7 +151,7 @@
 
                     <tbody v-else class="db-table-body">
                     <tr class="db-table-body-tr">
-                        <td class="db-table-body-td" colspan="6">
+                        <td class="db-table-body-td" colspan="7">
                             <div class="p-4">
                                 <img class="m-auto not-found max-w-[300px]" :src="setting.data_not_found"
                                      alt="Not Found">
@@ -256,6 +262,12 @@ export default {
                     [orderStatusEnum.PREPARING]: this.$t("label.preparing"),
                     [orderStatusEnum.PREPARED]: this.$t("label.prepared"),
                     [orderStatusEnum.DELIVERED]: this.$t("label.delivered"),
+                },
+                orderTypeEnumArray: {
+                    [orderTypeEnum.DELIVERY]: this.$t("label.delivery"),
+                    [orderTypeEnum.TAKEAWAY]: this.$t("label.takeaway"),
+                    [orderTypeEnum.POS]: this.$t("label.pos"),
+                    [orderTypeEnum.DINING_TABLE]: this.$t("label.dining_table")
                 }
             },
             printObj: {
@@ -270,7 +282,8 @@ export default {
                     order_column: 'id',
                     order_by: "desc",
                     order_serial_no: "",
-                    excepts: orderTypeEnum.DELIVERY + '|' + orderTypeEnum.TAKEAWAY,
+                    excepts: "",
+                    channel: 'pos',
                     user_id: null,
                     status: null,
                     from_date: "",
@@ -333,6 +346,9 @@ export default {
     methods: {
         permissionChecker(e) {
             return appService.permissionChecker(e);
+        },
+        statusClass: function (status) {
+            return appService.statusClass(status);
         },
         orderStatusClassForTable: function (status) {
             return appService.orderStatusClassForTable(status);

@@ -93,9 +93,15 @@
                             {{ order.order_serial_no }}
                         </td>
                         <td class="db-table-body-td">
-                            <span :class="statusClass(order.order_type)">
-                                {{ enums.orderTypeEnumArray[order.order_type] }}
-                            </span>
+                            <div class="flex flex-col gap-1">
+                                <span :class="statusClass(order.order_type)">
+                                    {{ orderTypeLabel(order) }}
+                                </span>
+                                <span class="text-[10px] font-semibold uppercase tracking-wide w-fit px-1.5 py-0.5 rounded"
+                                      :class="channelChipClass(order)">
+                                    {{ channelLabel(order) }}
+                                </span>
+                            </div>
                         </td>
                         <td class="db-table-body-td">
                             {{ textShortener(order.customer.name, 20) }}
@@ -269,7 +275,7 @@ export default {
                     order_by: "desc",
                     order_serial_no: "",
                     channel: 'online',
-                    excepts: orderTypeEnum.POS + '|' + orderTypeEnum.DINING_TABLE,
+                    excepts: String(orderTypeEnum.POS),
                     status: null,
                     from_date: "",
                     to_date: "",
@@ -315,6 +321,31 @@ export default {
         },
         textShortener: function (text, number = 30) {
             return appService.textShortener(text, number);
+        },
+        orderTypeLabel: function (order) {
+            if (order?.is_scan_menu_order || order?.channel_key === 'qr') {
+                return this.$t('label.qr_order');
+            }
+            return this.enums.orderTypeEnumArray[order.order_type] || this.$t('label.online');
+        },
+        channelLabel: function (order) {
+            const key = order?.channel_key;
+            const map = {
+                qr: this.$t('label.qr_order'),
+                waiter: this.$t('label.waiter'),
+                pos: this.$t('label.pos'),
+                app: this.$t('label.app'),
+                online: this.$t('label.online'),
+            };
+            return map[key] || this.$t('label.online');
+        },
+        channelChipClass: function (order) {
+            const key = order?.channel_key;
+            if (key === 'qr') return 'bg-sky-100 text-sky-800';
+            if (key === 'app') return 'bg-violet-100 text-violet-800';
+            if (key === 'waiter') return 'bg-indigo-100 text-indigo-800';
+            if (key === 'pos') return 'bg-amber-100 text-amber-800';
+            return 'bg-[#F7F7FC] text-[#6E7191]';
         },
         canPrint(order) {
             if (!order?.id) return false;
@@ -473,7 +504,7 @@ export default {
             this.props.search.order_serial_no = "";
             this.props.search.status          = null;
             this.props.search.channel         = 'online';
-            this.props.search.excepts         = orderTypeEnum.POS + '|' + orderTypeEnum.DINING_TABLE;
+            this.props.search.excepts         = String(orderTypeEnum.POS);
             this.props.search.from_date       = "";
             this.props.search.to_date         = "";
             this.modelValue                   = null;

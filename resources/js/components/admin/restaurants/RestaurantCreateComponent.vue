@@ -149,6 +149,146 @@
                                       id="address" class="db-field-control"></textarea>
                             <small class="db-field-alert" v-if="errors.address">{{ errors.address[0] }}</small>
                         </div>
+
+                        <div class="form-col-12">
+                            <label class="db-field-title">{{ $t("label.restaurant_apps") }}</label>
+                            <small class="text-[11px] text-[#6E7191] block mb-2">{{ $t("label.restaurant_apps_hint") }}</small>
+                        </div>
+                        <div class="form-col-12 sm:form-col-4">
+                            <label class="db-field-title required">{{ $t("label.enable_pos") }}</label>
+                            <div class="db-field-radio-group">
+                                <div class="db-field-radio">
+                                    <div class="custom-radio">
+                                        <input :value="enums.askEnum.YES" v-model="props.form.enable_pos" id="posOn" type="radio" class="custom-radio-field"/>
+                                        <span class="custom-radio-span"></span>
+                                    </div>
+                                    <label for="posOn" class="db-field-label">{{ $t("label.on") }}</label>
+                                </div>
+                                <div class="db-field-radio">
+                                    <div class="custom-radio">
+                                        <input :value="enums.askEnum.NO" v-model="props.form.enable_pos" id="posOff" type="radio" class="custom-radio-field"/>
+                                        <span class="custom-radio-span"></span>
+                                    </div>
+                                    <label for="posOff" class="db-field-label">{{ $t("label.off") }}</label>
+                                </div>
+                            </div>
+                            <small class="text-[11px] text-[#6E7191]">{{ $t("label.enable_pos_hint") }}</small>
+                        </div>
+                        <div class="form-col-12 sm:form-col-4">
+                            <label class="db-field-title required">{{ $t("label.enable_kitchen") }}</label>
+                            <div class="db-field-radio-group">
+                                <div class="db-field-radio">
+                                    <div class="custom-radio">
+                                        <input :value="enums.askEnum.YES" v-model="props.form.enable_kitchen" id="kitchenOn" type="radio" class="custom-radio-field"/>
+                                        <span class="custom-radio-span"></span>
+                                    </div>
+                                    <label for="kitchenOn" class="db-field-label">{{ $t("label.on") }}</label>
+                                </div>
+                                <div class="db-field-radio">
+                                    <div class="custom-radio">
+                                        <input :value="enums.askEnum.NO" v-model="props.form.enable_kitchen" id="kitchenOff" type="radio" class="custom-radio-field"/>
+                                        <span class="custom-radio-span"></span>
+                                    </div>
+                                    <label for="kitchenOff" class="db-field-label">{{ $t("label.off") }}</label>
+                                </div>
+                            </div>
+                            <small class="text-[11px] text-[#6E7191]">{{ $t("label.enable_kitchen_hint") }}</small>
+                        </div>
+                        <div class="form-col-12 sm:form-col-4">
+                            <label class="db-field-title required">{{ $t("label.enable_waiter") }}</label>
+                            <div class="db-field-radio-group">
+                                <div class="db-field-radio">
+                                    <div class="custom-radio">
+                                        <input :value="enums.askEnum.YES" v-model="props.form.enable_waiter" id="waiterOn" type="radio" class="custom-radio-field"/>
+                                        <span class="custom-radio-span"></span>
+                                    </div>
+                                    <label for="waiterOn" class="db-field-label">{{ $t("label.on") }}</label>
+                                </div>
+                                <div class="db-field-radio">
+                                    <div class="custom-radio">
+                                        <input :value="enums.askEnum.NO" v-model="props.form.enable_waiter" id="waiterOff" type="radio" class="custom-radio-field"/>
+                                        <span class="custom-radio-span"></span>
+                                    </div>
+                                    <label for="waiterOff" class="db-field-label">{{ $t("label.off") }}</label>
+                                </div>
+                            </div>
+                            <small class="text-[11px] text-[#6E7191]">{{ $t("label.enable_waiter_hint") }}</small>
+                        </div>
+
+                        <div class="form-col-12 sm:form-col-6">
+                            <label class="db-field-title required">{{ $t("label.show_important_notice") }}</label>
+                            <div class="db-field-radio-group">
+                                <div class="db-field-radio">
+                                    <div class="custom-radio">
+                                        <input :value="enums.askEnum.YES" v-model="props.form.show_important_notice" id="noticeOn" type="radio" class="custom-radio-field"/>
+                                        <span class="custom-radio-span"></span>
+                                    </div>
+                                    <label for="noticeOn" class="db-field-label">{{ $t("label.on") }}</label>
+                                </div>
+                                <div class="db-field-radio">
+                                    <div class="custom-radio">
+                                        <input :value="enums.askEnum.NO" v-model="props.form.show_important_notice" id="noticeOff" type="radio" class="custom-radio-field"/>
+                                        <span class="custom-radio-span"></span>
+                                    </div>
+                                    <label for="noticeOff" class="db-field-label">{{ $t("label.off") }}</label>
+                                </div>
+                            </div>
+                            <small class="text-[11px] text-[#6E7191]">{{ $t("label.show_important_notice_hint") }}</small>
+                        </div>
+
+                        <div class="form-col-12 sm:form-col-6">
+                            <label class="db-field-title required">{{ $t("label.show_highlights") }}</label>
+                            <div class="db-field-radio-group">
+                                <div class="db-field-radio">
+                                    <div class="custom-radio">
+                                        <input :value="enums.askEnum.YES" v-model="props.form.show_highlights" id="highlightsOn" type="radio" class="custom-radio-field"/>
+                                        <span class="custom-radio-span"></span>
+                                    </div>
+                                    <label for="highlightsOn" class="db-field-label">{{ $t("label.on") }}</label>
+                                </div>
+                                <div class="db-field-radio">
+                                    <div class="custom-radio">
+                                        <input :value="enums.askEnum.NO" v-model="props.form.show_highlights" id="highlightsOff" type="radio" class="custom-radio-field"/>
+                                        <span class="custom-radio-span"></span>
+                                    </div>
+                                    <label for="highlightsOff" class="db-field-label">{{ $t("label.off") }}</label>
+                                </div>
+                            </div>
+                            <small class="text-[11px] text-[#6E7191]">{{ $t("label.show_highlights_hint") }}</small>
+                        </div>
+
+                        <template v-if="Number(props.form.show_important_notice) === enums.askEnum.YES">
+                            <div class="form-col-12">
+                                <label for="important_notice" class="db-field-title">{{ $t("label.important_notice") }}</label>
+                                <textarea v-model="props.form.important_notice" id="important_notice" class="db-field-control h-24"
+                                          :placeholder="$t('message.restaurant_platform_disclaimer')"></textarea>
+                            </div>
+                            <div class="form-col-12">
+                                <label for="important_notice_emphasis" class="db-field-title">{{ $t("label.important_notice_emphasis") }}</label>
+                                <textarea v-model="props.form.important_notice_emphasis" id="important_notice_emphasis" class="db-field-control h-16"
+                                          :placeholder="$t('message.restaurant_contact_disclaimer')"></textarea>
+                            </div>
+                        </template>
+
+                        <div class="form-col-12" v-if="Number(props.form.show_highlights) === enums.askEnum.YES">
+                            <label class="db-field-title">{{ $t("label.restaurant_highlights") }}</label>
+                            <div class="space-y-2 rounded-lg border border-gray-200 p-3">
+                                <div v-for="item in highlightKeys" :key="item.key" class="flex flex-col sm:flex-row sm:items-center gap-2">
+                                    <label class="flex items-center gap-2 min-w-[180px] cursor-pointer">
+                                        <input type="checkbox"
+                                               :checked="Number(props.form.highlights?.[item.key]?.enabled) === enums.askEnum.YES"
+                                               @change="toggleHighlight(item.key, $event.target.checked)"/>
+                                        <i :class="item.icon" class="text-primary"></i>
+                                        <span class="text-sm">{{ $t('label.highlight_' + item.key) }}</span>
+                                    </label>
+                                    <input type="text"
+                                           v-if="props.form.highlights?.[item.key]"
+                                           v-model="props.form.highlights[item.key].title"
+                                           class="db-field-control"
+                                           :placeholder="$t('label.highlight_' + item.key)"/>
+                                </div>
+                            </div>
+                        </div>
                         <div class="form-col-12">
                             <div class="flex flex-wrap gap-3 mt-4">
                                 <button type="submit" class="db-btn py-2 text-white bg-primary">
@@ -203,12 +343,14 @@ import MapComponent from "../../common/MapComponent.vue";
 import {useModal} from "../../../composables/modal.js";
 import {useCanvas} from "../../../composables/canvas.js";
 import applyByEnum from "../../../enums/modules/applyByEnum.js";
+import askEnum from "../../../enums/modules/askEnum.js";
 import appService from "../../../services/appService.js";
 import {useRestaurantStore} from "../../../stores/restaurant.js";
 import {useCuisineStore} from "../../../stores/cuisine.js";
 import {useCountryCodeStore} from "../../../stores/countryCode.js";
 import {useCompanyStore} from "../../../stores/company.js";
 import SmSidebarModalCreateComponent from "../components/buttons/SmSidebarModalCreateComponent.vue";
+import {emptyRestaurantPageDisplay, RESTAURANT_HIGHLIGHT_KEYS} from "../../../utils/restaurantPageDisplay.js";
 
 export default {
     name: "RestaurantCreateComponent",
@@ -237,8 +379,10 @@ export default {
             },
             enums: {
                 statusEnum: statusEnum,
-                roleEnum: roleEnum
+                roleEnum: roleEnum,
+                askEnum: askEnum
             },
+            highlightKeys: RESTAURANT_HIGHLIGHT_KEYS,
             flag: "",
             countryCode: "",
             isOpen: false,
@@ -324,6 +468,12 @@ export default {
             this.props.form.zip_code  = e.other.zipCode;
             this.props.form.address   = e.address;
         },
+        toggleHighlight: function (key, checked) {
+            if (!this.props.form.highlights) {
+                this.props.form.highlights = emptyRestaurantPageDisplay().highlights;
+            }
+            this.props.form.highlights[key].enabled = checked ? askEnum.YES : askEnum.NO;
+        },
         addReset: function () {
             this.restaurantStore.reset();
             this.errors            = {};
@@ -345,7 +495,8 @@ export default {
                 status: statusEnum.ACTIVE,
                 apply: applyByEnum.ADMIN,
                 country_code: this.countryCode,
-                flag: this.flag
+                flag: this.flag,
+                ...emptyRestaurantPageDisplay()
             };
         },
         reset: function () {
@@ -370,7 +521,8 @@ export default {
                 status: statusEnum.ACTIVE,
                 apply: applyByEnum.ADMIN,
                 country_code: this.countryCode,
-                flag: this.flag
+                flag: this.flag,
+                ...emptyRestaurantPageDisplay()
             };
         },
         mapReset: function () {
@@ -402,7 +554,8 @@ export default {
                         status: statusEnum.ACTIVE,
                         apply: statusEnum.ACTIVE,
                         country_code: this.countryCode,
-                        flag: this.flag
+                        flag: this.flag,
+                        ...emptyRestaurantPageDisplay()
                     };
                     this.isMap      = false;
                     this.errors     = {};

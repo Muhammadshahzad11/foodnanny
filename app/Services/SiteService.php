@@ -28,7 +28,13 @@ class SiteService
     public function list()
     {
         try {
-            return Settings::group('site')->all();
+            $settings = Settings::group('site')->all();
+            if (!array_key_exists('site_order_cancel', $settings)) {
+                Settings::group('site')->set(['site_order_cancel' => Activity::DISABLE]);
+                $settings['site_order_cancel'] = Activity::DISABLE;
+            }
+
+            return $settings;
         } catch (Exception $exception) {
             Log::info($exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);

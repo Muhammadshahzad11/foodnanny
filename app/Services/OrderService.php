@@ -75,10 +75,12 @@ class OrderService
             $orderColumn = $request->get('order_column') ?? 'id';
             $orderType   = $request->get('order_by') ?? 'desc';
 
-            $query = Order::with('transaction', 'orderItems')->where(['active' => Status::ACTIVE]);
+            $query = Order::with('transaction', 'orderItems', 'diningTable', 'user')->where(['active' => Status::ACTIVE]);
 
             if (($requests['channel'] ?? null) === 'online') {
                 $this->constrainOnlineCustomerOrders($query);
+            } elseif (($requests['channel'] ?? null) === 'pos') {
+                $this->constrainPosOrders($query);
             }
 
             return $query->where(function ($query) use ($requests) {
@@ -517,24 +519,53 @@ class OrderService
     }
 
     /**
-     * Customer website / app delivery & takeaway only — not POS, dine-in, or waiter.
+     * Customer website / app / QR — not POS or waiter.
      */
     public function constrainOnlineCustomerOrders($query)
     {
-        return $query
-            ->where(function ($q) {
-                $q->whereIn('source', [Source::WEB, Source::APP, (string) Source::WEB, (string) Source::APP])
-                    ->orWhereIn('source', ['web', 'app', 'WEB', 'APP']);
-            })
-            ->whereIn('order_type', [OrderType::DELIVERY, OrderType::TAKEAWAY]);
+        return $query->where(function ($q) {
+            $q->whereIn('source', $this->customerSources())
+                ->whereIn('order_type', [OrderType::DELIVERY, OrderType::TAKEAWAY, OrderType::DINING_TABLE]);
+        });
+    }
+
+    /**
+     * Cashier POS only — takeaway, delivery, and dine-in placed from the POS screen.
+     */
+    public function constrainPosOrders($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('source', Source::POS)
+                ->orWhere('source', (string) Source::POS)
+                ->orWhere('source', 'pos')
+                ->orWhere('source', 'POS');
+        });
     }
 
     public function isOnlineCustomerOrder(Order $order): bool
     {
         $source = is_numeric($order->source) ? (int) $order->source : strtolower((string) $order->source);
         $onlineSource = in_array($source, [Source::WEB, Source::APP, 'web', 'app'], true);
-        $onlineType   = in_array((int) $order->order_type, [OrderType::DELIVERY, OrderType::TAKEAWAY], true);
+        $onlineType   = in_array((int) $order->order_type, [
+            OrderType::DELIVERY,
+            OrderType::TAKEAWAY,
+            OrderType::DINING_TABLE,
+        ], true);
 
         return $onlineSource && $onlineType;
+    }
+
+    protected function customerSources(): array
+    {
+        return [
+            Source::WEB,
+            Source::APP,
+            (string) Source::WEB,
+            (string) Source::APP,
+            'web',
+            'app',
+            'WEB',
+            'APP',
+        ];
     }
 }

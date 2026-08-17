@@ -90,6 +90,9 @@ class RestaurantService
         try {
             DB::transaction(function () use ($request) {
                 $payload = $request->validated() + ['slug' => Str::slug($request->name), 'apply' => Apply::ADMIN, 'terms_and_conditions' => Ask::YES];
+                if (isset($payload['highlights'])) {
+                    $payload['highlights'] = Restaurant::normalizeIncomingHighlights($payload['highlights']);
+                }
                 if ((int) (Auth::user()?->myrole ?? 0) === EnumRole::ZONE_ADMIN && (int) (Auth::user()?->zone_id ?? 0) > 0) {
                     $payload['zone_id'] = (int) Auth::user()->zone_id;
                 } else {
@@ -180,7 +183,11 @@ class RestaurantService
     {
         try {
             DB::transaction(function () use ($request, $restaurant) {
-                $this->restaurant = tap($restaurant)->update($request->validated() + ['slug' => Str::slug($request->name)]);
+                $payload = $request->validated() + ['slug' => Str::slug($request->name)];
+                if (isset($payload['highlights'])) {
+                    $payload['highlights'] = Restaurant::normalizeIncomingHighlights($payload['highlights']);
+                }
+                $this->restaurant = tap($restaurant)->update($payload);
                 if ((int) (Auth::user()?->myrole ?? 0) !== EnumRole::ZONE_ADMIN) {
                     $zoneId = app(ZoneService::class)->applyDetectedZoneId(
                         $this->restaurant->latitude !== null ? (float) $this->restaurant->latitude : null,

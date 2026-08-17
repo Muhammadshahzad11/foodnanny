@@ -2,6 +2,7 @@
 
 
 use App\Http\Middleware\ApiKeyMiddleware;
+use App\Http\Middleware\EnsureRestaurantModule;
 use App\Http\Middleware\Installed;
 use App\Http\Middleware\Localization;
 use App\Http\Middleware\VerifyEmail;
@@ -48,7 +49,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'localization' => Localization::class,
             'installed'    => Installed::class,
             'verify.api'   => VerifyEmail::class,
-            'apiKey'       => ApiKeyMiddleware::class
+            'apiKey'             => ApiKeyMiddleware::class,
+            'restaurant.module'  => EnsureRestaurantModule::class,
         ]);
         $middleware->web(append: [
             ThrottleRequests::class . ':120,1',

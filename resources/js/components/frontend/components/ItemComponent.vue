@@ -15,6 +15,10 @@
             <img :src="item.thumb" alt="menu"
                  @click.prevent="itemVariationModalShow('item-variation-modal-' + itemIndex, item)"
                  class="restaurant-item__image object-cover group-hover:scale-105 transition-transform duration-500 cursor-pointer">
+            <div v-if="parseInt(item.item_type) === parseInt(enums.itemTypeEnum.VEG)"
+                 class="restaurant-item__veg absolute z-20">
+                <img :src="setting.image_vag" alt="veg" class="w-4 h-4 object-contain">
+            </div>
             <div v-if="parseInt(item.halal) === parseInt(enums.askEnum.YES)"
                  class="restaurant-item__halal absolute z-20 flex items-center">
                 <img :src="setting.image_halal" alt="halal" class="w-5 h-5 sm:w-6 sm:h-6 object-contain drop-shadow">
@@ -39,7 +43,7 @@
                     <del class="text-xs font-medium text-paragraph">
                         {{ item.currency_price }}
                     </del>
-                    <span class="text-sm font-semibold text-heading truncate">
+                    <span class="text-sm font-semibold text-primary truncate">
                         {{
                             currencyFormat((item.convert_price - parseFloat((item.convert_price / 100) * offer.amount).toFixed(setting.site_digit_after_decimal_point)), setting.site_digit_after_decimal_point, setting.site_default_currency_symbol, setting.site_currency_position)
                         }}
@@ -49,13 +53,13 @@
                     <del v-if="item.discount > 0" class="text-xs font-medium text-paragraph">
                         {{ item.currency_price }}
                     </del>
-                    <span class="text-sm font-semibold text-heading truncate">
+                    <span class="text-sm font-semibold text-primary truncate">
                         {{ item.discount > 0 ? item.currency_discounted_price : item.currency_price }}
                     </span>
                 </div>
                 <button @click.prevent="itemVariationModalShow('item-variation-modal-' + itemIndex, item)"
-                        class="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 text-white bg-primary hover:bg-heading transition">
-                    <i class="lab-fill-bag text-sm"></i>
+                        class="restaurant-item__add shrink-0 inline-flex items-center gap-1 h-8 px-3 text-white bg-primary hover:bg-heading transition">
+                    <i class="lab-line-add-circle text-sm"></i>
                     <span class="text-xs font-semibold capitalize">{{ $t('button.add') }}</span>
                 </button>
             </div>
@@ -265,6 +269,7 @@
 <script>
 import {useModal} from "../../../composables/modal";
 import AskEnum from "../../../enums/modules/askEnum";
+import itemTypeEnum from "../../../enums/modules/itemTypeEnum.js";
 import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
 import appService from "../../../services/appService.js";
 import {useCommonStore} from "../../../stores/common.js";
@@ -328,6 +333,7 @@ export default {
             },
             enums: {
                 askEnum: AskEnum,
+                itemTypeEnum: itemTypeEnum,
                 displayModeEnum: DisplayModeEnum,
             },
             temp: {
@@ -787,6 +793,25 @@ export default {
     padding: 0.15rem;
     border-radius: 999px;
     background: rgb(255 255 255 / 0.92);
+}
+.restaurant-item__veg {
+    left: 0.4rem;
+    bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.95);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+}
+.restaurant-item__halal {
+    left: auto;
+    right: 0.4rem;
+}
+.restaurant-item__add {
+    border-radius: 0.45rem;
 }
 .restaurant-item__desc :deep(p),
 .restaurant-item__desc :deep(*) {

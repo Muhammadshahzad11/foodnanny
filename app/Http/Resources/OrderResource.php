@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\OrderType;
+use App\Enums\Source;
 use App\Libraries\AppLibrary;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -31,11 +33,22 @@ class OrderResource extends JsonResource
             'discount'                    => AppLibrary::convertAmountFormat($this->discount),
             'total'                       => AppLibrary::convertAmountFormat($this->total),
             'total_tax'                   => AppLibrary::convertAmountFormat($this->total_tax),
+            'order_type'                  => $this->order_type,
+            'source'                      => $this->source,
+            'source_name'                 => trans('source.' . $this->source),
+            'channel_key'                 => $this->channelKey(),
+            'is_scan_menu_order'          => $this->resource->isScanMenuOrder(),
             'table_id'                    => $this->table_id,
+            'table'                       => $this->when((int) $this->table_id > 0, function () {
+                return [
+                    'id'           => $this->diningTable?->id,
+                    'name'         => $this->diningTable?->name,
+                    'table_number' => $this->diningTable?->table_number,
+                ];
+            }),
             'payment_method'              => $this->payment_method,
             'payment_status'              => $this->payment_status,
             'preparation_time'            => $this->preparation_time,
-            'order_type'                  => $this->order_type,
             'order_datetime'              => AppLibrary::datetime($this->order_datetime),
             'status'                      => $this->status,
             'requires_delivery_otp'       => (int) $this->order_type === \App\Enums\OrderType::DELIVERY
@@ -46,5 +59,28 @@ class OrderResource extends JsonResource
             'transaction'                 => new TransactionResource($this->transaction),
             'reason'                      => $this->reason,
         ];
+    }
+
+    protected function channelKey(): string
+    {
+        if ((int) $this->order_type === OrderType::DINING_TABLE && (int) $this->table_id > 0) {
+            $source = (int) $this->source;
+            if (in_array($source, [Source::WEB, Source::APP], true)) {
+                return 'qr';
+            }
+            if ($source === Source::WAITER) {
+                return 'waiter';
+            }
+            if ($source === Source::POS) {
+                return 'pos';
+            }
+        }
+
+        return match ((int) $this->source) {
+            Source::POS => 'pos',
+            Source::WAITER => 'waiter',
+            Source::APP => 'app',
+            default => 'online',
+        };
     }
 }

@@ -73,7 +73,7 @@ class FrontendOrder extends Model
         'delivery_otp'             => 'string',
         'delivery_otp_verified_at' => 'datetime',
         'delivery_boy_request'     => 'integer',
-        'source'               => 'string',
+        'source'               => 'integer',
         'cutlery'              => 'integer',
         'service_fee'          => 'decimal:6',
         'rider_tip'            => 'decimal:6',

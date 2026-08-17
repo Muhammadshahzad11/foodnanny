@@ -33,6 +33,7 @@ class PosController extends AdminController implements HasMiddleware
     public static function middleware(): array
     {
         return [
+            new Middleware('restaurant.module:pos'),
             new Middleware('permission:pos', only: [
                 'store',
                 'tables',

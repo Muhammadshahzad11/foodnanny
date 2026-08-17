@@ -41,6 +41,17 @@
                             </button>
                         </div>
                         <OrderStatusComponent :props="order" />
+                        <button
+                            v-if="order.can_cancel"
+                            type="button"
+                            @click="cancelOrder"
+                            class="mt-4 w-full h-11 rounded-full bg-[#FB4E4E] text-white text-sm font-medium capitalize"
+                        >
+                            {{ $t('button.cancel_order') }}
+                            <span v-if="cancelSecondsLeft > 0" class="font-normal opacity-90">
+                                ({{ cancelSecondsLeft }}s)
+                            </span>
+                        </button>
                     </div>
 
                     <div v-if="parseInt(order.status) === enums.orderStatusEnum.REJECTED"
@@ -418,6 +429,7 @@ import LoadingComponent from "../../../common/LoadingComponent.vue";
 import ENV from "../../../../config/env.js";
 import {isScanMenuOrder as orderIsScanMenu, resolvePaymentMethodLabel} from "../../../../utils/orderHelpers.js";
 import {subscribeCustomerOrderRealtime} from "../../../../composables/useCustomerOrderRealtime.js";
+import VueSimpleAlert from "vue3-simple-alert";
 
 export default {
     name: "OrderDetailsComponent",
@@ -482,6 +494,8 @@ export default {
             unsubscribeOrderRealtime: null,
             orderRefreshTimer: null,
             orderRefreshInFlight: false,
+            cancelTimer: null,
+            cancelSecondsLeft: 0,
         }
     },
     computed: {
@@ -556,6 +570,7 @@ export default {
 
                 this.loading.isActive = false;
                 this.bindCustomerOrderRealtime();
+                this.startCancelCountdown();
                 if (res.data.data.restaurant_review_status) {
                     await this.frontendReviewStore.fetchRestaurantReview(this.$route.params.id).then(restaurantReviewRes => {
                         if (restaurantReviewRes.data?.data) {
@@ -594,6 +609,10 @@ export default {
             clearInterval(this.orderRefreshTimer);
             this.orderRefreshTimer = null;
         }
+        if (this.cancelTimer) {
+            clearInterval(this.cancelTimer);
+            this.cancelTimer = null;
+        }
         window.removeEventListener('focus', this.refreshOrderIfVisible);
         document.removeEventListener('visibilitychange', this.refreshOrderIfVisible);
     },
@@ -605,6 +624,51 @@ export default {
                 orderStatusEnum.REJECTED,
                 orderStatusEnum.RETURNED,
             ].includes(Number(this.order?.status));
+        },
+        startCancelCountdown() {
+            if (this.cancelTimer) {
+                clearInterval(this.cancelTimer);
+                this.cancelTimer = null;
+            }
+            const seconds = Number(this.order?.cancel_window_seconds || 0);
+            this.cancelSecondsLeft = this.order?.can_cancel ? seconds : 0;
+            if (!this.order?.can_cancel || seconds <= 0) {
+                return;
+            }
+            this.cancelTimer = setInterval(() => {
+                this.cancelSecondsLeft = Math.max(0, this.cancelSecondsLeft - 1);
+                if (this.cancelSecondsLeft <= 0) {
+                    clearInterval(this.cancelTimer);
+                    this.cancelTimer = null;
+                    this.frontendOrderStore.view(this.$route.params.id).catch(() => {});
+                }
+            }, 1000);
+        },
+        cancelOrder() {
+            return new VueSimpleAlert.confirm(
+                this.$t('message.cancel_order'),
+                this.$t('message.are_you_sure'),
+                'warning',
+                {
+                    confirmButtonText: this.$t('button.yes_cancel'),
+                    cancelButtonText: this.$t('button.no_cancel'),
+                    confirmButtonColor: '#FB4E4E',
+                    cancelButtonColor: '#6E7191'
+                }
+            ).then(() => {
+                this.loading.isActive = true;
+                return this.frontendOrderStore.cancel({
+                    id: this.order.id,
+                    status: orderStatusEnum.CANCELED
+                }).then(() => {
+                    this.loading.isActive = false;
+                    this.startCancelCountdown();
+                    alertService.success(this.$t('message.order_cancel'));
+                }).catch((err) => {
+                    this.loading.isActive = false;
+                    alertService.error(err.response?.data?.message || this.$t('message.something_wrong'));
+                });
+            }).catch(() => {});
         },
         async refreshOrderIfVisible() {
             if (document.hidden || this.isOrderTerminal() || this.orderRefreshInFlight) return;

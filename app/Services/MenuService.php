@@ -5,6 +5,7 @@ namespace App\Services;
 use Exception;
 use App\Models\Menu;
 use App\Models\User;
+use App\Models\Restaurant;
 use App\Enums\PermissionType;
 use App\Libraries\AppLibrary;
 use App\Enums\Role as RoleEnum;
@@ -19,7 +20,7 @@ class MenuService
     /**
      * @throws Exception
      */
-    public function menu(User $user, Role $role): array
+    public function menu(User $user, Role $role, ?Restaurant $restaurant = null): array
     {
         try {
             $adminMenus      = Menu::orderBy('priority')->orderBy('id')->get()->toArray();
@@ -78,6 +79,9 @@ class MenuService
             $adminPermissions = AppLibrary::pluck($adminPermissions, 'obj', 'url');
 
             $restaurantPermissions = AppLibrary::permissionWithAccess($restaurantAllPermissions, $restaurantAllMergePermissions);
+            if ($restaurant) {
+                $restaurantPermissions = app(RestaurantModuleService::class)->denyDisabledModules($restaurantPermissions, $restaurant);
+            }
             $restaurantPermissions = AppLibrary::pluck($restaurantPermissions, 'obj', 'url');
             return [
                 'adminPermission'      => count($adminAllMergePermissionsStatus) > 0 ? AppLibrary::numericToAssociativeArrayBuilder(AppLibrary::menu($adminMenus, $adminPermissions)) : [],

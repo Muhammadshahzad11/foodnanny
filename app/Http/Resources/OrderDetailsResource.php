@@ -84,9 +84,11 @@ class OrderDetailsResource extends JsonResource
             'status_name'                 => trans('order_status.' . $this->status),
             'reason'                      => $this->reason,
             'is_scan_menu_order'          => $this->resource->isScanMenuOrder(),
-            'cancel_window_seconds'       => 0,
-            'cancel_expires_at'           => null,
-            'can_cancel'                  => false,
+            'cancel_window_seconds'       => $this->resource->customerCanCancel() ? $this->resource->cancelWindowSeconds() : 0,
+            'cancel_expires_at'           => $this->resource->customerCanCancel()
+                ? optional($this->resource->cancelExpiresAt())?->toIso8601String()
+                : null,
+            'can_cancel'                  => $this->resource->customerCanCancel(),
             'requires_delivery_otp'       => $this->requiresDeliveryOtp(),
             'delivery_otp'                => $this->visibleDeliveryOtp(),
             'delivery_otp_length'         => DeliveryOtpService::LENGTH,

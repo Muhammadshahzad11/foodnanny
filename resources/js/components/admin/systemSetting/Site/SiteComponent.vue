@@ -361,6 +361,39 @@
                     </div>
 
                     <div class="form-col-12 sm:form-col-6">
+                        <label class="db-field-title" for="order_cancel_on">
+                            {{ $t("label.customer_order_cancel") }}
+                        </label>
+                        <div class="w-full h-10 rounded-md ps-3 p-[1px] border border-[#E5E7EB] flex items-center justify-between gap-3 bg-white">
+                            <span class="text-[#6E7191] text-sm min-w-0 truncate">
+                                {{ $t("label.cancel_window") }}
+                            </span>
+                            <nav class="w-fit h-full flex items-center justify-center p-0.5 rounded-md bg-[#FFF8F2] shrink-0">
+                                <button
+                                    type="button"
+                                    @click.prevent="setOrderCancel(false)"
+                                    :class="Number(form.site_order_cancel) !== enums.activityEnum.ENABLE ? 'text-white bg-[#6E7191]' : 'text-[#6E7191]'"
+                                    class="text-sm font-medium uppercase h-full px-3 rounded"
+                                >
+                                    {{ $t("label.off") }}
+                                </button>
+                                <button
+                                    type="button"
+                                    @click.prevent="setOrderCancel(true)"
+                                    :class="Number(form.site_order_cancel) === enums.activityEnum.ENABLE ? 'text-white bg-primary' : 'text-[#6E7191]'"
+                                    class="text-sm font-medium uppercase h-full px-3 rounded"
+                                >
+                                    {{ $t("label.on") }}
+                                </button>
+                            </nav>
+                        </div>
+                        <small class="text-[11px] text-[#6E7191]">{{ $t("label.customer_order_cancel_hint") }}</small>
+                        <small class="db-field-alert" v-if="errors.site_order_cancel">
+                            {{ errors.site_order_cancel[0] }}
+                        </small>
+                    </div>
+
+                    <div class="form-col-12 sm:form-col-6">
                         <label class="db-field-title required" for="online_payment_gateway_enable">
                             {{ $t("label.online_payment_gateway") }}
                         </label>
@@ -728,6 +761,7 @@ export default {
                 site_restaurant_search_radius: null,
                 site_delivery_boy_order_radius: null,
                 site_cash_on_delivery: null,
+                site_order_cancel: activityEnum.DISABLE,
                 site_default_order_commission: null,
                 site_default_delivery_commission: null,
                 site_default_pos_commission: null,
@@ -843,6 +877,7 @@ export default {
                     site_restaurant_search_radius: res.data.data.site_restaurant_search_radius,
                     site_delivery_boy_order_radius: res.data.data.site_delivery_boy_order_radius,
                     site_cash_on_delivery: res.data.data.site_cash_on_delivery,
+                    site_order_cancel: res.data.data.site_order_cancel ?? activityEnum.DISABLE,
                     site_service_fee: res.data.data.site_service_fee,
                     site_default_order_commission: res.data.data.site_default_order_commission,
                     site_default_delivery_commission: res.data.data.site_default_delivery_commission,
@@ -861,6 +896,14 @@ export default {
         },
         floatNumber(e) {
             return appService.floatNumber(e);
+        },
+        setOrderCancel: function (enabled) {
+            const next = enabled ? this.enums.activityEnum.ENABLE : this.enums.activityEnum.DISABLE;
+            if (Number(this.form.site_order_cancel) === Number(next)) {
+                return;
+            }
+            this.form.site_order_cancel = next;
+            this.save();
         },
         save: function () {
             try {

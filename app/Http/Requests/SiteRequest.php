@@ -49,6 +49,7 @@ class SiteRequest extends FormRequest
             'site_restaurant_search_radius'                           => ['required', 'numeric'],
             'site_delivery_boy_order_radius'                          => ['required', 'numeric'],
             'site_cash_on_delivery'                                   => ['required', 'numeric'],
+            'site_order_cancel'                                       => ['required', 'numeric'],
             'site_service_fee'                                        => ['required', 'numeric'],
             'site_default_order_commission'                           => ['required', 'numeric', 'max:100'],
             'site_default_delivery_commission'                        => ['required', 'numeric', 'max:100'],

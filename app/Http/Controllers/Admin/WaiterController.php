@@ -28,6 +28,7 @@ class WaiterController extends AdminController implements HasMiddleware
     public static function middleware(): array
     {
         return [
+            new Middleware('restaurant.module:waiter'),
             new Middleware('permission:waiter|waiter_dashboard', only: ['dashboard']),
             new Middleware('permission:waiter|waiter_tables', only: ['tables', 'tableShow']),
             new Middleware('permission:waiter|waiter_orders', only: ['orders', 'orderShow']),

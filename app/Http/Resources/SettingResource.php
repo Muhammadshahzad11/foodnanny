@@ -42,6 +42,7 @@ class SettingResource extends JsonResource
             'site_language_switch'                      => $this->info['site_language_switch'],
             'site_auto_localization'                    => $this->info['site_auto_localization'],
             'site_cash_on_delivery'                     => $this->info['site_cash_on_delivery'],
+            'site_order_cancel'                         => $this->info['site_order_cancel'] ?? \App\Enums\Activity::DISABLE,
             'site_online_payment_gateway'               => $this->info['site_online_payment_gateway'],
             'site_service_fee'                          => $this->info['site_service_fee'],
             'site_rider_tip'                            => $this->info['site_rider_tip'],
