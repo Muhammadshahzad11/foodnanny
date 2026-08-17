@@ -14,8 +14,11 @@
                     <h3 class="text-lg font-medium capitalize mb-2 text-paragraph">
                         {{ cuisine.name }}
                     </h3>
-                    <label class="db-badge  mb-3" :class="statusClass(cuisine.status)">
+                    <label class="db-badge mb-3" :class="statusClass(cuisine.status)">
                         {{ enums.statusEnumArray[cuisine.status] }}
+                    </label>
+                    <label class="db-badge mb-3 ml-2" :class="statusClass(cuisine.show_on_home)">
+                        {{ $t("label.show_on_home") }}: {{ enums.askEnumArray[cuisine.show_on_home] }}
                     </label>
                     <p class="db-light-text" v-html="cuisine.description"></p>
                 </div>
@@ -27,6 +30,7 @@
 <script>
 import LoadingComponent from "../../../common/LoadingComponent.vue";
 import statusEnum from "../../../../enums/modules/statusEnum.js";
+import askEnum from "../../../../enums/modules/askEnum.js";
 import {useCuisineStore} from "../../../../stores/cuisine.js";
 import appService from "../../../../services/appService.js";
 
@@ -44,9 +48,14 @@ export default {
             },
             enums: {
                 statusEnum: statusEnum,
+                askEnum: askEnum,
                 statusEnumArray: {
                     [statusEnum.ACTIVE]: this.$t("label.active"),
                     [statusEnum.INACTIVE]: this.$t("label.inactive")
+                },
+                askEnumArray: {
+                    [askEnum.YES]: this.$t("label.on"),
+                    [askEnum.NO]: this.$t("label.off")
                 }
             }
         }

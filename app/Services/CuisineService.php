@@ -14,7 +14,7 @@ use App\Libraries\QueryExceptionLibrary;
 
 class CuisineService
 {
-    protected array $cuisineFilter = ['name', 'status'];
+    protected array $cuisineFilter = ['name', 'status', 'show_on_home'];
 
     /**
      * @throws Exception

@@ -166,6 +166,7 @@ import {useFrontendRestaurantStore} from "../../../stores/frontendRestaurant.js"
 import {useCommonStore} from "../../../stores/common.js";
 import _ from "lodash";
 import statusEnum from "../../../enums/modules/statusEnum.js";
+import askEnum from "../../../enums/modules/askEnum.js";
 import {useFrontendCuisineStore} from "../../../stores/frontendCuisine.js";
 import appService from "../../../services/appService.js";
 import availabilityEnum from "../../../enums/modules/availabilityEnum.js";
@@ -382,7 +383,8 @@ export default {
             await this.frontendCuisineStore.fetch({
                 order_column: 'sort',
                 order_type: 'asc',
-                status: statusEnum.ACTIVE
+                status: statusEnum.ACTIVE,
+                show_on_home: askEnum.YES
             });
             await this.frontendOfferStore.fetchFind({
                 latitude: this.latitude,

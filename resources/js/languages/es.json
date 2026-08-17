@@ -136,6 +136,8 @@
         "default": "Predeterminado",
         "active": "Activo",
         "inactive": "Inactivo",
+        "show_on_home": "Mostrar en inicio",
+        "show_on_home_hint": "Si está desactivado, la cocina sigue disponible para restaurantes, pero no aparece en el slider de inicio ni en los destacados del restaurante.",
         "image": "Imagen",
         "display_mode": "Modo de visualización",
         "default_storage": "Almacenamiento predeterminado",

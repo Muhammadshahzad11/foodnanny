@@ -135,6 +135,8 @@
         "default": "Par défaut",
         "active": "Actif",
         "inactive": "Inactif",
+        "show_on_home": "Afficher à l’accueil",
+        "show_on_home_hint": "Si désactivé, la cuisine reste disponible pour les restaurants mais n’apparaît pas sur le slider d’accueil ni dans les temps forts du restaurant.",
         "image": "Image",
         "display_mode": "Mode d'affichage",
         "default_storage": "Stockage par défaut",

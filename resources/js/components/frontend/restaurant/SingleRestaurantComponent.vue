@@ -49,8 +49,10 @@
                                 {{ restaurant.name }}
                             </h1>
                             <div class="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1.5 text-xs sm:text-sm text-white/85">
-                                <span>{{ restaurant.cuisine }}</span>
-                                <span class="opacity-40">·</span>
+                                <template v-if="restaurant.cuisine">
+                                    <span>{{ restaurant.cuisine }}</span>
+                                    <span class="opacity-40">·</span>
+                                </template>
                                 <span>{{ restaurant.distance }} {{ $t('label.km') }}</span>
                                 <template v-if="restaurant.rating_star > 0 && restaurant.rating_star_count > 0">
                                     <span class="opacity-40">·</span>

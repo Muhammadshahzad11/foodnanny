@@ -141,6 +141,8 @@
         "default": "Default",
         "active": "Active",
         "inactive": "Inactive",
+        "show_on_home": "Show on home",
+        "show_on_home_hint": "When off, this cuisine stays available for restaurants but is hidden from the home slider and restaurant highlights.",
         "table_number": "Table Number",
         "table_name": "Table Name",
         "tables": "Tables",

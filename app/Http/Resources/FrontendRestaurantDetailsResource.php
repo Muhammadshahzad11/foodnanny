@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 
+use App\Enums\Ask;
 use App\Libraries\AppLibrary;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -32,7 +33,7 @@ class FrontendRestaurantDetailsResource extends JsonResource
             'distance'          => $this->distance,
             'rating_star'       => (int)$this->rating_star,
             'rating_star_count' => (int)$this->rating_star_count,
-            'cuisine'           => AppLibrary::cuisineString($this->cuisinesWithCuisineRelation),
+            'cuisine'           => AppLibrary::cuisineString($this->cuisinesWithCuisineRelation, true),
             'availability'      => AppLibrary::availability($this->timeSlots),
             'time_slots'        => SimpleTimeSlotResource::collection($this->timeSlots),
             'single_time_slots' => AppLibrary::timeSlots($this->timeSlots),
@@ -56,7 +57,11 @@ class FrontendRestaurantDetailsResource extends JsonResource
                 ];
             }),
             'delivery_zones'    => RestaurantDeliveryZoneResource::collection($this->whenLoaded('activeDeliveryZones')),
-            'cuisines'          => SimpleCuisineResource::collection($this->cuisinesWithCuisineRelation),
+            'cuisines'          => SimpleCuisineResource::collection(
+                $this->cuisinesWithCuisineRelation->filter(
+                    fn ($row) => (int) ($row->cuisine?->show_on_home ?? Ask::YES) === Ask::YES
+                )->values()
+            ),
             'reviews'           => SimpleReviewResource::collection($this->reviews),
             'favorite'          => (bool)$this->favorite
         ];

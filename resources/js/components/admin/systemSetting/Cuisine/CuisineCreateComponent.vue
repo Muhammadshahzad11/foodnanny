@@ -43,6 +43,27 @@
                             </div>
                         </div>
 
+                        <div class="form-col-12 sm:form-col-6">
+                            <label class="db-field-title required" for="showOnHomeYes">{{ $t("label.show_on_home") }}</label>
+                            <div class="db-field-radio-group">
+                                <div class="db-field-radio">
+                                    <div class="custom-radio">
+                                        <input :value="enums.askEnum.YES" v-model="props.form.show_on_home" id="showOnHomeYes" type="radio" class="custom-radio-field"/>
+                                        <span class="custom-radio-span"></span>
+                                    </div>
+                                    <label for="showOnHomeYes" class="db-field-label">{{ $t("label.on") }}</label>
+                                </div>
+                                <div class="db-field-radio">
+                                    <div class="custom-radio">
+                                        <input :value="enums.askEnum.NO" v-model="props.form.show_on_home" type="radio" id="showOnHomeNo" class="custom-radio-field"/>
+                                        <span class="custom-radio-span"></span>
+                                    </div>
+                                    <label for="showOnHomeNo" class="db-field-label">{{ $t("label.off") }}</label>
+                                </div>
+                            </div>
+                            <small class="text-[11px] text-[#6E7191]">{{ $t("label.show_on_home_hint") }}</small>
+                        </div>
+
                         <div class="form-col-12">
                             <label for="description" class="db-field-title">{{ $t("label.description") }}</label>
                             <div :class="errors.description ? 'invalid textarea-error-box-style' : ''" class="custom-quill-editor">
@@ -74,6 +95,7 @@
 import LoadingComponent from "../../../common/LoadingComponent.vue";
 import SmModalCreateComponent from "../../components/buttons/SmModalCreateComponent.vue";
 import statusEnum from "../../../../enums/modules/statusEnum.js";
+import askEnum from "../../../../enums/modules/askEnum.js";
 import {useModal} from "../../../../composables/modal.js";
 import {useCuisineStore} from "../../../../stores/cuisine.js";
 import alertService from "../../../../services/alertService.js";
@@ -97,6 +119,7 @@ export default {
             },
             enums: {
                 statusEnum: statusEnum,
+                askEnum: askEnum,
                 statusEnumArray: {
                     [statusEnum.ACTIVE]: this.$t("label.active"),
                     [statusEnum.INACTIVE]: this.$t("label.inactive")
@@ -115,9 +138,10 @@ export default {
             this.cuisineStore.reset();
             this.errors            = {};
             this.$props.props.form = {
-                name       : "",
-                description: "",
-                status     : statusEnum.ACTIVE
+                name         : "",
+                description  : "",
+                status       : statusEnum.ACTIVE,
+                show_on_home : askEnum.YES
             };
             if (this.image) {
                 this.image                     = "";
@@ -130,6 +154,7 @@ export default {
                 fd.append("name", this.props.form.name);
                 fd.append("description", this.props.form.description);
                 fd.append("status", this.props.form.status);
+                fd.append("show_on_home", this.props.form.show_on_home);
                 if (this.image) {
                     fd.append("image", this.image);
                 }
@@ -146,6 +171,7 @@ export default {
                         name: "",
                         description: "",
                         status: statusEnum.ACTIVE,
+                        show_on_home: askEnum.YES,
                     };
                     this.image                     = "";
                     this.errors                    = {};

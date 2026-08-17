@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\Ask;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -27,8 +28,9 @@ class CuisineRequest extends FormRequest
         return [
             'name'        => ['required', 'string', 'max:190', Rule::unique("cuisines", "name")->ignore($this->route('cuisine.id'))],
             'description' => ['nullable', 'string', 'max:5000'],
-            'status'      => ['required', 'numeric', 'max:24'],
-            'image'       => $this->route('cuisine.id') ? ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:2048'] : ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:2048']
+            'status'        => ['required', 'numeric', 'max:24'],
+            'show_on_home'  => ['required', Rule::in([Ask::YES, Ask::NO])],
+            'image'         => $this->route('cuisine.id') ? ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:2048'] : ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:2048']
         ];
     }
 }

@@ -135,6 +135,8 @@
         "default": "Standard",
         "active": "Aktiv",
         "inactive": "Inaktiv",
+        "show_on_home": "Auf Startseite anzeigen",
+        "show_on_home_hint": "Wenn aus, bleibt die Küche für Restaurants verfügbar, wird aber auf dem Home-Slider und in Restaurant-Highlights ausgeblendet.",
         "image": "Bild",
         "display_mode": "Anzeigemodus",
         "default_storage": "Standard-Speicher",

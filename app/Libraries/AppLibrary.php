@@ -2,6 +2,7 @@
 
 namespace App\Libraries;
 
+use App\Enums\Ask;
 use App\Enums\Availability;
 use App\Enums\CurrencyPosition;
 use App\Models\User;
@@ -460,22 +461,21 @@ class AppLibrary
         rmdir($dirPath);
     }
 
-    public static function cuisineString($arrays): string
+    public static function cuisineString($arrays, bool $homeHighlightsOnly = false): string
     {
-        $string = '';
-        $i      = 1;
-        $count  = count($arrays);
-        if (count($arrays) > 0) {
-            foreach ($arrays as $array) {
-                if ($i == $count) {
-                    $string .= $array?->cuisine?->name;
-                } else {
-                    $string .= $array?->cuisine?->name . ', ';
-                }
-                $i++;
+        $names = [];
+        foreach ($arrays ?? [] as $array) {
+            $cuisine = $array?->cuisine;
+            if (blank($cuisine?->name)) {
+                continue;
             }
+            if ($homeHighlightsOnly && (int) ($cuisine->show_on_home ?? Ask::YES) !== Ask::YES) {
+                continue;
+            }
+            $names[] = $cuisine->name;
         }
-        return $string;
+
+        return implode(', ', $names);
     }
 
     public static function timeSlots($timeSlots, $return = true): array|string

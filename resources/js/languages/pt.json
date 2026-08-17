@@ -135,6 +135,8 @@
         "default": "Padrão",
         "active": "Ativo",
         "inactive": "Inativo",
+        "show_on_home": "Mostrar na página inicial",
+        "show_on_home_hint": "Se estiver desligado, a cozinha continua disponível para restaurantes, mas não aparece no slider inicial nem nos destaques da página do restaurante.",
         "image": "Imagem",
         "display_mode": "Modo de Exibição",
         "default_storage": "Armazenamento Padrão",

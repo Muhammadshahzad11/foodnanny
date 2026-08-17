@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\Ask;
 use App\Enums\Status;
 use App\Models\Cuisine;
 use App\Models\User;
@@ -133,6 +134,7 @@ class CuisineTableSeeder extends Seeder
                     'slug'         => Str::slug($cuisine['name'] . '-' . rand(1, 1000)),
                     'description'  => null,
                     'status'       => Status::ACTIVE,
+                    'show_on_home' => Ask::YES,
                     'sort'         => $cuisine['sort'],
                     'creator_type' => User::class,
                     'creator_id'   => 1,

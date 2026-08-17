@@ -20,6 +20,9 @@
                             {{ $t("label.status") }}
                         </th>
                         <th class="db-table-head-th">
+                            {{ $t("label.show_on_home") }}
+                        </th>
+                        <th class="db-table-head-th">
                             {{ $t("label.action") }}
                         </th>
                     </tr>
@@ -38,6 +41,11 @@
                             </span>
                         </td>
                         <td class="db-table-body-td">
+                            <span :class="statusClass(cuisine.show_on_home)">
+                                {{ enums.askEnumArray[cuisine.show_on_home] }}
+                            </span>
+                        </td>
+                        <td class="db-table-body-td">
                             <div class="flex justify-start items-center sm:items-start sm:justify-start gap-1.5">
                                 <SmViewComponent :link="'admin.cuisines.show'" :id="cuisine.id"/>
                                 <SmModalEditComponent @click="edit(cuisine)"/>
@@ -48,7 +56,7 @@
                 </draggable>
                 <tbody class="db-table-body" v-else>
                     <tr class="db-table-body-tr">
-                        <td class="db-table-body-td" colspan="4">
+                        <td class="db-table-body-td" colspan="5">
                             <div class="p-4">
                                 <img class="m-auto not-found max-w-[300px]" :src="setting.data_not_found" alt="Not Found">
                                 <span class="block mt-3 text-center text-lg">{{ $t('message.no_data_found') }}</span>
@@ -73,6 +81,7 @@
 import LoadingComponent from "../../../common/LoadingComponent.vue";
 import {useCuisineStore} from "../../../../stores/cuisine.js";
 import statusEnum from "../../../../enums/modules/statusEnum.js";
+import askEnum from "../../../../enums/modules/askEnum.js";
 import {useFrontendSettingStore} from "../../../../stores/frontendSetting.js";
 import appService from "../../../../services/appService.js";
 import alertService from "../../../../services/alertService.js";
@@ -115,16 +124,22 @@ export default {
             },
             enums: {
                 statusEnum     : statusEnum,
+                askEnum        : askEnum,
                 statusEnumArray: {
                     [statusEnum.ACTIVE]  : this.$t("label.active"),
                     [statusEnum.INACTIVE]: this.$t("label.inactive"),
+                },
+                askEnumArray: {
+                    [askEnum.YES]: this.$t("label.on"),
+                    [askEnum.NO] : this.$t("label.off"),
                 }
             },
             props: {
                 form: {
-                    name       : "",
-                    description: "",
-                    status     : statusEnum.ACTIVE
+                    name         : "",
+                    description  : "",
+                    status       : statusEnum.ACTIVE,
+                    show_on_home : askEnum.YES
                 },
                 search: {
                     paginate    : 1,
@@ -177,9 +192,10 @@ export default {
             this.loading.isActive = true;
             this.cuisineStore.edit(cuisine.id);
             this.props.form       = {
-                name       : cuisine.name,
-                description: cuisine.description,
-                status     : cuisine.status,
+                name         : cuisine.name,
+                description  : cuisine.description,
+                status       : cuisine.status,
+                show_on_home : cuisine.show_on_home ?? askEnum.YES,
             };
             this.loading.isActive = false;
         },

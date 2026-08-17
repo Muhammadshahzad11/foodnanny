@@ -24,7 +24,7 @@ class TableRestaurantDetailsResource extends JsonResource
             'cover'     => $this->image,
             'latitude'  => $this->latitude,
             'longitude' => $this->longitude,
-            'cuisine'   => AppLibrary::cuisineString($this->cuisinesWithCuisineRelation),
+            'cuisine'   => AppLibrary::cuisineString($this->cuisinesWithCuisineRelation, true),
         ];
     }
 }

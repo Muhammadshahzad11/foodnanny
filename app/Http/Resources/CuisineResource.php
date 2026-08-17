@@ -19,8 +19,9 @@ class CuisineResource extends JsonResource
             "name"        => $this->name,
             "slug"        => $this->slug,
             "description" => $this->description === null ? '' : $this->description,
-            "status"      => $this->status,
-            'image'       => $this->image
+            "status"        => $this->status,
+            "show_on_home"  => $this->show_on_home,
+            'image'         => $this->image
         ];
     }
 }
