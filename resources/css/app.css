@@ -275,6 +275,27 @@
     .middle-navigate.swiper-rtl .swiper-button-prev { @apply after:content-['\e03b'] }
 
 
+    /* Offer cover banners + selected offer container */
+    .offer-cover-swiper .swiper-slide { width: 340px; }
+    .offer-cover-card {
+        @apply block w-full overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xst p-0;
+        height: auto;
+    }
+    .offer-cover-card img { @apply w-full h-auto object-contain; }
+    .offer-cover-card:hover { @apply shadow-md; }
+    .offer-cover-swiper .swiper-button-prev,
+    .offer-cover-swiper .swiper-button-next {
+        @apply mobile:hidden w-8 h-8 leading-8 text-center rounded-full bg-white text-paragraph shadow-xst border border-gray-200 mt-0 after:font-icon after:text-base;
+    }
+    .offer-cover-swiper .swiper-button-prev { @apply ltr:after:content-['\e03c'] rtl:after:content-['\e03b'] }
+    .offer-cover-swiper .swiper-button-next { @apply ltr:after:content-['\e03b'] rtl:after:content-['\e03c'] }
+    .offer-block-nav {
+        @apply hidden sm:flex absolute top-5 ltr:right-5 rtl:left-5 z-20 gap-2;
+    }
+    .offer-block-nav__btn {
+        @apply w-9 h-9 rounded-full bg-white border border-gray-200 text-paragraph shadow-xst flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition;
+    }
+
     /* Offer + restaurant container */
     .offer-campaign-swiper .swiper-button-prev,
     .offer-campaign-swiper .swiper-button-next {

@@ -60,15 +60,39 @@
         <div class="db-card-header border-none">
             <h3 class="db-card-title">{{ $t('label.restaurants_in_zone') }}</h3>
         </div>
-        <div class="p-4 sm:p-6">
-            <p class="text-sm text-slate-500 mt-0 mb-3">{{ $t('label.auto_assigned_from_map') }}</p>
-            <ul v-if="zoneRestaurants.length" class="m-0 p-0 list-none divide-y divide-slate-100 border border-slate-200 rounded">
-                <li v-for="restaurant in zoneRestaurants" :key="restaurant.id" class="px-3 py-2 text-sm text-slate-800">
-                    {{ restaurant.name }}
-                </li>
-            </ul>
-            <p v-else class="text-sm text-slate-500 mb-0">{{ $t('label.no_restaurants_in_zone') }}</p>
-        </div>
+        <form class="p-4 sm:p-6" @submit.prevent="saveRestaurants">
+            <p class="text-sm text-slate-500 mt-0 mb-3">{{ $t('label.select_zone_restaurants_help') }}</p>
+            <input
+                v-model="restaurantSearch"
+                type="text"
+                class="db-field-control mb-3"
+                :placeholder="$t('label.search_restaurants')"
+            />
+            <div class="border border-slate-200 rounded-lg max-h-72 overflow-y-auto divide-y divide-slate-100">
+                <label
+                    v-for="restaurant in filteredRestaurants"
+                    :key="restaurant.id"
+                    class="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-800 cursor-pointer hover:bg-slate-50"
+                >
+                    <div class="custom-checkbox shrink-0">
+                        <input
+                            type="checkbox"
+                            class="custom-checkbox-field"
+                            :checked="isSelected(selectedRestaurantIds, restaurant.id)"
+                            @change="toggleId('selectedRestaurantIds', restaurant.id, $event)"
+                        />
+                        <i class="lab-fill-check custom-checkbox-icon"></i>
+                    </div>
+                    <span>{{ restaurant.name }}</span>
+                </label>
+                <p v-if="!filteredRestaurants.length" class="px-3 py-3 text-sm text-slate-500 mb-0">
+                    {{ $t('label.no_restaurants_in_zone') }}
+                </p>
+            </div>
+            <div class="flex justify-end mt-4">
+                <button type="submit" class="db-btn py-2 px-4 text-white bg-primary">{{ $t('button.save') }}</button>
+            </div>
+        </form>
     </div>
 
     <div class="db-card mb-4">
@@ -106,15 +130,42 @@
         <div class="db-card-header border-none">
             <h3 class="db-card-title">{{ $t('label.riders_in_zone') }}</h3>
         </div>
-        <div class="p-4 sm:p-6">
-            <p class="text-sm text-slate-500 mt-0 mb-3">{{ $t('label.auto_assigned_from_map') }}</p>
-            <ul v-if="zoneRiders.length" class="m-0 p-0 list-none divide-y divide-slate-100 border border-slate-200 rounded">
-                <li v-for="rider in zoneRiders" :key="rider.id" class="px-3 py-2 text-sm text-slate-800">
-                    {{ rider.name }} <span class="text-slate-500">({{ rider.email }})</span>
-                </li>
-            </ul>
-            <p v-else class="text-sm text-slate-500 mb-0">{{ $t('label.no_riders_in_zone') }}</p>
-        </div>
+        <form class="p-4 sm:p-6" @submit.prevent="saveRiders">
+            <p class="text-sm text-slate-500 mt-0 mb-3">{{ $t('label.select_zone_riders_help') }}</p>
+            <input
+                v-model="riderSearch"
+                type="text"
+                class="db-field-control mb-3"
+                :placeholder="$t('label.search_delivery_partners')"
+            />
+            <div class="border border-slate-200 rounded-lg max-h-72 overflow-y-auto divide-y divide-slate-100">
+                <label
+                    v-for="rider in filteredRiders"
+                    :key="rider.id"
+                    class="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-800 cursor-pointer hover:bg-slate-50"
+                >
+                    <div class="custom-checkbox shrink-0">
+                        <input
+                            type="checkbox"
+                            class="custom-checkbox-field"
+                            :checked="isSelected(selectedRiderIds, rider.id)"
+                            @change="toggleId('selectedRiderIds', rider.id, $event)"
+                        />
+                        <i class="lab-fill-check custom-checkbox-icon"></i>
+                    </div>
+                    <span>
+                        {{ rider.name }}
+                        <span v-if="rider.email" class="text-slate-500">({{ rider.email }})</span>
+                    </span>
+                </label>
+                <p v-if="!filteredRiders.length" class="px-3 py-3 text-sm text-slate-500 mb-0">
+                    {{ $t('label.no_riders_in_zone') }}
+                </p>
+            </div>
+            <div class="flex justify-end mt-4">
+                <button type="submit" class="db-btn py-2 px-4 text-white bg-primary">{{ $t('button.save') }}</button>
+            </div>
+        </form>
     </div>
 </template>
 
@@ -135,8 +186,12 @@ export default {
             loading: {isActive: false},
             zoneName: "",
             zone: null,
-            zoneRestaurants: [],
-            zoneRiders: [],
+            assignableRestaurants: [],
+            assignableRiders: [],
+            selectedRestaurantIds: [],
+            selectedRiderIds: [],
+            restaurantSearch: "",
+            riderSearch: "",
             feeForm: {
                 base_delivery_fee: "0",
                 min_order_amount: "",
@@ -155,6 +210,14 @@ export default {
             },
         };
     },
+    computed: {
+        filteredRestaurants() {
+            return this.filterList(this.assignableRestaurants, this.restaurantSearch, ['name']);
+        },
+        filteredRiders() {
+            return this.filterList(this.assignableRiders, this.riderSearch, ['name', 'email', 'phone']);
+        },
+    },
     async mounted() {
         this.loading.isActive = true;
         try {
@@ -164,11 +227,36 @@ export default {
         }
     },
     methods: {
+        filterList(items, search, fields) {
+            const query = (search || '').trim().toLowerCase();
+            const list = items || [];
+            if (!query) {
+                return list;
+            }
+            return list.filter((item) => fields.some((field) => String(item[field] || '').toLowerCase().includes(query)));
+        },
+        selectedIds(values) {
+            return (values || [])
+                .map((value) => Number(value && typeof value === 'object' ? value.id : value))
+                .filter((id) => Number.isFinite(id) && id > 0);
+        },
+        isSelected(selectedIds, id) {
+            return this.selectedIds(selectedIds).includes(Number(id));
+        },
+        toggleId(field, id, event) {
+            const current = this.selectedIds(this[field]);
+            const value = Number(id);
+            this[field] = event.target.checked
+                ? Array.from(new Set([...current, value]))
+                : current.filter((item) => item !== value);
+        },
         async loadZone() {
             const res = await this.zoneStore.show(this.$route.params.id);
             const zone = res.data.data;
             this.zone = zone;
             this.zoneName = zone.display_name || zone.name;
+            this.assignableRestaurants = res.data.assignable_restaurants || [];
+            this.assignableRiders = res.data.assignable_delivery_boys || [];
             this.feeForm = {
                 base_delivery_fee: zone.base_delivery_fee ?? "0",
                 min_order_amount: zone.min_order_amount ?? "",
@@ -178,8 +266,50 @@ export default {
                 peak_enabled: zone.peak_enabled ?? 0,
                 peak_charge: zone.peak_charge ?? "0",
             };
-            this.zoneRestaurants = zone.restaurants || [];
-            this.zoneRiders = zone.delivery_boys || [];
+            const assignedRestaurants = zone.restaurants || [];
+            const assignedRiders = zone.delivery_boys || [];
+            this.selectedRestaurantIds = assignedRestaurants.map((restaurant) => Number(restaurant.id));
+            this.selectedRiderIds = assignedRiders.map((rider) => Number(rider.id));
+            this.mergeAssigned(this.assignableRestaurants, assignedRestaurants, 'name');
+            this.mergeAssigned(this.assignableRiders, assignedRiders, 'name_email');
+        },
+        mergeAssigned(allItems, assignedItems, extraLabel) {
+            const existingIds = new Set(allItems.map((item) => Number(item.id)));
+            (assignedItems || []).forEach((item) => {
+                const id = Number(item.id);
+                if (!existingIds.has(id)) {
+                    allItems.push({
+                        ...item,
+                        id,
+                        [extraLabel]: item[extraLabel] || (item.email ? `${item.name} (${item.email})` : item.name),
+                    });
+                    existingIds.add(id);
+                }
+            });
+        },
+        saveRestaurants() {
+            if (!this.zone) return;
+            this.loading.isActive = true;
+            this.zoneStore.assignRestaurants(this.zone.id, this.selectedIds(this.selectedRestaurantIds)).then(() => {
+                this.loading.isActive = false;
+                this.loadZone();
+                alertService.success(this.$t('message.update_success') || 'Saved');
+            }).catch((err) => {
+                this.loading.isActive = false;
+                alertService.error(err.response?.data?.message || err);
+            });
+        },
+        saveRiders() {
+            if (!this.zone) return;
+            this.loading.isActive = true;
+            this.zoneStore.assignDeliveryBoys(this.zone.id, this.selectedIds(this.selectedRiderIds)).then(() => {
+                this.loading.isActive = false;
+                this.loadZone();
+                alertService.success(this.$t('message.update_success') || 'Saved');
+            }).catch((err) => {
+                this.loading.isActive = false;
+                alertService.error(err.response?.data?.message || err);
+            });
         },
         saveFees() {
             if (!this.zone) return;

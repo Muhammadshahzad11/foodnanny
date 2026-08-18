@@ -19,26 +19,49 @@
         </div>
     </section>
 
-    <section v-if="!outOfServiceArea && search === null && promoBlocks.length > 0" class="mb-8 sm:mb-12">
+    <section v-if="!outOfServiceArea && search === null && promoBlocks.length > 0" class="mb-6 sm:mb-8">
+        <div v-if="offerAndCampaignsShowHide || singleOfferShowHide" class="container">
+            <div v-if="activePromo" class="relative">
+                <OfferCampaignBlock
+                    :item="activePromo"
+                    :offer-restaurant="findRestaurants"
+                    :gift-fallback="setting.image_offer"
+                    :dir="displayMode"
+                />
+                <div v-if="promoBlocks.length > 1" class="offer-block-nav">
+                    <button type="button" class="offer-block-nav__btn" @click="shiftPromo(-1)" aria-label="Previous campaign">
+                        <i class="lab-line-chevron-left"></i>
+                    </button>
+                    <button type="button" class="offer-block-nav__btn" @click="shiftPromo(1)" aria-label="Next campaign">
+                        <i class="lab-line-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section v-if="!outOfServiceArea && search === null && offerBanners.length > 0" class="mb-8 sm:mb-12">
         <div v-if="offerAndCampaignsShowHide || singleOfferShowHide" class="container">
             <Swiper
                 :dir="displayMode"
-                :loop="promoBlocks.length > 1"
+                :loop="false"
                 :speed="1000"
-                :navigation="promoBlocks.length > 1"
+                :navigation="true"
                 :modules="promoModules"
-                :slides-per-view="1"
-                :space-between="20"
-                class="offer-campaign-swiper"
+                :breakpoints="offerBreakPoints"
+                class="middle-navigate"
             >
-                <SwiperSlide v-for="block in promoBlocks" :key="(block.type || 'offer') + '-' + block.id">
-                    <OfferCampaignBlock
-                        :item="block"
-                        :restaurants="block.restaurants || []"
-                        :offer-restaurant="findRestaurants"
-                        :gift-fallback="setting.image_offer"
-                        :dir="displayMode"
-                    />
+                <SwiperSlide v-for="offer in offerBanners" :key="'offer-' + offer.id" class="mobile:!w-60">
+                    <router-link
+                        :to="{ name: 'frontend.offerAndCampaign', params: { slug: offer.slug, type: 'offer' } }"
+                        class="w-full block"
+                    >
+                        <img
+                            :src="offer.thumb || offer.cover || setting.image_offer"
+                            :alt="offer.title"
+                            class="w-full rounded-2xl"
+                        >
+                    </router-link>
                 </SwiperSlide>
             </Swiper>
         </div>
@@ -204,6 +227,7 @@ export default {
             temporaryRestaurants: [],
             closeRestaurants: [],
             offerAndCampaigns: [],
+            offerBanners: [],
             lastPage: null,
             totalRestaurant: 0,
             enums: {
@@ -228,9 +252,11 @@ export default {
                 1024: {slidesPerView: 4, spaceBetween: 24}
             },
             offerBreakPoints: {
-                0: {slidesPerView: 1, spaceBetween: 16},
-                640: {slidesPerView: 1, spaceBetween: 24},
+                0: {slidesPerView: 'auto', spaceBetween: 16},
+                640: {slidesPerView: 2, spaceBetween: 24},
+                768: {slidesPerView: 3, spaceBetween: 24}
             },
+            activePromoKey: '',
             outOfServiceArea: false,
             outOfServiceAlertKey: null,
             outOfServiceMessage: '',
@@ -302,25 +328,11 @@ export default {
             return this.frontendOfferStore.find;
         },
         promoBlocks() {
-            const blocks = [];
-            const single = this.singleOffer;
-            const singleRestaurants = (single?.restaurants || this.singleRestaurants || [])
-                .filter((r) => r && Number(r.id) > 0);
-            if (single && Object.keys(single).length && singleRestaurants.length) {
-                blocks.push({
-                    ...single,
-                    type: 'offer',
-                    restaurants: singleRestaurants,
-                });
-            }
-            const seen = new Set(blocks.map((b) => `${b.type}-${b.id}`));
-            (this.offerAndCampaigns || []).forEach((item) => {
-                const key = `${item.type || 'offer'}-${item.id}`;
-                if (seen.has(key)) return;
-                seen.add(key);
-                blocks.push(item);
-            });
-            return blocks;
+            return (this.offerAndCampaigns || []).filter((item) => (item.type || '') === this.enums.offerAndCampaignEnum.CAMPAIGN);
+        },
+        activePromo() {
+            const key = this.activePromoKey;
+            return this.promoBlocks.find((block) => this.promoKey(block) === key) || this.promoBlocks[0] || null;
         },
     },
     async mounted() {
@@ -332,6 +344,20 @@ export default {
     methods: {
         textShortener: function (text, number = 30) {
             return appService.textShortener(text, number);
+        },
+        promoKey(block) {
+            if (!block) return '';
+            return `${block.type || 'offer'}-${block.id}`;
+        },
+        selectPromo(block) {
+            this.activePromoKey = this.promoKey(block);
+        },
+        shiftPromo(dir) {
+            const blocks = this.promoBlocks;
+            if (!blocks.length) return;
+            const current = blocks.findIndex((block) => this.promoKey(block) === this.promoKey(this.activePromo));
+            const next = (current + dir + blocks.length) % blocks.length;
+            this.activePromoKey = this.promoKey(blocks[next]);
         },
         setCuisine: function (cuisineId) {
             this.commonStore.update({
@@ -385,6 +411,7 @@ export default {
         },
         async getInitialOffer() {
             this.offerAndCampaigns = [];
+            this.offerBanners = [];
             await this.frontendCuisineStore.fetch({
                 order_column: 'sort',
                 order_type: 'asc',
@@ -395,12 +422,28 @@ export default {
                 latitude: this.latitude,
                 longitude: this.longitude,
                 delivery_order_type: this.orderType
-            })
+            });
+            const seenOffers = new Set();
+            const pushOfferBanner = (obj) => {
+                if (!obj || !obj.id || seenOffers.has(obj.id)) return;
+                if (!(obj.cover || obj.thumb)) return;
+                seenOffers.add(obj.id);
+                this.offerBanners.push(obj);
+            };
             await this.frontendOfferStore.fetchSingle({
                 latitude: this.latitude,
                 longitude: this.longitude,
                 delivery_order_type: this.orderType
-            });
+            }).then(() => {
+                pushOfferBanner(this.frontendOfferStore.single);
+            }).catch();
+            await this.frontendOfferStore.fetchMulti({
+                latitude: this.latitude,
+                longitude: this.longitude,
+                delivery_order_type: this.orderType
+            }).then(res => {
+                _.forEach(res.data.data || [], pushOfferBanner);
+            }).catch();
             await this.frontendCampaignStore.fetch({
                 latitude: this.latitude,
                 longitude: this.longitude,
@@ -408,40 +451,7 @@ export default {
             }).then(res => {
                 if (res.data.data.length > 0) {
                     _.forEach(res.data.data, (obj) => {
-                        let restaurantCheck = false;
-                        if (obj.restaurants.length > 0) {
-                            _.forEach(obj.restaurants, (restaurant) => {
-                                if (restaurant.id > 0) {
-                                    restaurantCheck = true;
-                                }
-                            });
-                            if (restaurantCheck) {
-                                this.offerAndCampaigns.push(obj);
-                                restaurantCheck = false;
-                            }
-                        }
-                    });
-                }
-            }).catch();
-            await this.frontendOfferStore.fetchMulti({
-                latitude: this.latitude,
-                longitude: this.longitude,
-                delivery_order_type: this.orderType
-            }).then(res => {
-                if (res.data.data.length > 0) {
-                    _.forEach(res.data.data, (obj) => {
-                        let restaurantCheck = false;
-                        if (obj.restaurants.length > 0) {
-                            _.forEach(obj.restaurants, (restaurant) => {
-                                if (restaurant.id > 0) {
-                                    restaurantCheck = true;
-                                }
-                            });
-                            if (restaurantCheck) {
-                                this.offerAndCampaigns.push(obj);
-                                restaurantCheck = false;
-                            }
-                        }
+                        this.offerAndCampaigns.push(obj);
                     });
                 }
             }).catch();
@@ -458,6 +468,7 @@ export default {
                 return;
             }
             this.offerAndCampaigns = [];
+            this.offerBanners = [];
             this.frontendOfferStore.singleRestaurants = [];
             this.frontendOfferStore.single = {};
             this.outOfServiceMessage = res.data.message || this.$t('message.not_available_in_your_location');
@@ -574,7 +585,20 @@ export default {
                 this.singleOfferShowHide       = true;
                 this.offerAndCampaignsShowHide = true;
             }, 100);
-        }
+        },
+        promoBlocks: {
+            handler(blocks) {
+                if (!blocks.length) {
+                    this.activePromoKey = '';
+                    return;
+                }
+                const exists = blocks.some((block) => this.promoKey(block) === this.activePromoKey);
+                if (!exists) {
+                    this.activePromoKey = this.promoKey(blocks[0]);
+                }
+            },
+            immediate: true,
+        },
     }
 }
 </script>

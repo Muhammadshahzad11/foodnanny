@@ -1,18 +1,29 @@
 <template>
     <section class="pt-6 pb-24 md:pb-20">
         <div class="container">
-            <div v-if="offerAndCampaign && offerAndCampaign.id" class="relative">
-                <OfferCampaignBlock
-                    :item="bannerItem"
-                    :restaurants="offerAndCampaignRestaurants || []"
-                    :offer-restaurant="findRestaurants"
-                    :linkable="false"
-                    variant="grid"
-                />
+            <figure v-if="offerAndCampaign && offerAndCampaign.id" class="relative mb-9 sm:mb-12">
+                <img class="w-full rounded-2xl" :src="offerAndCampaign.cover || offerAndCampaign.thumb" alt="offerAndCampaign">
                 <button @click.prevent="openModal('offer-info-modal')"
-                        class="w-8 h-8 rounded-full text-center shadow-filter absolute top-5 ltr:right-5 rtl:left-5 bg-white z-10">
+                        class="w-8 h-8 rounded-full text-center shadow-filter absolute top-5 ltr:right-5 rtl:left-5 bg-white">
                     <i class="lab-line-info-circle text-xl leading-8 text-primary"></i>
                 </button>
+            </figure>
+            <h2 class="mb-6 sm:mb-8 text-xl sm:text-2xl font-semibold capitalize">
+                {{ $t('message.number_restaurant_available', {length: (offerAndCampaignRestaurants || []).length}) }}
+            </h2>
+            <div
+                v-if="hasRestaurants"
+                class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6"
+            >
+                <RestaurantCardComponent
+                    :offerRestaurant="findRestaurants"
+                    :restaurant="offerAndCampaignRestaurant"
+                    v-for="offerAndCampaignRestaurant in offerAndCampaignRestaurants"
+                    :key="offerAndCampaignRestaurant.id || offerAndCampaignRestaurant.slug"
+                />
+            </div>
+            <div v-else-if="offerDescription" class="max-w-3xl rounded-2xl border border-gray-100 bg-primary/5 p-5 sm:p-6">
+                <div class="ql-ul-set text-sm leading-6 text-heading" v-html="offerDescription"></div>
             </div>
         </div>
     </section>
@@ -31,7 +42,8 @@
                 </h3>
                 <p class="text-sm mb-1 text-heading">{{ $t('message.new_and_existing_customers') }}</p>
                 <p class="text-sm mb-4 text-heading">{{ $t('message.valid_for_selected_restaurants') }}</p>
-                <p class="text-sm mb-1 text-heading">{{ $t('label.valid_from') }} {{ offerAndCampaign.start_date }} - {{ offerAndCampaign.end_date }}</p>
+                <p :class="type === offerAndCampaignEnum.CAMPAIGN ? 'mb-4' : ''" class="text-sm mb-1 text-heading">
+                    {{ $t('label.valid_from') }} {{ offerAndCampaign.start_date }} - {{ offerAndCampaign.end_date }}</p>
                 <p v-if="hasDiscount" class="text-sm mb-4 text-heading">{{
                         $t('label.discount')
                     }} {{ offerAndCampaign.percentage }}</p>
@@ -49,7 +61,7 @@ import {useFrontendOfferStore} from "../../../stores/frontendOffer.js";
 import {useFrontendCampaignStore} from "../../../stores/frontendCampaign.js";
 import router from "../../../router/index.js";
 import {useCommonStore} from "../../../stores/common.js";
-import OfferCampaignBlock from "../components/OfferCampaignBlock.vue";
+import RestaurantCardComponent from "../components/RestaurantCardComponent.vue";
 
 export default {
     name: "OfferAndCampaign",
@@ -73,7 +85,7 @@ export default {
             offerAndCampaignEnum: offerAndCampaignEnum
         }
     },
-    components: {OfferCampaignBlock},
+    components: {RestaurantCardComponent},
 
     computed: {
         latitude: function () {
@@ -91,12 +103,7 @@ export default {
             } else if (this.$route.params.type === this.offerAndCampaignEnum.CAMPAIGN) {
                 return this.frontendCampaignStore.show;
             }
-        },
-        bannerItem() {
-            return {
-                ...(this.offerAndCampaign || {}),
-                type: this.type || this.$route.params.type,
-            };
+            return {};
         },
         hasDiscount() {
             return this.type === this.offerAndCampaignEnum.OFFER
@@ -108,10 +115,19 @@ export default {
             } else if (this.$route.params.type === this.offerAndCampaignEnum.CAMPAIGN) {
                 return this.frontendCampaignStore.showRestaurants;
             }
+            return [];
         },
         findRestaurants: function () {
             return this.frontendOfferStore.find;
-        }
+        },
+        hasRestaurants() {
+            return (this.offerAndCampaignRestaurants || []).length > 0;
+        },
+        offerDescription() {
+            const raw = String(this.offerAndCampaign?.description || '').trim();
+            const text = raw.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim();
+            return text ? raw : '';
+        },
     },
     mounted() {
         this.frontendOfferStore.fetchFind({

@@ -26,7 +26,7 @@
             </component>
         </section>
 
-        <section v-if="visibleRestaurants.length" class="offer-block__restaurants">
+        <section v-if="showRestaurants && visibleRestaurants.length" class="offer-block__restaurants">
             <div v-if="variant === 'grid'" class="offer-block__grid">
                 <RestaurantCardComponent
                     v-for="restaurant in visibleRestaurants"
@@ -70,6 +70,7 @@ export default {
         dir: {type: String, default: 'ltr'},
         variant: {type: String, default: 'carousel'},
         linkable: {type: Boolean, default: true},
+        showRestaurants: {type: Boolean, default: true},
     },
     setup() {
         return {
@@ -147,7 +148,8 @@ export default {
 }
 .offer-block__hero {
     position: relative;
-    min-height: 176px;
+    min-height: 196px;
+    overflow: visible;
     background-color: #e7f6ec;
     background-size: cover;
     background-position: center;
@@ -171,24 +173,28 @@ export default {
     display: flex;
     align-items: center;
     gap: 18px;
-    min-height: 176px;
-    padding: 22px 72px 20px 22px;
+    min-height: 196px;
+    padding: 20px 72px 20px 20px;
     text-decoration: none;
     color: inherit;
 }
+.offer-block__gift {
+    width: 110px;
+    height: 110px;
+    max-width: 110px;
+    max-height: 110px;
+    object-fit: contain;
+    object-position: center;
+    filter: drop-shadow(0 8px 12px rgba(20, 83, 45, 0.15));
+}
 .offer-block__art {
     flex-shrink: 0;
-    width: 96px;
-    height: 96px;
+    width: 110px;
+    height: 110px;
+    overflow: visible;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-.offer-block__gift {
-    max-width: 96px;
-    max-height: 96px;
-    object-fit: contain;
-    filter: drop-shadow(0 8px 12px rgba(20, 83, 45, 0.15));
 }
 .offer-block__copy {
     min-width: 0;
@@ -238,8 +244,9 @@ export default {
     color: #15803d;
 }
 .offer-block__restaurants {
-    padding: 12px 16px 8px;
+    padding: 16px 18px 14px;
     background: #fff;
+    border-top: 1px solid #dcfce7;
 }
 .offer-block__restaurants :deep(.resto-card) {
     border: 1px solid #d1d5db;
@@ -299,14 +306,14 @@ export default {
     .offer-block__hero-inner {
         gap: 12px;
         padding: 16px 16px 14px;
-        min-height: 148px;
+        min-height: 168px;
     }
     .offer-block__art,
     .offer-block__gift {
-        width: 64px;
-        height: 64px;
-        max-width: 64px;
-        max-height: 64px;
+        width: 84px;
+        height: 84px;
+        max-width: 84px;
+        max-height: 84px;
     }
     .offer-block__title {
         font-size: 20px;

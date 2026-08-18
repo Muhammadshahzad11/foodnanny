@@ -85,7 +85,12 @@
                             @click.prevent="shareRestaurant"
                             class="restaurant-hero__btn restaurant-hero__btn--icon"
                         >
-                            <i class="lab-fill-gallery-export"></i>
+                            <svg class="restaurant-hero__share-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="18" cy="5" r="2.6" fill="currentColor"/>
+                                <circle cx="6" cy="12" r="2.6" fill="currentColor"/>
+                                <circle cx="18" cy="19" r="2.6" fill="currentColor"/>
+                                <path d="M8.4 10.8l7.2-4.2M8.4 13.2l7.2 4.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
                         </button>
                     </nav>
                 </div>
@@ -656,22 +661,38 @@ export default {
         shareRestaurant: function () {
             const url = window.location.href;
             const title = this.restaurant?.name || document.title;
-            const copied = () => {
+            const copyLink = () => {
+                const fallback = () => {
+                    const input = document.createElement('textarea');
+                    input.value = url;
+                    input.setAttribute('readonly', '');
+                    input.style.position = 'fixed';
+                    input.style.opacity = '0';
+                    document.body.appendChild(input);
+                    input.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(input);
+                };
+                const done = () => alertService.success(this.$t('message.link_copied'));
                 if (navigator.clipboard?.writeText) {
-                    navigator.clipboard.writeText(url).then(() => {
-                        alertService.success(this.$t('message.link_copied'));
-                    }).catch(() => {});
+                    navigator.clipboard.writeText(url).then(done).catch(() => {
+                        fallback();
+                        done();
+                    });
+                    return;
                 }
+                fallback();
+                done();
             };
-            if (navigator.share) {
-                navigator.share({ title, url, text: title }).catch((err) => {
+            if (typeof navigator.share === 'function') {
+                navigator.share({ title, text: title, url }).catch((err) => {
                     if (err?.name !== 'AbortError') {
-                        copied();
+                        copyLink();
                     }
                 });
                 return;
             }
-            copied();
+            copyLink();
         },
         currencyFormat(amount, decimal, currency, position) {
             return appService.currencyFormat(amount, decimal, currency, position);
@@ -975,6 +996,11 @@ export default {
 }
 .restaurant-hero__btn--icon .lab-fill-heart {
     color: #15803d;
+}
+.restaurant-hero__share-icon {
+    width: 1.15rem;
+    height: 1.15rem;
+    display: block;
 }
 .restaurant-hero__rating {
     position: absolute;

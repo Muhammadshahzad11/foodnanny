@@ -54,7 +54,7 @@ class DeliveryBoyController extends AdminController implements HasMiddleware
             new Middleware('permission:delivery-boys_edit', only: ['update']),
             new Middleware('permission:delivery-boys_delete', only: ['destroy']),
             new Middleware('permission:delivery-boys_show', only: ['downloadAttachment']),
-            new Middleware('permission:collections|payouts|payouts_create|sales-report|statements', only: ['allDeliveryBoy']),
+            new Middleware('permission:collections|payouts|payouts_create|sales-report|statements|delivery-zones', only: ['allDeliveryBoy']),
             new Middleware('permission:delivery-boys_show|payouts_show|collections_create', only: ['show'])
         ];
     }

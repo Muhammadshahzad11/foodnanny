@@ -41,13 +41,13 @@ class ZoneController extends AdminController implements HasMiddleware
     public function show(Zone $zone)
     {
         try {
-            return new ZoneResource(
-                $zone->loadCount('restaurants')->load([
-                    'admins' => fn ($q) => $q->role(\App\Enums\Role::ZONE_ADMIN),
-                    'restaurants' => fn ($q) => $q->withoutGlobalScopes()->select('id', 'name', 'zone_id'),
-                    'deliveryBoys' => fn ($q) => $q->withoutGlobalScopes()->role(\App\Enums\Role::DELIVERY_BOY),
-                ])
-            );
+            $zone->loadCount('restaurants')->load([
+                'admins' => fn ($q) => $q->role(\App\Enums\Role::ZONE_ADMIN),
+                'restaurants' => fn ($q) => $q->withoutGlobalScopes()->select('id', 'name', 'zone_id'),
+                'deliveryBoys' => fn ($q) => $q->withoutGlobalScopes()->role(\App\Enums\Role::DELIVERY_BOY),
+            ]);
+
+            return (new ZoneResource($zone))->additional($this->zoneService->assignableMembers());
         } catch (Exception $exception) {
             return response(['status' => false, 'message' => $exception->getMessage()], 422);
         }

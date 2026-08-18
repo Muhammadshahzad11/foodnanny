@@ -383,7 +383,14 @@ class RestaurantService
 
             $this->applyDistanceSelect($query, $lat, $lng);
 
-            if ($hasArea) {
+            $zoneService     = app(ZoneService::class);
+            $hasPlatformZones = $zoneService->hasActiveZones();
+
+            // Platform zones: keep the admin search radius. Do not expand via city/state
+            // text, which listed restaurants tens of kilometres outside the zone.
+            if ($hasPlatformZones || !$hasArea) {
+                $this->applyNearbyConstraint($query, $lat, $lng, $radius, false);
+            } else {
                 $query->where(function ($area) use ($city, $district, $state, $lat, $lng, $radius) {
                     if ($city !== '') {
                         $area->orWhere('city', 'like', '%' . $city . '%')
@@ -398,11 +405,8 @@ class RestaurantService
                         $area->orWhere('state', 'like', '%' . $state . '%')
                             ->orWhere('address', 'like', '%' . $state . '%');
                     }
-                    // Also include restaurants near the pin (same metro), even if city text differs.
                     $this->applyNearbyConstraint($area, $lat, $lng, $radius, true);
                 });
-            } else {
-                $this->applyNearbyConstraint($query, $lat, $lng, $radius, false);
             }
 
             if ($orderColumn === 'distance') {
@@ -411,13 +415,8 @@ class RestaurantService
                 $query->orderBy($orderColumn, $orderType);
             }
 
-            $isDelivery  = isset($requests['delivery_order_type']) && (int) $requests['delivery_order_type'] === OrderType::DELIVERY;
-            $zoneService = app(ZoneService::class);
-            $zoneService->constrainRestaurants($query, $lat, $lng, [
-                'city'     => $city,
-                'district' => $district,
-                'state'    => $state,
-            ]);
+            $isDelivery = isset($requests['delivery_order_type']) && (int) $requests['delivery_order_type'] === OrderType::DELIVERY;
+            $zoneService->constrainRestaurants($query, $lat, $lng);
 
             return $query
                 ->when(isset($requests['name']) && !blank($requests['name']), function ($q) use ($requests) {

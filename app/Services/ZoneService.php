@@ -96,8 +96,6 @@ class ZoneService
                 'peak_charge'           => $data['peak_charge'] ?? 0,
             ]);
 
-            $this->syncMembersFromPolygon($zone);
-
             return $zone->fresh()->loadCount('restaurants')->load(['admins:id,name,email,phone,zone_id']);
         } catch (\InvalidArgumentException $exception) {
             throw new Exception($exception->getMessage(), 422);
@@ -135,7 +133,6 @@ class ZoneService
             }
 
             $zone->update($payload);
-            $this->syncMembersFromPolygon($zone->fresh());
 
             return $zone->fresh()->loadCount('restaurants')->load(['admins:id,name,email,phone,zone_id']);
         } catch (\InvalidArgumentException $exception) {
@@ -276,6 +273,32 @@ class ZoneService
         return $this->detect($lat, $lng)?->id;
     }
 
+    public function assignableMembers(): array
+    {
+        return [
+            'assignable_restaurants' => Restaurant::withoutGlobalScopes()
+                ->where('status', Status::ACTIVE)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn (Restaurant $restaurant) => [
+                    'id'   => (int) $restaurant->id,
+                    'name' => $restaurant->name,
+                ])
+                ->values(),
+            'assignable_delivery_boys' => User::role(EnumRole::DELIVERY_BOY)
+                ->orderBy('name')
+                ->get(['id', 'name', 'email', 'phone', 'status', 'zone_id'])
+                ->map(fn (User $user) => [
+                    'id'         => (int) $user->id,
+                    'name'       => $user->name,
+                    'email'      => $user->email,
+                    'phone'      => $user->phone,
+                    'name_email' => $user->name . (blank($user->email) ? '' : ' (' . $user->email . ')'),
+                ])
+                ->values(),
+        ];
+    }
+
     /**
      * @throws Exception
      */
@@ -294,7 +317,11 @@ class ZoneService
                 ->update(['zone_id' => $zone->id]);
         }
 
-        return $zone->fresh()->loadCount('restaurants')->load(['admins:id,name,email,phone,zone_id']);
+        return $zone->fresh()->loadCount('restaurants')->load([
+            'admins:id,name,email,phone,zone_id',
+            'restaurants' => fn ($q) => $q->withoutGlobalScopes()->select('id', 'name', 'zone_id'),
+            'deliveryBoys' => fn ($q) => $q->withoutGlobalScopes()->role(EnumRole::DELIVERY_BOY),
+        ]);
     }
 
     /**
@@ -358,7 +385,11 @@ class ZoneService
                 ->update(['zone_id' => $zone->id]);
         }
 
-        return $zone->fresh()->loadCount('restaurants')->load(['admins:id,name,email,phone,zone_id']);
+        return $zone->fresh()->loadCount('restaurants')->load([
+            'admins:id,name,email,phone,zone_id',
+            'restaurants' => fn ($q) => $q->withoutGlobalScopes()->select('id', 'name', 'zone_id'),
+            'deliveryBoys' => fn ($q) => $q->withoutGlobalScopes()->role(EnumRole::DELIVERY_BOY),
+        ]);
     }
 
     public function detect(?float $lat, ?float $lng): ?Zone
@@ -388,9 +419,8 @@ class ZoneService
     }
 
     /**
-     * Restrict a restaurant query to the platform zone(s) for this pin / city.
-     * Inside a polygon → that zone (+ unassigned restaurants).
-     * Outside all zones → only restaurants not locked to a zone (still filtered by radius).
+     * Restrict a restaurant query to the platform zone that contains this pin.
+     * Restaurants in other zones, or with no zone, are excluded.
      */
     public function constrainRestaurants($query, ?float $lat, ?float $lng, array $area = []): bool
     {
@@ -402,15 +432,11 @@ class ZoneService
         $table = method_exists($query, 'getModel') ? $query->getModel()->getTable() : 'restaurants';
 
         if (empty($ids)) {
-            // Pin is outside mapped zones — still show restaurants that are not zone-locked.
-            $query->whereNull($table . '.zone_id');
+            $query->whereRaw('0 = 1');
             return false;
         }
 
-        $query->where(function ($q) use ($ids, $table) {
-            $q->whereIn($table . '.zone_id', $ids)
-                ->orWhereNull($table . '.zone_id');
-        });
+        $query->whereIn($table . '.zone_id', $ids);
 
         return true;
     }
@@ -442,38 +468,8 @@ class ZoneService
         }
 
         $zone = $this->detect($lat, $lng);
-        if ($zone) {
-            return [(int) $zone->id];
-        }
 
-        $activeIds = Zone::withoutGlobalScopes()->where('status', Status::ACTIVE)->pluck('id');
-        $city      = trim((string) ($area['city'] ?? ''));
-        $district  = trim((string) ($area['district'] ?? ''));
-        $terms     = array_values(array_unique(array_filter([$city, $district])));
-
-        if ($terms) {
-            $matched = Restaurant::withoutGlobalScopes()
-                ->whereIn('zone_id', $activeIds)
-                ->where(function ($q) use ($terms) {
-                    foreach ($terms as $term) {
-                        $q->orWhere('city', 'like', '%' . $term . '%')
-                            ->orWhere('address', 'like', '%' . $term . '%');
-                    }
-                })
-                ->pluck('zone_id')
-                ->filter()
-                ->map(fn ($id) => (int) $id)
-                ->unique()
-                ->values()
-                ->all();
-
-            if ($matched) {
-                return $matched;
-            }
-        }
-
-        $nearest = $this->nearestZone($lat, $lng, 25);
-        return $nearest ? [(int) $nearest->id] : [];
+        return $zone ? [(int) $zone->id] : [];
     }
 
     protected function nearestZone(?float $lat, ?float $lng, float $maxKm): ?Zone
