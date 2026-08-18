@@ -285,7 +285,7 @@ class OfferService
     public function activeMultiOffer(OfferRestaurantByLatLongRadiusRequest $request): \Illuminate\Database\Eloquent\Collection|array
     {
         return Offer::with(['media', 'translations', 'offerRestaurants' => fn($query) => $query->where(['status' => OfferStatus::APPROVE])->with(
-            ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
+            ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('cuisines.cuisine')->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
                 ->tap(fn ($q) => app(ZoneService::class)->constrainRestaurants($q, (float) $request->latitude, (float) $request->longitude))
                 ->whereHas('orderSetup', function ($query) use ($request) {
                     if (isset($request->delivery_order_type)) {
@@ -310,7 +310,7 @@ class OfferService
     public function activeSingleOffer(OfferRestaurantByLatLongRadiusRequest $request): Offer|\Illuminate\Database\Eloquent\Builder|null
     {
         return Offer::with(['translations', 'offerRestaurants' => fn($query) => $query->where(['status' => OfferStatus::APPROVE])->with(
-            ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('orderSetup', 'timeSlots')
+            ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('orderSetup', 'timeSlots', 'cuisines.cuisine')
                 ->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
                 ->tap(fn ($q) => app(ZoneService::class)->constrainRestaurants($q, (float) $request->latitude, (float) $request->longitude))
                 ->withDistance($request)
@@ -339,7 +339,7 @@ class OfferService
     public function activeShowOffer(OfferRestaurantByLatLongRadiusRequest $request, Offer $offer): Offer|\Illuminate\Database\Eloquent\Builder|null
     {
         return Offer::with(['translations', 'offerRestaurants' => fn($query) => $query->where(['status' => OfferStatus::APPROVE])->with(
-            ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('orderSetup')
+            ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('orderSetup', 'cuisines.cuisine')
                 ->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
                 ->tap(fn ($q) => app(ZoneService::class)->constrainRestaurants($q, (float) $request->latitude, (float) $request->longitude))
                 ->withDistance($request)
@@ -369,7 +369,7 @@ class OfferService
         $i           = 0;
         $restaurants = [];
         $offers      = Offer::with(['offerRestaurants' => fn($query) => $query->where(['status' => OfferStatus::APPROVE])->with(
-            ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('orderSetup')
+            ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('orderSetup', 'cuisines.cuisine')
                 ->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
                 ->tap(fn ($q) => app(ZoneService::class)->constrainRestaurants($q, (float) $request->latitude, (float) $request->longitude))
                 ->withDistance($request)

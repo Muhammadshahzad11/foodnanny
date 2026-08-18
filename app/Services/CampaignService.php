@@ -248,7 +248,7 @@ class CampaignService
     public function activeCampaign(CampaignRestaurantByLatLongRadiusRequest $request): \Illuminate\Database\Eloquent\Collection|array
     {
         return Campaign::with(['translations', 'media', 'campaignRestaurants' => fn($query) => $query->where(['status' => CampaignStatus::APPROVE])->with(
-            ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
+            ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('cuisines.cuisine')->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
                 ->tap(fn ($q) => app(ZoneService::class)->constrainRestaurants($q, (float) $request->latitude, (float) $request->longitude))
                 ->whereHas('orderSetup', function ($query) use ($request) {
                     if (isset($request->delivery_order_type)) {
@@ -271,7 +271,7 @@ class CampaignService
     public function activeShowCampaign(CampaignRestaurantByLatLongRadiusRequest $request, Campaign $campaign): Campaign|\Illuminate\Database\Eloquent\Builder|null
     {
         return Campaign::with(['translations', 'campaignRestaurants' => fn($query) => $query->where(['status' => CampaignStatus::APPROVE])->with(
-            ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('orderSetup')
+            ['restaurant' => fn($query) => $query->where(['status' => Status::ACTIVE, 'current_status' => Status::ACTIVE])->with('orderSetup', 'cuisines.cuisine')
                 ->withinDistanceOf($request->latitude, $request->longitude, Settings::group('site')->get('site_restaurant_search_radius'))
                 ->tap(fn ($q) => app(ZoneService::class)->constrainRestaurants($q, (float) $request->latitude, (float) $request->longitude))
                 ->withDistance($request)

@@ -368,7 +368,7 @@ class RestaurantService
             $query = Restaurant::query()
                 ->withoutGlobalScope(\App\Models\Scopes\ZoneScope::class)
                 ->where(['current_status' => Status::ACTIVE])
-                ->with('orderSetup', 'timeSlots', 'activeDeliveryZones', 'zone')
+                ->with('orderSetup', 'timeSlots', 'activeDeliveryZones', 'zone', 'cuisines.cuisine')
                 ->withReviewRating()
                 ->with(['favorite' => fn($q) => $q->where('user_id', Auth::check() ? Auth::user()->id : 0)])
                 ->whereHas('orderSetup', function ($query) use ($requests) {

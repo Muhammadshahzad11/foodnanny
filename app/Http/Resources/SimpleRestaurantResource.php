@@ -38,6 +38,8 @@ class SimpleRestaurantResource extends JsonResource
             }),
             'name'              => $this->name,
             'slug'              => $this->slug,
+            'description'       => $this->description === null ? '' : $this->description,
+            'cuisine'           => AppLibrary::cuisineString($this->cuisines),
             'thumb'             => $this->image,
             'preparation_time'  => $this->orderSetup?->food_preparation_time,
             'rating_star'       => $this->rating_star == null ? 0 : (double)$this->rating_star,

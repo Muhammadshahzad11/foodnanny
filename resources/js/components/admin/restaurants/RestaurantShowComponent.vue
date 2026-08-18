@@ -196,6 +196,14 @@
                                 </span>
                             </div>
                         </div>
+                        <div v-if="restaurant.description" class="col-12 !py-1.5">
+                            <div class="db-list-item p-0">
+                                <span class="db-list-item-text w-full">
+                                    <span class="db-list-item-title">{{ $t('label.description') }}</span><br>
+                                    <span class="mt-2">{{ restaurant.description }}</span>
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

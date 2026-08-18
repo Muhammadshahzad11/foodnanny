@@ -114,6 +114,15 @@
                                 </div>
 
                                 <div class="form-col-12">
+                                    <label for="description" class="db-field-title">{{ $t("label.description") }}</label>
+                                    <textarea v-model="form.description" v-bind:class="errors.description ? 'invalid' : ''"
+                                        id="description" class="db-field-control h-20" maxlength="255"
+                                        :placeholder="$t('label.restaurant_description_hint')"></textarea>
+                                    <small class="text-[11px] text-[#6E7191]">{{ $t("label.restaurant_description_hint") }}</small>
+                                    <small class="db-field-alert" v-if="errors.description">{{ errors.description[0] }}</small>
+                                </div>
+
+                                <div class="form-col-12">
                                     <button type="submit" class="db-btn text-white bg-primary">
                                         <i class="lab lab-fill-save text-base"></i>
                                         <span>{{ $t("button.save") }}</span>
@@ -277,7 +286,8 @@ export default {
                 city: "",
                 state: "",
                 zip_code: "",
-                address: ""
+                address: "",
+                description: ""
             },
             isMap: false,
             address: "",
@@ -329,6 +339,7 @@ export default {
                     state: res.data.data.state,
                     zip_code: res.data.data.zip_code,
                     address: res.data.data.address,
+                    description: res.data.data.description || "",
                     cuisine_id: this.cuisineUpdate(res.data.data.cuisine_id)
                 };
                 this.loading.isActive = false;

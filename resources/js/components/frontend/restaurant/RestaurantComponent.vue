@@ -304,11 +304,13 @@ export default {
         promoBlocks() {
             const blocks = [];
             const single = this.singleOffer;
-            if (single && Object.keys(single).length && (this.singleRestaurants || []).length) {
+            const singleRestaurants = (single?.restaurants || this.singleRestaurants || [])
+                .filter((r) => r && Number(r.id) > 0);
+            if (single && Object.keys(single).length && singleRestaurants.length) {
                 blocks.push({
                     ...single,
                     type: 'offer',
-                    restaurants: this.singleRestaurants,
+                    restaurants: singleRestaurants,
                 });
             }
             const seen = new Set(blocks.map((b) => `${b.type}-${b.id}`));

@@ -149,6 +149,14 @@
                                       id="address" class="db-field-control"></textarea>
                             <small class="db-field-alert" v-if="errors.address">{{ errors.address[0] }}</small>
                         </div>
+                        <div class="form-col-12">
+                            <label for="description" class="db-field-title">{{ $t("label.description") }}</label>
+                            <textarea v-model="props.form.description" v-bind:class="errors.description ? 'invalid' : ''"
+                                      id="description" class="db-field-control h-20" maxlength="255"
+                                      :placeholder="$t('label.restaurant_description_hint')"></textarea>
+                            <small class="text-[11px] text-[#6E7191]">{{ $t("label.restaurant_description_hint") }}</small>
+                            <small class="db-field-alert" v-if="errors.description">{{ errors.description[0] }}</small>
+                        </div>
 
                         <div class="form-col-12">
                             <label class="db-field-title">{{ $t("label.restaurant_apps") }}</label>
@@ -490,6 +498,7 @@ export default {
                 state: "",
                 zip_code: "",
                 address: "",
+                description: "",
                 online_commission: "",
                 pos_commission: "",
                 status: statusEnum.ACTIVE,
@@ -516,6 +525,7 @@ export default {
                 state: "",
                 zip_code: "",
                 address: "",
+                description: "",
                 online_commission: "",
                 pos_commission: "",
                 status: statusEnum.ACTIVE,
@@ -549,6 +559,7 @@ export default {
                         state: "",
                         zip_code: "",
                         address: "",
+                        description: "",
                         online_commission: "",
                         pos_commission: "",
                         status: statusEnum.ACTIVE,

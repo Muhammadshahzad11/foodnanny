@@ -30,6 +30,7 @@ class RestaurantResource extends JsonResource
             "state"                  => $this->state,
             "zip_code"               => $this->zip_code,
             "address"                => $this->address,
+            "description"            => $this->description === null ? '' : $this->description,
             "status"                 => $this->status,
             "current_status"         => $this->current_status,
             "apply"                  => $this->apply,

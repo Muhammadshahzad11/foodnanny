@@ -141,6 +141,7 @@ export default {
 .offer-block {
     overflow: hidden;
     background: #fff;
+    border: 1px solid #86efac;
     border-radius: 20px;
     box-shadow: 0 10px 28px rgba(16, 24, 40, 0.08);
 }
@@ -154,7 +155,7 @@ export default {
 .offer-block__shade {
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, rgba(231, 246, 236, 0.96) 0%, rgba(231, 246, 236, 0.88) 48%, rgba(231, 246, 236, 0.58) 100%);
+    background: linear-gradient(90deg, rgba(231, 246, 236, 0.92) 0%, rgba(231, 246, 236, 0.72) 42%, rgba(231, 246, 236, 0.28) 100%);
 }
 .offer-block__decor {
     position: absolute;
@@ -237,8 +238,12 @@ export default {
     color: #15803d;
 }
 .offer-block__restaurants {
-    padding: 16px 16px 8px;
+    padding: 12px 16px 8px;
     background: #fff;
+}
+.offer-block__restaurants :deep(.resto-card) {
+    border: 1px solid #d1d5db;
+    box-shadow: 0 6px 16px rgba(16, 24, 40, 0.06);
 }
 .offer-block__grid {
     display: grid;

@@ -20,6 +20,8 @@ class SimpleOfferRestaurantResource extends JsonResource
             'id'                => $this->restaurant?->id ?? 0,
             'name'              => $this->restaurant?->name,
             'slug'              => $this->restaurant?->slug,
+            'description'       => $this->restaurant?->description ?? '',
+            'cuisine'           => AppLibrary::cuisineString($this->restaurant?->cuisines),
             'thumb'             => $this->restaurant?->image,
             'preparation_time'  => $this->restaurant?->orderSetup?->food_preparation_time,
             'rating_star'       => $this->restaurant?->rating_star == null ? 0 : (double)$this->restaurant?->rating_star,

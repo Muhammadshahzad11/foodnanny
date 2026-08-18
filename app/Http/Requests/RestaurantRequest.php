@@ -36,6 +36,7 @@ class RestaurantRequest extends FormRequest
             'state'             => ['required', 'string', 'max:190'],
             'zip_code'          => ['required', 'numeric', 'digits_between:0,190'],
             'address'           => ['required', 'string', 'max:500'],
+            'description'       => ['nullable', 'string', 'max:255'],
             'status'            => ['required', 'numeric', 'max:24'],
             'cuisine_id[]'      => ['nullable', 'numeric', 'max_digits:10'],
             'online_commission' => ['nullable', 'numeric', 'max:100'],

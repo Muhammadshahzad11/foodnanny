@@ -468,6 +468,7 @@
         "menu_section_id": "Menu Section",
         "template_id": "Menu Template",
         "description": "Description",
+        "restaurant_description_hint": "Short text shown on restaurant cards (max 255 characters)",
         "page": "Page",
         "cookies_details_page": "Cookies Details Page",
         "cookies_summary": "Cookies Summary",
