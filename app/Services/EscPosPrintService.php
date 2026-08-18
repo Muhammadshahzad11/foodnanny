@@ -204,8 +204,18 @@ class EscPosPrintService
         }
         $rows[] = $line;
 
-        $customer = trim($this->ascii((string) ($payload['customer'] ?? '')));
+        $customer = $this->invoiceCustomerName($payload);
         $rows[] = 'Name: ' . ($customer !== '' ? $customer : 'Walk-in');
+        $phone = trim($this->ascii((string) ($payload['customer_phone'] ?? '')));
+        if ($phone !== '') {
+            $rows[] = 'Phone: ' . $phone;
+        }
+        $address = trim($this->ascii((string) ($payload['customer_address'] ?? '')));
+        if ($address !== '') {
+            foreach ($this->wrapWords('Address: ' . $address, $width) as $line) {
+                $rows[] = $line;
+            }
+        }
         $rows[] = str_repeat('- ', (int) floor($width / 2));
 
         $date      = (string) ($payload['order_date'] ?? $payload['order_datetime'] ?? '');
@@ -715,6 +725,16 @@ class EscPosPrintService
     public function sanitizeMoney(string $amount): string
     {
         return $this->thermalMoney($amount);
+    }
+
+    protected function invoiceCustomerName(array $payload): string
+    {
+        $name = trim($this->ascii((string) ($payload['customer'] ?? '')));
+        if ($name === '' || preg_match('/walking\s*customer/i', $name) || preg_match('/^walk-?in$/i', $name) || strcasecmp($name, 'guest') === 0) {
+            return '';
+        }
+
+        return $name;
     }
 
     protected function ascii(string $text): string

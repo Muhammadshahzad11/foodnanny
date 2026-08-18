@@ -131,6 +131,44 @@ function currencyFormatter(sample) {
  * Server payloads carry powered_by; client-built tickets fall back to the
  * company name in settings so the footer never disappears.
  */
+function isPlaceholderCustomer(name) {
+    const n = String(name || '').trim();
+    if (!n) return true;
+    return /walking\s*customer/i.test(n) || /^walk-?in$/i.test(n) || /^guest$/i.test(n);
+}
+
+/**
+ * POS orders are stored against the placeholder Walking Customer user.
+ * The selected guest lives on customer_name / phone / address.
+ */
+export function resolveBillCustomer(order = {}, opts = {}) {
+    const userName = order?.user?.name;
+    const userIsPlaceholder = isPlaceholderCustomer(userName);
+    const candidates = [
+        order?.customer_name,
+        opts.customerName,
+        order?.customer,
+        userIsPlaceholder ? '' : userName,
+    ];
+    const name = candidates
+        .map((v) => String(v || '').trim())
+        .find((v) => v && !isPlaceholderCustomer(v)) || 'Walk-in';
+
+    let phone = String(order?.customer_phone || opts.customerPhone || '').trim();
+    if (!phone && !userIsPlaceholder) {
+        phone = `${order?.user?.country_code || ''}${order?.user?.phone || ''}`.trim();
+    }
+
+    let address = String(order?.customer_address || opts.customerAddress || '').trim();
+    if (!address && !userIsPlaceholder) {
+        const addr = order?.order_address || order?.address || {};
+        const apartment = addr.apartment ? `${addr.apartment}, ` : '';
+        address = `${apartment}${addr.address || ''}`.trim();
+    }
+
+    return {name, phone, address};
+}
+
 function poweredByHtml(explicit = '', prefix = '') {
     let name = String(explicit || '').trim();
     if (!name) {
@@ -213,6 +251,8 @@ export function buildKotHtml(payload = {}, printerHint = '') {
     const items = Array.isArray(payload.items) ? payload.items : [];
     const isMod = !!(payload.is_modification || payload.modification);
 
+    const qtyWidth = isMod ? '32%' : '18%';
+    const itemWidth = isMod ? '68%' : '82%';
     const rows = items.map((item, idx) => {
         const mods = []
             .concat(item.variation_lines || [])
@@ -227,8 +267,8 @@ export function buildKotHtml(payload = {}, printerHint = '') {
             : esc(item.quantity);
         return `
           <tr>
-            <td style="width:82%">${idx + 1}. ${esc(item.name)}${mods}${extras}${instr}</td>
-            <td class="qty" style="width:18%">${qtyCell}</td>
+            <td style="width:${itemWidth}">${idx + 1}. ${esc(item.name)}${mods}${extras}${instr}</td>
+            <td class="qty" style="width:${qtyWidth}">${qtyCell}</td>
           </tr>`;
     }).join('');
 
@@ -245,7 +285,7 @@ export function buildKotHtml(payload = {}, printerHint = '') {
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>KOT</title><style>${THERMAL_CSS}</style></head><body>
       ${hint}
       <div class="sheet">
-        <div class="c kot-title">${isMod ? 'ORDER CHANGE' : 'KOT'}</div>
+        <div class="c kot-title">${isMod ? 'ORDER UPDATE' : 'KOT'}</div>
         <div class="c kot-shop">${esc(payload.restaurant || '')}</div>
         <div class="rule"></div>
         <table class="meta">
@@ -253,7 +293,7 @@ export function buildKotHtml(payload = {}, printerHint = '') {
           <tr><td>${esc(payload.order_date || '')} ${esc(payload.order_time || '')}</td><td class="r">${esc(ticket)}</td></tr>
         </table>
         <table class="grid">
-          <thead><tr><th class="l">ITEM</th><th class="qty">${isMod ? 'CHANGE' : 'QTY'}</th></tr></thead>
+          <thead><tr><th class="l">ITEM</th><th class="qty">${isMod ? 'ORDER UPDATE' : 'QTY'}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
         <div class="rule"></div>
@@ -290,11 +330,7 @@ export function buildBillHtml(order = {}, opts = {}) {
         </tr>`;
     }).join('');
 
-    const customer = (() => {
-        const name = (order?.user?.name || order?.customer_name || '').toString().trim();
-        if (!name || /walking\s*customer/i.test(name) || /^guest$/i.test(name)) return 'Walk-in';
-        return name;
-    })();
+    const customer = resolveBillCustomer(order, opts);
 
     const orderType = opts.orderTypeLabel
         || (Number(order?.order_type) === 20 ? 'Dine In'
@@ -353,7 +389,9 @@ export function buildBillHtml(order = {}, opts = {}) {
         <div class="c shop">${esc(restaurant.name || 'Restaurant')}</div>
         <div class="c doc-title">TAX INVOICE</div>
         <div class="rule"></div>
-        <div class="name">Name: <span class="b">${esc(customer)}</span></div>
+        <div class="name">Name: <span class="b">${esc(customer.name)}</span></div>
+        ${customer.phone ? `<div class="name">Phone: ${esc(customer.phone)}</div>` : ''}
+        ${customer.address ? `<div class="name">Address: ${esc(customer.address)}</div>` : ''}
         <div class="rule-dash"></div>
         <table class="meta">
           <tr>
@@ -395,4 +433,5 @@ export default {
     printBillIframe,
     buildKotHtml,
     buildBillHtml,
+    resolveBillCustomer,
 };

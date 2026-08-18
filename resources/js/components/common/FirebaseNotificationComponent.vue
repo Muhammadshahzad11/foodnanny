@@ -27,7 +27,7 @@ import {useAuthStore} from "../../stores/auth.js";
 import axios from "axios";
 import orderStatusEnum from "../../enums/modules/orderStatusEnum.js";
 import {useRoute} from "vue-router";
-import {playNotificationSound, playOrderAlertSound} from "../../services/notificationSound.js";
+import {playOrderAlertSound} from "../../services/notificationSound.js";
 
 export default {
     name: "FirebaseNotificationComponent",
@@ -108,8 +108,6 @@ export default {
                         this.notificationMessage = payload.notification.body;
                         if (payload.data.topic_name === 'new-order') {
                             playOrderAlertSound();
-                        } else {
-                            playNotificationSound({volume: 0.8});
                         }
                     }
                 });

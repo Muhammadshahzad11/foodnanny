@@ -18,6 +18,7 @@ class CampaignResource extends JsonResource
         return [
             'id'             => $this->id,
             'title'          => $this->title,
+            'tag'            => $this->tag,
             "slug"           => $this->slug,
             'amount'         => $this->amount,
             "flat_amount"    => AppLibrary::flatAmountFormat($this->amount),

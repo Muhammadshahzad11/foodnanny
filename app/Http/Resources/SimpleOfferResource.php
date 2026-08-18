@@ -20,9 +20,10 @@ class SimpleOfferResource extends JsonResource
         return [
             'id'          => $this->id,
             'title'       => $this->title,
+            'tag'         => $this->tag,
             'slug'        => $this->slug,
             'amount'      => (float)$this->amount,
-            'percentage'  => AppLibrary::convertAmountFormat($this->amount) . '%',
+            'percentage'  => ((float) $this->amount > 0) ? AppLibrary::convertAmountFormat($this->amount) . '%' : '',
             'option'      => $this->is_single == Ask::YES ? 'single' : 'multi',
             'type'        => 'offer',
             'start_time'  => AppLibrary::time($this->start_time),

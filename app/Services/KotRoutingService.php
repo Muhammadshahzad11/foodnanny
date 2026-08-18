@@ -299,7 +299,7 @@ class KotRoutingService
         })->values()->all();
 
         $base = $this->buildKotPayload($order, collect(), $station);
-        $base['copy']            = 'ORDER CHANGE';
+        $base['copy']            = 'ORDER UPDATE';
         $base['ticket_no']       = 'CHG - ' . $order->id . ($station ? ' / ' . $station->name : '');
         $base['kot_no']          = 'CHG-' . $order->id;
         $base['items']           = $mappedItems;
@@ -432,9 +432,9 @@ class KotRoutingService
             ] : null,
             'table_no'         => $order->diningTable?->table_number,
             'waiter'           => $order->waiter?->name,
-            'customer'         => $order->customer_name ?: $order->user?->name,
-            'customer_phone'   => $order->customer_phone,
-            'customer_address' => $order->customer_address,
+            'customer'         => $this->invoiceCustomerName($order),
+            'customer_phone'   => $this->invoiceCustomerPhone($order),
+            'customer_address' => $this->invoiceCustomerAddress($order),
             'delivery_note'    => $order->delivery_note,
             'order_note'       => $order->order_note,
             'special_note'     => $order->order_note,
@@ -450,6 +450,59 @@ class KotRoutingService
             'printed_at'       => AppLibrary::datetime(now()),
             'reprint'          => false,
         ];
+    }
+
+    protected function isPlaceholderCustomer(?string $name): bool
+    {
+        $name = trim((string) $name);
+        if ($name === '') {
+            return true;
+        }
+
+        return (bool) preg_match('/walking\s*customer/i', $name)
+            || (bool) preg_match('/^walk-?in$/i', $name)
+            || strcasecmp($name, 'guest') === 0;
+    }
+
+    protected function invoiceCustomerName(Order $order): string
+    {
+        $name = trim((string) ($order->customer_name ?: ''));
+        if (!$this->isPlaceholderCustomer($name)) {
+            return $name;
+        }
+
+        $userName = trim((string) ($order->user?->name ?: ''));
+        if (!$this->isPlaceholderCustomer($userName)) {
+            return $userName;
+        }
+
+        return '';
+    }
+
+    protected function invoiceCustomerPhone(Order $order): string
+    {
+        $phone = trim((string) ($order->customer_phone ?: ''));
+        if ($phone !== '') {
+            return $phone;
+        }
+
+        if ($this->isPlaceholderCustomer($order->user?->name)) {
+            return '';
+        }
+
+        return trim((string) (($order->user?->country_code ?: '') . ($order->user?->phone ?: '')));
+    }
+
+    protected function invoiceCustomerAddress(Order $order): string
+    {
+        $address = trim((string) ($order->customer_address ?: ''));
+        if ($address !== '') {
+            return $address;
+        }
+
+        $apartment = $order->address?->apartment ? $order->address->apartment . ', ' : '';
+
+        return trim($apartment . (string) ($order->address?->address ?: ''));
     }
 
     /**
@@ -602,9 +655,9 @@ class KotRoutingService
             'order_type_label' => $orderTypeLabel,
             'table_no'         => $order->diningTable?->table_number,
             'biller'           => Auth::user()?->name ?: 'Cashier',
-            'customer'         => $order->customer_name ?: $order->user?->name,
-            'customer_phone'   => $order->customer_phone,
-            'customer_address' => $order->customer_address,
+            'customer'         => $this->invoiceCustomerName($order),
+            'customer_phone'   => $this->invoiceCustomerPhone($order),
+            'customer_address' => $this->invoiceCustomerAddress($order),
             'delivery_note'    => $order->delivery_note,
             'order_datetime'   => AppLibrary::datetime($order->order_datetime),
             'order_date'       => AppLibrary::date($order->order_datetime),

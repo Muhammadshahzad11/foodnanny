@@ -95,6 +95,7 @@ class CampaignService
             DB::transaction(function () use ($request) {
                 $this->campaign = Campaign::create([
                     'title'       => $request->title,
+                    'tag'         => $request->input('tag'),
                     'slug'        => Str::slug($request->title) . AppLibrary::timeWithRand(),
                     'description' => $request->description,
                     'start_date'  => date('Y-m-d', strtotime($request->start_date)),
@@ -130,6 +131,7 @@ class CampaignService
         try {
             DB::transaction(function () use ($request, $campaign) {
                 $campaign->title       = $request->title;
+                $campaign->tag         = $request->input('tag');
                 $campaign->slug        = Str::slug($request->title) . AppLibrary::timeWithRand();
                 $campaign->description = $request->description;
                 $campaign->start_date  = date('Y-m-d', strtotime($request->start_date));

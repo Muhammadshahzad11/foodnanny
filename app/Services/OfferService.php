@@ -100,12 +100,13 @@ class OfferService
             DB::transaction(function () use ($request) {
                 $this->offer = Offer::create([
                     'title'       => $request->title,
+                    'tag'         => $request->input('tag'),
                     'slug'        => Str::slug($request->title) . AppLibrary::timeWithRand(),
                     'description' => $request->description,
                     'location'    => $request->location,
                     'latitude'    => $request->latitude,
                     'longitude'   => $request->longitude,
-                    'amount'      => $request->amount,
+                    'amount'      => $request->filled('amount') ? $request->amount : 0,
                     'status'      => $request->status,
                     'start_date'  => date('Y-m-d', strtotime($request->start_date)),
                     'end_date'    => date('Y-m-d', strtotime($request->end_date)),
@@ -153,12 +154,13 @@ class OfferService
                 }
 
                 $offer->title       = $request->title;
+                $offer->tag         = $request->input('tag');
                 $offer->slug        = Str::slug($request->title) . AppLibrary::timeWithRand();
                 $offer->description = $request->description;
                 $offer->location    = blank($request->latitude) && blank($request->longitude) ? null : $request->location;
                 $offer->latitude    = $request->latitude;
                 $offer->longitude   = $request->longitude;
-                $offer->amount      = $request->amount;
+                $offer->amount      = $request->filled('amount') ? $request->amount : 0;
                 $offer->status      = $request->status;
                 $offer->start_date  = date('Y-m-d', strtotime($request->start_date));
                 $offer->end_date    = date('Y-m-d', strtotime($request->end_date));

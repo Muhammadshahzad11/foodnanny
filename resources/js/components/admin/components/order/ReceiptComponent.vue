@@ -163,17 +163,16 @@
                         <tbody>
                         <tr>
                             <td class="pt-1 pb-1 pr-1">{{ $t('label.customer') }}:</td>
-                            <td class="pt-1 pb-1">{{ orderUser.name }}</td>
+                            <td class="pt-1 pb-1">{{ customerDisplayName }}</td>
                         </tr>
-                        <tr v-if="orderUser.phone">
+                        <tr v-if="customerDisplayPhone">
                             <td class="pt-1 pb-1 pr-1">{{ $t('label.phone') }}:</td>
-                            <td class="pt-1 pb-1">{{ orderUser.country_code + '' + orderUser.phone }}</td>
+                            <td class="pt-1 pb-1">{{ customerDisplayPhone }}</td>
                         </tr>
                         <tr v-if="order.order_type === enums.orderTypeEnum.DELIVERY">
                             <td class="pt-1 pb-1 pr-1">{{ $t('label.address') }}:</td>
                             <td class="pt-1 pb-1">
-                                {{ orderAddress.apartment ? orderAddress.apartment + ', ' : '' }}
-                                {{ orderAddress.address }}
+                                {{ customerDisplayAddress }}
                             </td>
                         </tr>
                         </tbody>
@@ -249,6 +248,38 @@ export default {
     computed: {
         company: function () {
             return this.frontendSettingStore.lists;
+        },
+        customerDisplayName() {
+            if (this.order?.customer_name && !this.isPlaceholderName(this.order.customer_name)) {
+                return this.order.customer_name;
+            }
+            if (this.orderUser?.name && !this.isPlaceholderName(this.orderUser.name)) {
+                return this.orderUser.name;
+            }
+            return 'Walk-in';
+        },
+        customerDisplayPhone() {
+            if (this.order?.customer_phone) {
+                return this.order.customer_phone;
+            }
+            if (this.orderUser?.phone && !this.isPlaceholderName(this.orderUser?.name)) {
+                return `${this.orderUser.country_code || ''}${this.orderUser.phone}`;
+            }
+            return '';
+        },
+        customerDisplayAddress() {
+            if (this.order?.customer_address) {
+                return this.order.customer_address;
+            }
+            const apartment = this.orderAddress?.apartment ? this.orderAddress.apartment + ', ' : '';
+            return `${apartment}${this.orderAddress?.address || ''}`.trim();
+        }
+    },
+    methods: {
+        isPlaceholderName(name) {
+            const n = String(name || '').trim();
+            if (!n) return true;
+            return /walking\s*customer/i.test(n) || /^walk-?in$/i.test(n) || /^guest$/i.test(n);
         }
     },
     mounted() {

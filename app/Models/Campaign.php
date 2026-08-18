@@ -17,10 +17,11 @@ class Campaign extends Model implements HasMedia
     use Translatable;
 
     protected $table = "campaigns";
-    protected $fillable = ['title', 'slug', 'description', 'amount', 'start_date', 'end_date', 'start_time', 'end_time', 'type', 'status', 'creator_type', 'creator_id', 'editor_type', 'editor_id'];
+    protected $fillable = ['title', 'tag', 'slug', 'description', 'amount', 'start_date', 'end_date', 'start_time', 'end_time', 'type', 'status', 'creator_type', 'creator_id', 'editor_type', 'editor_id'];
     protected $casts = [
         'id'           => 'integer',
         'title'        => 'string',
+        'tag'          => 'string',
         'slug'         => 'string',
         'description'  => 'string',
         'amount'       => 'decimal:6',

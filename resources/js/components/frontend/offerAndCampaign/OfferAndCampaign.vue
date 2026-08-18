@@ -2,9 +2,9 @@
     <section class="pt-6 pb-24 md:pb-20">
         <div class="container">
             <figure class="relative mb-9 sm:mb-12">
-                <img class="w-full rounded-2xl" :src="offerAndCampaign.cover" alt="offerAndCampaign">
+                <PromoBannerComponent v-if="offerAndCampaign" :item="offerAndCampaign" :link-type="type || $route.params.type" :gift-fallback="''"/>
                 <button @click.prevent="openModal('offer-info-modal')"
-                        class="w-8 h-8 rounded-full text-center shadow-filter absolute top-5 ltr:right-5 rtl:left-5 bg-white">
+                        class="w-8 h-8 rounded-full text-center shadow-filter absolute top-5 ltr:right-5 rtl:left-5 bg-white z-10">
                     <i class="lab-line-info-circle text-xl leading-8 text-primary"></i>
                 </button>
             </figure>
@@ -31,9 +31,8 @@
                 </h3>
                 <p class="text-sm mb-1 text-heading">{{ $t('message.new_and_existing_customers') }}</p>
                 <p class="text-sm mb-4 text-heading">{{ $t('message.valid_for_selected_restaurants') }}</p>
-                <p :class="type === offerAndCampaignEnum.CAMPAIGN ? 'mb-4' : ''" class="text-sm mb-1 text-heading">
-                    {{ $t('label.valid_from') }} {{ offerAndCampaign.start_date }} - {{ offerAndCampaign.end_date }}</p>
-                <p v-if="type === offerAndCampaignEnum.OFFER" class="text-sm mb-4 text-heading">{{
+                <p class="text-sm mb-1 text-heading">{{ $t('label.valid_from') }} {{ offerAndCampaign.start_date }} - {{ offerAndCampaign.end_date }}</p>
+                <p v-if="hasDiscount" class="text-sm mb-4 text-heading">{{
                         $t('label.discount')
                     }} {{ offerAndCampaign.percentage }}</p>
                 <p v-if="offerAndCampaign.description" class="ql-ul-set text-xs"
@@ -51,6 +50,7 @@ import {useFrontendCampaignStore} from "../../../stores/frontendCampaign.js";
 import router from "../../../router/index.js";
 import {useCommonStore} from "../../../stores/common.js";
 import RestaurantCardComponent from "../components/RestaurantCardComponent.vue";
+import PromoBannerComponent from "../components/PromoBannerComponent.vue";
 
 export default {
     name: "OfferAndCampaign",
@@ -74,7 +74,7 @@ export default {
             offerAndCampaignEnum: offerAndCampaignEnum
         }
     },
-    components: {RestaurantCardComponent},
+    components: {RestaurantCardComponent, PromoBannerComponent},
 
     computed: {
         latitude: function () {
@@ -92,6 +92,10 @@ export default {
             } else if (this.$route.params.type === this.offerAndCampaignEnum.CAMPAIGN) {
                 return this.frontendCampaignStore.show;
             }
+        },
+        hasDiscount() {
+            return this.type === this.offerAndCampaignEnum.OFFER
+                && parseFloat(this.offerAndCampaign?.amount || 0) > 0;
         },
         offerAndCampaignRestaurants: function () {
             if (this.$route.params.type === this.offerAndCampaignEnum.OFFER) {

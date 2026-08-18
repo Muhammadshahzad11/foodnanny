@@ -1253,13 +1253,30 @@ export default {
                 }
                 if (job.type === 'invoice' && job.payload) {
                     try {
-                        await printBillIframe({order_serial_no: job.payload.order_serial_no}, {
-                            restaurant: {name: job.payload.restaurant},
-                            items: (job.payload.items || []).map((i) => ({
+                        const payload = job.payload || {};
+                        await printBillIframe({
+                            order_serial_no: payload.order_serial_no,
+                            order_date: payload.order_date,
+                            order_time: payload.order_time,
+                            order_datetime: payload.order_datetime,
+                            customer_name: payload.customer,
+                            customer_phone: payload.customer_phone,
+                            customer_address: payload.customer_address,
+                            subtotal: payload.subtotal,
+                            total_tax: payload.tax,
+                            discount: payload.discount,
+                            total: payload.total,
+                        }, {
+                            restaurant: {name: payload.restaurant},
+                            items: (payload.items || []).map((i) => ({
                                 name: i.name,
                                 quantity: i.quantity,
                                 total_price: i.total_price,
                             })),
+                            cashierName: payload.biller || '',
+                            paymentLabel: payload.payment_label || '',
+                            tableLabel: payload.table_no || '',
+                            orderTypeLabel: payload.order_type_label || '',
                             printerHint: job.printer || '',
                         });
                     } catch (e) {}

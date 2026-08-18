@@ -20,6 +20,7 @@ class AdminOfferResource extends JsonResource
         return [
             'id'            => $this->id,
             'title'         => $this->resource->getRawOriginal('title'),
+            'tag'           => $this->tag,
             "slug"          => $this->slug,
             'description'   => $this->resource->getRawOriginal('description'),
             'location'      => $this->location === null ? '' : $this->location,

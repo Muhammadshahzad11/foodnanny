@@ -17,10 +17,11 @@ class Offer extends Model implements HasMedia
     use Translatable;
 
     protected $table = "offers";
-    protected $fillable = ['title', 'slug', 'description', 'location', 'latitude', 'longitude', 'amount', 'status', 'start_date', 'end_date', 'start_time', 'end_time', 'type', 'is_single', 'creator_type', 'creator_id', 'editor_type', 'editor_id'];
+    protected $fillable = ['title', 'tag', 'slug', 'description', 'location', 'latitude', 'longitude', 'amount', 'status', 'start_date', 'end_date', 'start_time', 'end_time', 'type', 'is_single', 'creator_type', 'creator_id', 'editor_type', 'editor_id'];
     protected $casts = [
         'id'           => 'integer',
         'name'         => 'string',
+        'tag'          => 'string',
         'slug'         => 'string',
         'description'  => 'string',
         'location'     => 'string',

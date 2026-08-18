@@ -1,7 +1,7 @@
 <template>
     <figure class="group w-full block overflow-hidden rounded-2xl border border-gray-100">
         <figure class="relative overflow-hidden">
-            <label v-if="typeof offerRestaurant[restaurant.id] !== 'undefined'" class="absolute top-2 ltr:left-2 rtl:right-2 z-20 whitespace-nowrap text-xs sm:text-sm px-2 py-1 rounded-lg bg-primary text-white">{{ $t('message.percentage_off', {discount : offerRestaurant[restaurant.id].amount }) }}</label>
+            <label v-if="offerBadgeAmount" class="absolute top-2 ltr:left-2 rtl:right-2 z-20 whitespace-nowrap text-xs sm:text-sm px-2 py-1 rounded-lg bg-primary text-white">{{ $t('message.percentage_off', {discount : offerBadgeAmount }) }}</label>
             <button @click.prevent="favorite(restaurant, restaurant.favorite = !restaurant.favorite)" class="absolute top-2 ltr:right-2 rtl:left-2 z-20 cursor-pointer">
                 <i :class="restaurant.favorite ? 'lab-fill-heart text-primary' : 'lab-line-heart'" class="text-sm w-6 h-6 leading-6 text-center rounded-full bg-white"></i>
             </button>
@@ -65,6 +65,13 @@ export default {
                 availabilityEnum : availabilityEnum
             }
         }
+    },
+    computed: {
+        offerBadgeAmount() {
+            const offer = this.offerRestaurant?.[this.restaurant?.id];
+            const amount = parseFloat(offer?.amount || 0);
+            return amount > 0 ? offer.amount : 0;
+        },
     },
     methods: {
         textShortener: function (text, number = 30) {

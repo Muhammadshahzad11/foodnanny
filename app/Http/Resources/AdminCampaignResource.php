@@ -12,6 +12,7 @@ class AdminCampaignResource extends JsonResource
         return [
             'id'             => $this->id,
             'title'          => $this->resource->getRawOriginal('title'),
+            'tag'            => $this->tag,
             'slug'           => $this->slug,
             'amount'         => $this->amount,
             'flat_amount'    => AppLibrary::flatAmountFormat($this->amount),

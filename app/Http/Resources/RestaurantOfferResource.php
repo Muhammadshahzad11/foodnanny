@@ -22,6 +22,7 @@ class RestaurantOfferResource extends JsonResource
         return [
             'id'            => $this->id,
             'title'         => $this->title,
+            'tag'           => $this->tag,
             "slug"          => $this->slug,
             'description'   => $this->description,
             'location'      => $this->location === null ? '' : $this->location,

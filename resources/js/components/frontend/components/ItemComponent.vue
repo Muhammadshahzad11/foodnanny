@@ -3,7 +3,7 @@
          v-show="type === null || type === item.item_type"
          class="group restaurant-item flex h-full min-h-[8.5rem] overflow-hidden bg-white transition-all duration-300">
         <figure class="restaurant-item__media relative flex-shrink-0 overflow-hidden">
-            <label v-if="Object.keys(offer).length > 0"
+            <label v-if="Object.keys(offer).length > 0 && parseFloat(offer.amount || 0) > 0"
                    class="absolute top-2 ltr:left-2 rtl:right-2 z-20 whitespace-nowrap text-[11px] font-semibold py-1 px-2 bg-primary text-white rounded">
                 {{ $t('message.percentage_off', {discount: offer.amount}) }}
             </label>

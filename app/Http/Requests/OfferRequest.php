@@ -26,11 +26,12 @@ class OfferRequest extends FormRequest
     {
         return [
             'title'       => ['required', 'string', 'max:190'],
+            'tag'         => ['nullable', 'string', 'max:80'],
             'description' => ['required', 'string', 'max:5000'],
             'location'    => ['nullable', 'string'],
             'latitude'    => ['nullable', 'string'],
             'longitude'   => ['nullable', 'string'],
-            'amount'      => ['required', 'numeric', 'max:100', new IniAmount()],
+            'amount'      => ['nullable', 'numeric', 'max:100', new IniAmount(true)],
             'status'      => ['required', 'numeric', 'max:24'],
             'start_date'  => ['required', 'string', 'max:190'],
             'end_date'    => ['required', 'string', 'max:190'],

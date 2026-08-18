@@ -21,43 +21,22 @@
 
     <section v-if="!outOfServiceArea && search === null && (singleOffer && singleRestaurants.length > 0)" class="mb-5 sm:mb-8">
         <div v-if="singleOfferShowHide" class="container">
-            <div class="p-4 sm:p-6 rounded-2xl bg-primary/5">
-                <div class="mb-4 sm:-mb-11 flex items-center gap-3">
-                    <img class="flex-shrink-0 w-12" :src="setting.image_offer" alt="offer">
-                    <dl class="flex-auto">
-                        <dt class="text-xl sm:text-2xl font-semibold capitalize text-primary">
-                            {{ $t("message.get_discount_off", {discount: singleOffer.percentage}) }}
-                        </dt>
-                        <dd class="text-xs sm:text-sm capitalize text-primary">
-                            {{
-                                $t('message.until_offer', {
-                                    start_time: singleOffer.start_time,
-                                    end_time: singleOffer.end_time
-                                })
-                            }}
-                        </dd>
-                    </dl>
-                </div>
-                <Swiper :dir="displayMode" :loop="false" :speed="1000" :navigation="true" :modules="modules"
-                        :breakpoints="restaurantBreakPoints" class="float-navigate">
-                    <SwiperSlide v-for="restaurant in singleRestaurants" class="mobile:!w-60">
-                        <RestaurantCardComponent :restaurant="restaurant"/>
-                    </SwiperSlide>
-                </Swiper>
-            </div>
+            <PromoBannerComponent class="mb-4" :item="singleOfferBanner" :gift-fallback="setting.image_offer"/>
+            <Swiper :dir="displayMode" :loop="false" :speed="1000" :navigation="true" :modules="modules"
+                    :breakpoints="restaurantBreakPoints" class="float-navigate">
+                <SwiperSlide v-for="restaurant in singleRestaurants" class="mobile:!w-60">
+                    <RestaurantCardComponent :restaurant="restaurant"/>
+                </SwiperSlide>
+            </Swiper>
         </div>
     </section>
 
     <section v-if="!outOfServiceArea && search === null && offerAndCampaigns.length > 0" class="mb-9 sm:mb-12">
         <div v-if="offerAndCampaignsShowHide" class="container">
-            <Swiper :dir="displayMode" :loop="false" :speed="1000" :navigation="true" :modules="modules"
+            <Swiper :dir="displayMode" :loop="offerAndCampaigns.length > 1" :speed="1000" :navigation="true" :modules="modules"
                     :breakpoints="offerBreakPoints" class="middle-navigate">
-                <SwiperSlide v-for="offerAndCampaign in offerAndCampaigns" class="mobile:!w-60">
-                    <router-link
-                        :to="{ name : 'frontend.offerAndCampaign', params : { slug : offerAndCampaign.slug, type : offerAndCampaign.type }}"
-                        class="w-full block">
-                        <img :src="offerAndCampaign.thumb" alt="promotion" class="w-full rounded-2xl">
-                    </router-link>
+                <SwiperSlide v-for="offerAndCampaign in offerAndCampaigns" :key="offerAndCampaign.type + '-' + offerAndCampaign.id">
+                    <PromoBannerComponent :item="offerAndCampaign" :gift-fallback="setting.image_offer"/>
                 </SwiperSlide>
             </Swiper>
         </div>
@@ -171,6 +150,7 @@ import {useFrontendCuisineStore} from "../../../stores/frontendCuisine.js";
 import appService from "../../../services/appService.js";
 import availabilityEnum from "../../../enums/modules/availabilityEnum.js";
 import RestaurantCardComponent from "../components/RestaurantCardComponent.vue";
+import PromoBannerComponent from "../components/PromoBannerComponent.vue";
 import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
 import {useFrontendOfferStore} from "../../../stores/frontendOffer.js";
 import {useFrontendCampaignStore} from "../../../stores/frontendCampaign.js";
@@ -183,6 +163,7 @@ export default {
     components: {
         TrackOrderComponent,
         RestaurantCardComponent,
+        PromoBannerComponent,
         LoadingContentComponent,
         LoadingComponent,
         Swiper,
@@ -244,9 +225,8 @@ export default {
                 1024: {slidesPerView: 4, spaceBetween: 24}
             },
             offerBreakPoints: {
-                0: {slidesPerView: 'auto', spaceBetween: 16},
-                640: {slidesPerView: 2, spaceBetween: 24},
-                768: {slidesPerView: 3, spaceBetween: 24}
+                0: {slidesPerView: 1, spaceBetween: 16},
+                640: {slidesPerView: 1, spaceBetween: 24},
             },
             outOfServiceArea: false,
             outOfServiceAlertKey: null,
@@ -311,6 +291,9 @@ export default {
         },
         singleOffer: function () {
             return this.frontendOfferStore.single;
+        },
+        singleOfferBanner: function () {
+            return { ...(this.singleOffer || {}), type: 'offer' };
         },
         singleRestaurants: function () {
             return this.frontendOfferStore.singleRestaurants;

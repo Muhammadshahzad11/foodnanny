@@ -93,7 +93,7 @@
                             <td class="db-table-body-td">
                                 {{ textShortener(offer.title) }}
                             </td>
-                            <td class="db-table-body-td">{{ offer.flat_amount }} %</td>
+                            <td class="db-table-body-td">{{ Number(offer.flat_amount) > 0 ? offer.flat_amount + ' %' : '—' }}</td>
                             <td class="db-table-body-td">{{ offer.convert_date }}</td>
                             <td class="db-table-body-td">{{ offer.convert_time }}</td>
                             <td class="db-table-body-td">
@@ -214,6 +214,7 @@ export default {
             props: {
                 form: {
                     title: "",
+                    tag: "",
                     description: "",
                     location: "",
                     latitude: "",
@@ -339,11 +340,12 @@ export default {
                     this.props.endTime    = this.parseTime(data.end_time);
                     this.props.form       = {
                         title        : data.title,
+                        tag          : data.tag || '',
                         description  : data.description,
                         location     : data.location,
                         latitude     : data.latitude,
                         longitude    : data.longitude,
-                        amount       : data.flat_amount,
+                        amount       : Number(data.flat_amount) > 0 ? data.flat_amount : '',
                         status       : data.status,
                         start_date   : data.start_date,
                         end_date     : data.end_date,

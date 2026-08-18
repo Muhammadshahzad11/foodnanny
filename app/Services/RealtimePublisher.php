@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\AppNotificationType;
 use App\Enums\OrderStatus;
 use App\Enums\Role as EnumRole;
+use App\Enums\Source;
 use App\Enums\TableStatus;
 use App\Events\AppNotificationCreated;
 use App\Events\CustomerOrderStatusUpdated;
@@ -129,7 +130,7 @@ class RealtimePublisher
                     'icon'          => 'lab-line-table',
                     'color'         => (int) $table->status === TableStatus::OCCUPIED ? 'amber' : 'emerald',
                     'url'           => '/admin/waiter/tables',
-                    'play_sound'    => true,
+                    'play_sound'    => false,
                 ]
             );
         } catch (\Throwable $e) {
@@ -229,12 +230,18 @@ class RealtimePublisher
                 'table_number'    => $order->diningTable?->table_number,
                 'action'          => $action,
                 'status'          => (int) $order->status,
+                'source'          => (int) $order->source,
                 'icon'            => 'lab-line-flame',
                 'color'           => $color,
                 'url'             => $userUrl,
-                'play_sound'      => in_array($action, ['created', 'ready', 'accept', 'preparing', 'reject', 'cancel'], true),
+                'play_sound'      => $this->isOnlineOrder($order) && $action === 'created',
             ]);
         }
+    }
+
+    protected function isOnlineOrder(Order $order): bool
+    {
+        return in_array((int) $order->source, [Source::WEB, Source::APP], true);
     }
 
     protected function urlForRecipient(User $user, Order $order, string $action, string $fallback): string

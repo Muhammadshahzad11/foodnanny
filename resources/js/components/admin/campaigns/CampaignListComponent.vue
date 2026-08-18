@@ -213,6 +213,7 @@ export default {
             props: {
                 form: {
                     title: "",
+                    tag: "",
                     amount: "",
                     start_date: "",
                     end_date: "",
@@ -332,6 +333,7 @@ export default {
                     this.props.endTime = this.parseTime(campaign.end_time);
                     this.props.form = {
                         title: campaign.title,
+                        tag: campaign.tag || '',
                         amount: campaign.flat_amount,
                         start_date: campaign.start_date,
                         end_date: campaign.end_date,

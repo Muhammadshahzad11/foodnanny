@@ -11,14 +11,13 @@ import {
 } from "../services/notificationSound.js";
 
 const NEW_ORDER_TYPES = ['order.created'];
-const SOUND_TYPES = [
-    'order.created',
-    'kitchen.ready',
-    'kitchen.accepted',
-    'kitchen.preparing',
-    'order.rejected',
-    'order.cancelled',
-];
+const ONLINE_SOURCES = [5, 10, '5', '10', 'web', 'app'];
+
+function isOnlineNewOrder(payload) {
+    if (!NEW_ORDER_TYPES.includes(payload?.type)) return false;
+    const source = payload?.data?.source ?? payload?.source;
+    return ONLINE_SOURCES.includes(source) || ONLINE_SOURCES.includes(Number(source));
+}
 
 function notificationText(payload) {
     const title = payload?.title || 'Update';
@@ -148,7 +147,7 @@ export const useInboxNotificationStore = defineStore('inboxNotification', {
             this.recent = this.recent.slice(0, 15);
             this.unreadCount += 1;
 
-            const isNewOrder = NEW_ORDER_TYPES.includes(payload.type);
+            const isNewOrder = isOnlineNewOrder(payload);
 
             if (isNewOrder) {
                 showNewOrderAlert(payload);
@@ -157,13 +156,8 @@ export const useInboxNotificationStore = defineStore('inboxNotification', {
                 showStatusAlert(payload);
             }
 
-            const play = payload.data?.play_sound || SOUND_TYPES.includes(payload.type);
-            if (this.soundEnabled && play) {
-                if (isNewOrder) {
-                    playOrderAlertSound();
-                } else {
-                    playNotificationSound({volume: 0.7});
-                }
+            if (this.soundEnabled && isNewOrder) {
+                playOrderAlertSound();
             }
         },
 

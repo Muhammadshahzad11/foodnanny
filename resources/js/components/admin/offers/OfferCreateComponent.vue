@@ -19,8 +19,16 @@
                             <small class="db-field-alert" v-if="errors.title">{{ errors.title[0]}}</small>
                         </div>
                         <div class="form-col-12 sm:form-col-6">
-                            <label for="amount" class="db-field-title required"> {{ $t("label.discount") }} (%) </label>
+                            <label for="tag" class="db-field-title">{{ $t("label.offer_tag") }}</label>
+                            <input v-model="props.form.tag" v-bind:class="errors.tag ? 'invalid' : ''" type="text"
+                                id="tag" class="db-field-control" :placeholder="$t('label.offer_tag_placeholder')" />
+                            <small class="text-xs text-paragraph mt-1 block">{{ $t('label.offer_tag_hint') }}</small>
+                            <small class="db-field-alert" v-if="errors.tag">{{ errors.tag[0]}}</small>
+                        </div>
+                        <div class="form-col-12 sm:form-col-6">
+                            <label for="amount" class="db-field-title"> {{ $t("label.discount") }} (%) </label>
                             <input v-model="props.form.amount" v-on:keypress="floatNumber($event)" v-bind:class="errors.amount ? 'invalid' : ''" type="text" id="amount" class="db-field-control" />
+                            <small class="text-xs text-paragraph mt-1 block">{{ $t('label.discount_optional_hint') }}</small>
                             <small class="db-field-alert" v-if="errors.amount">{{ errors.amount[0] }}</small>
                         </div>
                         <div class="form-col-12 sm:form-col-6">
@@ -275,6 +283,7 @@ export default {
             this.$props.props.endTime = '';
             this.$props.props.form = {
                 title: "",
+                tag: "",
                 description: "",
                 location: "",
                 latitude: "",
@@ -305,6 +314,7 @@ export default {
             this.$props.props.endTime = '';
             this.$props.props.form = {
                 title: "",
+                tag: "",
                 description: "",
                 location: "",
                 latitude: "",
@@ -331,11 +341,12 @@ export default {
             try {
                 const fd = new FormData();
                 fd.append("title", this.props.form.title);
+                fd.append("tag", this.props.form.tag || '');
                 fd.append("description", this.props.form.description);
                 fd.append("location", this.props.form.location);
                 fd.append("latitude", this.props.form.latitude);
                 fd.append("longitude", this.props.form.longitude);
-                fd.append("amount", this.props.form.amount);
+                fd.append("amount", this.props.form.amount || 0);
                 fd.append("status", this.props.form.status);
                 fd.append("start_date", this.props.form.start_date === null? '': this.props.form.start_date );
                 fd.append("end_date", this.props.form.end_date === null? '': this.props.form.end_date);
@@ -357,6 +368,7 @@ export default {
                     alertService.successFlip(tempId === null ? 0 : 1, this.$t("menu.offers"));
                     this.$props.props.form = {
                         title: "",
+                        tag: "",
                         description: "",
                         location: "",
                         latitude: "",

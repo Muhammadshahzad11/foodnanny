@@ -11,6 +11,8 @@
             <div class="bill-line"></div>
 
             <div class="bill-nameline">Name: <strong>{{ customerDisplay }}</strong></div>
+            <div v-if="customerPhone" class="bill-nameline">Phone: {{ customerPhone }}</div>
+            <div v-if="customerAddress" class="bill-nameline">Address: {{ customerAddress }}</div>
 
             <div class="bill-dash"></div>
 
@@ -103,6 +105,7 @@ import DisplayModeEnum from "../../../../enums/modules/displayModeEnum.js";
 import appService from "../../../../services/appService.js";
 import {useFrontendSettingStore} from "../../../../stores/frontendSetting.js";
 import orderTypeEnum from "../../../../enums/modules/orderTypeEnum.js";
+import {resolveBillCustomer} from "../../../../services/thermalIframePrint.js";
 
 export default {
     name: "CustomerReceiptPrintSheet",
@@ -142,13 +145,17 @@ export default {
             const r = this.restaurant || {};
             return [r.city, r.state, r.zip_code].filter(Boolean).join(', ');
         },
+        customerInfo() {
+            return resolveBillCustomer(this.order || {});
+        },
         customerDisplay() {
-            const name = (this.order?.user?.name || this.order?.customer_name || '').toString().trim();
-            // POS guest / placeholder customer → show Walk-in on the bill
-            if (!name || /walking\s*customer/i.test(name) || /^guest$/i.test(name)) {
-                return 'Walk-in';
-            }
-            return name;
+            return this.customerInfo.name;
+        },
+        customerPhone() {
+            return this.customerInfo.phone;
+        },
+        customerAddress() {
+            return this.customerInfo.address;
         },
         orderTypeLabel() {
             if (this.orderTypeOverride) return this.orderTypeOverride;

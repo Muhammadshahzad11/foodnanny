@@ -21,6 +21,14 @@
                         </div>
 
                         <div class="form-col-12 sm:form-col-6">
+                            <label for="tag" class="db-field-title">{{ $t("label.offer_tag") }}</label>
+                            <input v-model="props.form.tag" v-bind:class="errors.tag ? 'invalid' : ''" type="text"
+                                id="tag" class="db-field-control" :placeholder="$t('label.offer_tag_placeholder')" />
+                            <small class="text-xs text-paragraph mt-1 block">{{ $t('label.offer_tag_hint') }}</small>
+                            <small class="db-field-alert" v-if="errors.tag">{{ errors.tag[0]}}</small>
+                        </div>
+
+                        <div class="form-col-12 sm:form-col-6">
                             <label class="db-field-title required">{{ $t("label.status") }}</label>
                             <div class="db-field-radio-group">
                                 <div class="db-field-radio">
@@ -237,6 +245,7 @@ export default {
             this.$props.props.endTime = '';
             this.$props.props.form = {
                 title: "",
+                tag: "",
                 amount: "",
                 start_date: "",
                 end_date: "",
@@ -263,6 +272,7 @@ export default {
             this.$props.props.endTime = '';
             this.$props.props.form = {
                 title: "",
+                tag: "",
                 amount: "",
                 start_date: "",
                 end_date: "",
@@ -285,6 +295,7 @@ export default {
             try {
                 const fd = new FormData();
                 fd.append("title", this.props.form.title);
+                fd.append("tag", this.props.form.tag || '');
                 fd.append("start_date", this.props.form.start_date);
                 fd.append("end_date", this.props.form.end_date);
                 fd.append("start_time", this.props.form.start_time);
@@ -307,6 +318,7 @@ export default {
                         alertService.successFlip(tempId === null ? 0 : 1, this.$t("menu.campaigns"));
                         this.$props.props.form = {
                             title: "",
+                            tag: "",
                             amount: "",
                             start_date: "",
                             end_date: "",

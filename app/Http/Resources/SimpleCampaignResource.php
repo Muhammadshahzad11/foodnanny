@@ -19,8 +19,11 @@ class SimpleCampaignResource extends JsonResource
         return [
             'id'          => $this->id,
             'title'       => $this->title,
+            'tag'         => $this->tag,
             'slug'        => $this->slug,
             'type'        => 'campaign',
+            'amount'      => (float) $this->amount,
+            'percentage'  => ((float) $this->amount > 0) ? AppLibrary::convertAmountFormat($this->amount) . '%' : '',
             'start_time'  => AppLibrary::time($this->start_time),
             'end_time'    => AppLibrary::time($this->end_time),
             'start_date'  => AppLibrary::date($this->start_date),

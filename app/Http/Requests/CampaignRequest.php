@@ -27,6 +27,7 @@ class CampaignRequest extends FormRequest
     {
         return [
             'title'       => ['required', 'string', 'max:190'],
+            'tag'         => ['nullable', 'string', 'max:80'],
             'amount'      => request('type') == CampaignType::FREE ? ['nullable', 'numeric'] : ['required', 'numeric', new IniAmount()],
             'description' => ['required', 'string', 'max:5000'],
             'start_date'  => ['required', 'string', 'max:190'],

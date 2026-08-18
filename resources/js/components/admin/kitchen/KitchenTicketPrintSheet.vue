@@ -1,7 +1,7 @@
 <template>
     <div class="kitchen-print-root hidden">
         <div v-if="payload" class="kot-sheet">
-            <div class="kot-center kot-head">{{ isModification ? 'ORDER CHANGE' : 'KOT' }}</div>
+            <div class="kot-center kot-head">{{ isModification ? 'ORDER UPDATE' : 'KOT' }}</div>
             <div v-if="payload.restaurant" class="kot-center kot-shop">{{ payload.restaurant }}</div>
             <div class="kot-rule"></div>
 
@@ -19,13 +19,13 @@
             </div>
             <div v-if="payload.reprint" class="kot-center kot-reprint">*** REPRINT ***</div>
 
-            <div class="kot-row kot-cols kot-col-head">
+            <div class="kot-row kot-cols kot-col-head" :class="{ 'kot-cols--update': isModification }">
                 <span class="c-item">ITEM</span>
-                <span class="c-qty">QTY</span>
+                <span class="c-qty">{{ isModification ? 'ORDER UPDATE' : 'QTY' }}</span>
             </div>
 
             <div v-for="(item, idx) in payload.items" :key="idx" class="kot-item-block">
-                <div class="kot-row kot-cols">
+                <div class="kot-row kot-cols" :class="{ 'kot-cols--update': isModification }">
                     <span class="c-item">{{ idx + 1 }}. {{ item.name }}</span>
                     <span class="c-qty">{{ item.change_label || item.quantity }}</span>
                 </div>
@@ -174,6 +174,8 @@ export default {
 }
 .kot-cols .c-item { width: 80%; padding-right: 4px; }
 .kot-cols .c-qty { width: 20%; text-align: right; flex-shrink: 0; }
+.kot-cols--update .c-item { width: 64%; }
+.kot-cols--update .c-qty { width: 36%; font-size: 10px; }
 .kot-item-block {
     padding: 2px 0;
 }
