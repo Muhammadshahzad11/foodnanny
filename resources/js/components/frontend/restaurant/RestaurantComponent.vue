@@ -19,24 +19,26 @@
         </div>
     </section>
 
-    <section v-if="!outOfServiceArea && search === null && (singleOffer && singleRestaurants.length > 0)" class="mb-5 sm:mb-8">
-        <div v-if="singleOfferShowHide" class="container">
-            <PromoBannerComponent class="mb-4" :item="singleOfferBanner" :gift-fallback="setting.image_offer"/>
-            <Swiper :dir="displayMode" :loop="false" :speed="1000" :navigation="true" :modules="modules"
-                    :breakpoints="restaurantBreakPoints" class="float-navigate">
-                <SwiperSlide v-for="restaurant in singleRestaurants" class="mobile:!w-60">
-                    <RestaurantCardComponent :restaurant="restaurant"/>
-                </SwiperSlide>
-            </Swiper>
-        </div>
-    </section>
-
-    <section v-if="!outOfServiceArea && search === null && offerAndCampaigns.length > 0" class="mb-9 sm:mb-12">
-        <div v-if="offerAndCampaignsShowHide" class="container">
-            <Swiper :dir="displayMode" :loop="offerAndCampaigns.length > 1" :speed="1000" :navigation="true" :modules="modules"
-                    :breakpoints="offerBreakPoints" class="middle-navigate">
-                <SwiperSlide v-for="offerAndCampaign in offerAndCampaigns" :key="offerAndCampaign.type + '-' + offerAndCampaign.id">
-                    <PromoBannerComponent :item="offerAndCampaign" :gift-fallback="setting.image_offer"/>
+    <section v-if="!outOfServiceArea && search === null && promoBlocks.length > 0" class="mb-8 sm:mb-12">
+        <div v-if="offerAndCampaignsShowHide || singleOfferShowHide" class="container">
+            <Swiper
+                :dir="displayMode"
+                :loop="promoBlocks.length > 1"
+                :speed="1000"
+                :navigation="promoBlocks.length > 1"
+                :modules="promoModules"
+                :slides-per-view="1"
+                :space-between="20"
+                class="offer-campaign-swiper"
+            >
+                <SwiperSlide v-for="block in promoBlocks" :key="(block.type || 'offer') + '-' + block.id">
+                    <OfferCampaignBlock
+                        :item="block"
+                        :restaurants="block.restaurants || []"
+                        :offer-restaurant="findRestaurants"
+                        :gift-fallback="setting.image_offer"
+                        :dir="displayMode"
+                    />
                 </SwiperSlide>
             </Swiper>
         </div>
@@ -150,7 +152,7 @@ import {useFrontendCuisineStore} from "../../../stores/frontendCuisine.js";
 import appService from "../../../services/appService.js";
 import availabilityEnum from "../../../enums/modules/availabilityEnum.js";
 import RestaurantCardComponent from "../components/RestaurantCardComponent.vue";
-import PromoBannerComponent from "../components/PromoBannerComponent.vue";
+import OfferCampaignBlock from "../components/OfferCampaignBlock.vue";
 import {useFrontendSettingStore} from "../../../stores/frontendSetting.js";
 import {useFrontendOfferStore} from "../../../stores/frontendOffer.js";
 import {useFrontendCampaignStore} from "../../../stores/frontendCampaign.js";
@@ -163,7 +165,7 @@ export default {
     components: {
         TrackOrderComponent,
         RestaurantCardComponent,
-        PromoBannerComponent,
+        OfferCampaignBlock,
         LoadingContentComponent,
         LoadingComponent,
         Swiper,
@@ -188,6 +190,7 @@ export default {
             openModal,
             closeModal,
             modules: [Navigation],
+            promoModules: [Navigation],
         }
     },
     data() {
@@ -292,15 +295,31 @@ export default {
         singleOffer: function () {
             return this.frontendOfferStore.single;
         },
-        singleOfferBanner: function () {
-            return { ...(this.singleOffer || {}), type: 'offer' };
-        },
         singleRestaurants: function () {
             return this.frontendOfferStore.singleRestaurants;
         },
         findRestaurants: function () {
             return this.frontendOfferStore.find;
-        }
+        },
+        promoBlocks() {
+            const blocks = [];
+            const single = this.singleOffer;
+            if (single && Object.keys(single).length && (this.singleRestaurants || []).length) {
+                blocks.push({
+                    ...single,
+                    type: 'offer',
+                    restaurants: this.singleRestaurants,
+                });
+            }
+            const seen = new Set(blocks.map((b) => `${b.type}-${b.id}`));
+            (this.offerAndCampaigns || []).forEach((item) => {
+                const key = `${item.type || 'offer'}-${item.id}`;
+                if (seen.has(key)) return;
+                seen.add(key);
+                blocks.push(item);
+            });
+            return blocks;
+        },
     },
     async mounted() {
         if (!this.commonStore.location) {
@@ -363,6 +382,7 @@ export default {
             }
         },
         async getInitialOffer() {
+            this.offerAndCampaigns = [];
             await this.frontendCuisineStore.fetch({
                 order_column: 'sort',
                 order_type: 'asc',

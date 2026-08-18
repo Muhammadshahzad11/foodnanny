@@ -1,18 +1,18 @@
 <template>
     <section class="pt-6 pb-24 md:pb-20">
         <div class="container">
-            <figure class="relative mb-9 sm:mb-12">
-                <PromoBannerComponent v-if="offerAndCampaign" :item="offerAndCampaign" :link-type="type || $route.params.type" :gift-fallback="''"/>
+            <div v-if="offerAndCampaign && offerAndCampaign.id" class="relative">
+                <OfferCampaignBlock
+                    :item="bannerItem"
+                    :restaurants="offerAndCampaignRestaurants || []"
+                    :offer-restaurant="findRestaurants"
+                    :linkable="false"
+                    variant="grid"
+                />
                 <button @click.prevent="openModal('offer-info-modal')"
                         class="w-8 h-8 rounded-full text-center shadow-filter absolute top-5 ltr:right-5 rtl:left-5 bg-white z-10">
                     <i class="lab-line-info-circle text-xl leading-8 text-primary"></i>
                 </button>
-            </figure>
-            <h2 class="mb-6 sm:mb-8 text-xl sm:text-2xl font-semibold capitalize">
-                {{ $t('message.number_restaurant_available', {length: offerAndCampaignRestaurants.length}) }}
-            </h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-                <RestaurantCardComponent :offerRestaurant="findRestaurants" :restaurant="offerAndCampaignRestaurant" v-for="offerAndCampaignRestaurant in offerAndCampaignRestaurants"/>
             </div>
         </div>
     </section>
@@ -49,8 +49,7 @@ import {useFrontendOfferStore} from "../../../stores/frontendOffer.js";
 import {useFrontendCampaignStore} from "../../../stores/frontendCampaign.js";
 import router from "../../../router/index.js";
 import {useCommonStore} from "../../../stores/common.js";
-import RestaurantCardComponent from "../components/RestaurantCardComponent.vue";
-import PromoBannerComponent from "../components/PromoBannerComponent.vue";
+import OfferCampaignBlock from "../components/OfferCampaignBlock.vue";
 
 export default {
     name: "OfferAndCampaign",
@@ -74,7 +73,7 @@ export default {
             offerAndCampaignEnum: offerAndCampaignEnum
         }
     },
-    components: {RestaurantCardComponent, PromoBannerComponent},
+    components: {OfferCampaignBlock},
 
     computed: {
         latitude: function () {
@@ -92,6 +91,12 @@ export default {
             } else if (this.$route.params.type === this.offerAndCampaignEnum.CAMPAIGN) {
                 return this.frontendCampaignStore.show;
             }
+        },
+        bannerItem() {
+            return {
+                ...(this.offerAndCampaign || {}),
+                type: this.type || this.$route.params.type,
+            };
         },
         hasDiscount() {
             return this.type === this.offerAndCampaignEnum.OFFER

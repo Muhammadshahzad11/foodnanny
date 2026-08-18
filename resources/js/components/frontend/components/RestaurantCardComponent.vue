@@ -18,10 +18,15 @@
             <h3 @click.prevent="handleGoToRestaurant(restaurant)" class="mb-2 font-medium capitalize cursor-pointer whitespace-nowrap overflow-hidden text-ellipsis group-hover:text-primary transition-all duration-500">
                 {{ textShortener(restaurant.name,) }}
             </h3>
-            <p class="flex flex-wrap items-center gap-y-1 gap-x-1.5 mb-2.5 text-sm text-paragraph">
-                <span v-if="restaurant.distance">{{ restaurant.distance }} {{ $t('label.km') }}</span>
-                <span v-if="restaurant.distance" class="w-1 h-1 rounded-full bg-paragraph"></span>
-                <span>{{ restaurant.preparation_time }} {{ $t('label.minute') }}</span>
+            <p class="flex flex-wrap items-center gap-y-1 gap-x-3 mb-2.5 text-sm text-paragraph">
+                <span v-if="restaurant.distance" class="inline-flex items-center gap-1">
+                    <i class="lab-line-map text-primary text-sm"></i>
+                    {{ restaurant.distance }} {{ $t('label.km') }}
+                </span>
+                <span v-if="restaurant.preparation_time" class="inline-flex items-center gap-1">
+                    <i class="lab-line-clock text-primary text-sm"></i>
+                    {{ restaurant.preparation_time }} {{ $t('label.minute') }}
+                </span>
             </p>
             <div v-if="restaurant.rating_star > 0" class="flex items-center gap-1">
                 <i class="lab-fill-star text-sm -mt-1 text-admin-yellow"></i>

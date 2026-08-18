@@ -275,6 +275,20 @@
     .middle-navigate.swiper-rtl .swiper-button-prev { @apply after:content-['\e03b'] }
 
 
+    /* Offer + restaurant container */
+    .offer-campaign-swiper .swiper-button-prev,
+    .offer-campaign-swiper .swiper-button-next {
+        @apply mobile:hidden w-9 h-9 leading-9 text-center rounded-full bg-white text-paragraph shadow-xst border border-gray-200 mt-0 after:font-icon after:text-base after:font-bold;
+        top: 24px;
+        margin-top: 0;
+        transform: none;
+    }
+    .offer-campaign-swiper .swiper-button-prev { @apply ltr:after:content-['\e03c'] rtl:after:content-['\e03b'] ltr:!left-auto ltr:!right-[3.75rem] rtl:!right-auto rtl:!left-[3.75rem] }
+    .offer-campaign-swiper .swiper-button-next { @apply ltr:after:content-['\e03b'] rtl:after:content-['\e03c'] ltr:!right-4 rtl:!left-4 }
+    .offer-campaign-swiper .swiper-button-disabled { @apply hidden }
+    .offer-campaign-swiper.swiper-rtl .swiper-button-next { @apply after:content-['\e03c'] }
+    .offer-campaign-swiper.swiper-rtl .swiper-button-prev { @apply after:content-['\e03b'] }
+
     /* Float Navigation */
     .float-navigate { @apply sm:!pt-16 }
     .float-navigate .swiper-button-prev { @apply mobile:hidden w-8 h-8 leading-8 text-center rounded-full bg-primary/10 text-primary ltr:after:content-['\e03c'] rtl:after:content-['\e03b'] after:font-icon after:text-lg transition-all duration-300 hover:bg-primary hover:after:text-white top-6 ltr:!left-auto ltr:!right-11 rtl:!right-auto rtl:!left-11 }
