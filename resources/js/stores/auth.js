@@ -37,20 +37,26 @@ export const useAuthStore = defineStore("auth", {
                 });
             });
         },
+        applyLoginPayload: function (data) {
+            this.status = true;
+            this.token = data.token;
+            this.info = data.user;
+            this.adminMenu = data.admin_menu;
+            this.restaurantMenu = data.restaurant_menu;
+            this.adminPermission = data.admin_permission;
+            this.restaurantPermission = data.restaurant_permission;
+            this.permission = data.permission;
+            this.defaultPermission = Object.keys(data.admin_default_permission || {}).length > 0
+                ? data.admin_default_permission
+                : data.restaurant_default_permission;
+            this.adminDefaultPermission = data.admin_default_permission;
+            this.restaurantDefaultPermission = data.restaurant_default_permission;
+            this.clearPhoneLoginInfo();
+        },
         login: function (payload) {
             return new Promise((resolve, reject) => {
                 axios.post('auth/login', payload).then((res) => {
-                    this.status = true;
-                    this.token = res.data.token;
-                    this.info = res.data.user;
-                    this.adminMenu = res.data.admin_menu;
-                    this.restaurantMenu = res.data.restaurant_menu;
-                    this.adminPermission = res.data.admin_permission;
-                    this.restaurantPermission = res.data.restaurant_permission;
-                    this.permission = res.data.permission;
-                    this.defaultPermission = Object.keys(res.data.admin_default_permission).length > 0 ? res.data.admin_default_permission : res.data.restaurant_default_permission;
-                    this.adminDefaultPermission = res.data.admin_default_permission;
-                    this.restaurantDefaultPermission = res.data.restaurant_default_permission;
+                    this.applyLoginPayload(res.data);
                     resolve(res);
                 }).catch((err) => {
                     reject(err);
@@ -69,7 +75,11 @@ export const useAuthStore = defineStore("auth", {
         sendPhoneLoginOtp: function (payload) {
             return new Promise((resolve, reject) => {
                 axios.post('auth/login-phone/otp', payload).then((res) => {
-                    this.setPhoneLoginInfo(payload);
+                    if (res.data?.token) {
+                        this.applyLoginPayload(res.data);
+                    } else {
+                        this.setPhoneLoginInfo(payload);
+                    }
                     resolve(res);
                 }).catch((err) => {
                     reject(err);
@@ -79,18 +89,7 @@ export const useAuthStore = defineStore("auth", {
         phoneLogin: function (payload) {
             return new Promise((resolve, reject) => {
                 axios.post('auth/login-phone', payload).then((res) => {
-                    this.status = true;
-                    this.token = res.data.token;
-                    this.info = res.data.user;
-                    this.adminMenu = res.data.admin_menu;
-                    this.restaurantMenu = res.data.restaurant_menu;
-                    this.adminPermission = res.data.admin_permission;
-                    this.restaurantPermission = res.data.restaurant_permission;
-                    this.permission = res.data.permission;
-                    this.defaultPermission = Object.keys(res.data.admin_default_permission).length > 0 ? res.data.admin_default_permission : res.data.restaurant_default_permission;
-                    this.adminDefaultPermission = res.data.admin_default_permission;
-                    this.restaurantDefaultPermission = res.data.restaurant_default_permission;
-                    this.clearPhoneLoginInfo();
+                    this.applyLoginPayload(res.data);
                     resolve(res);
                 }).catch((err) => {
                     reject(err);

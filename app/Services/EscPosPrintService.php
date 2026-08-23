@@ -60,9 +60,7 @@ class EscPosPrintService
         $line  = str_repeat('-', $width);
         $rows  = [];
 
-        // First two non-dash lines are printed double-size/centred by buildKotDocument.
-        $rows[] = $this->center($payload['copy'] ?? 'KOT', $width);
-        $rows[] = $this->center($this->ascii((string) ($payload['restaurant'] ?? '')), $width);
+        // Title + shop name are emitted by buildKotDocument (double-size / full width).
         $rows[] = $line;
 
         $table = (string) ($payload['table_no'] ?? ($payload['table']['number'] ?? ''));
@@ -75,7 +73,10 @@ class EscPosPrintService
         $ticket = (string) ($payload['ticket_no'] ?? ($payload['kot_no'] ? 'KOT - ' . $payload['kot_no'] : ''));
         $rows[] = $this->pair($stamp, $ticket, $width);
         if (!empty($payload['station'])) {
-            $rows[] = $this->pair('Station', $this->ascii((string) $payload['station']), $width);
+            $station = trim($this->ascii((string) $payload['station']));
+            if ($station !== '' && strcasecmp($station, 'Default') !== 0) {
+                $rows[] = $this->pair('Station', $station, $width);
+            }
         }
 
         $rows[] = $line;
@@ -123,8 +124,9 @@ class EscPosPrintService
         }
         if (!empty($payload['powered_by'])) {
             $rows[] = '';
-            $rows[] = $this->center('Powered by ' . $this->ascii((string) $payload['powered_by']), $width);
+            $rows[] = $this->center('- Powered by ' . $this->ascii((string) $payload['powered_by']), $width);
         }
+        $rows[] = $line;
         $rows[] = '';
         $rows[] = '';
         $rows[] = '';
@@ -189,20 +191,14 @@ class EscPosPrintService
     public function renderInvoiceText(Printer $printer, array $payload): string
     {
         $width = $this->effectiveWidth($printer);
-        $line  = str_repeat('-', $width);
+        $rule  = str_repeat('-', $width);
+        $dash  = str_repeat('- ', (int) floor($width / 2));
         $rows  = [];
 
+        // Reference layout: shop name + TAX INVOICE only (no logo / address / phone).
         $rows[] = $this->center($this->ascii((string) ($payload['restaurant'] ?? 'INVOICE')), $width);
         $rows[] = $this->center('TAX INVOICE', $width);
-        if (!empty($payload['tagline'])) {
-            foreach ($this->wrapWords($this->ascii((string) $payload['tagline']), $width) as $w) {
-                $rows[] = $this->center($w, $width);
-            }
-        }
-        if (!empty($payload['phone'])) {
-            $rows[] = $this->center('ph: ' . $this->ascii((string) $payload['phone']), $width);
-        }
-        $rows[] = $line;
+        $rows[] = $rule;
 
         $customer = $this->invoiceCustomerName($payload);
         $rows[] = 'Name: ' . ($customer !== '' ? $customer : 'Walk-in');
@@ -212,11 +208,11 @@ class EscPosPrintService
         }
         $address = trim($this->ascii((string) ($payload['customer_address'] ?? '')));
         if ($address !== '') {
-            foreach ($this->wrapWords('Address: ' . $address, $width) as $line) {
-                $rows[] = $line;
+            foreach ($this->wrapWords('Address: ' . $address, $width) as $addrRow) {
+                $rows[] = $addrRow;
             }
         }
-        $rows[] = str_repeat('- ', (int) floor($width / 2));
+        $rows[] = $dash;
 
         $date      = (string) ($payload['order_date'] ?? $payload['order_datetime'] ?? '');
         $time      = (string) ($payload['order_time'] ?? '');
@@ -229,19 +225,11 @@ class EscPosPrintService
             $table !== '' && $table !== '-' ? 'Table: ' . $table : $typeLabel,
             $width
         );
-        if (!empty($payload['biller'])) {
-            $rows[] = $this->pair(
-                'Cashier: ' . $this->ascii((string) $payload['biller']),
-                $table !== '' && $table !== '-' ? $typeLabel : '',
-                $width
-            );
-        }
-
-        $rows[] = $line;
+        $rows[] = $rule;
         foreach ($this->invoiceItemRows('Item', 'Qty', 'Price', 'Amt', $width) as $row) {
             $rows[] = $row;
         }
-        $rows[] = $line;
+        $rows[] = $rule;
 
         $totalQty = 0;
         foreach ($payload['items'] ?? [] as $item) {
@@ -270,7 +258,7 @@ class EscPosPrintService
             }
         }
 
-        $rows[] = $line;
+        $rows[] = $rule;
 
         $subtotal = (float) $this->moneyNumber($payload['subtotal'] ?? 0);
         $tax      = (float) $this->moneyNumber($payload['tax'] ?? 0);
@@ -298,18 +286,19 @@ class EscPosPrintService
             $rows[] = $this->pair('Round Off', ($roundOff < 0 ? '-' : '') . $this->thermalMoney(abs($roundOff)), $width);
         }
 
-        $rows[] = $line;
+        $rows[] = $rule;
         $rows[] = $this->pair('GRAND TOTAL', $this->thermalMoney($total), $width);
         if (!empty($payload['payment_label'])) {
             $rows[] = $this->pair('Payment', strtoupper($this->ascii((string) $payload['payment_label'])), $width);
         }
-        $rows[] = $line;
+        $rows[] = $rule;
         $rows[] = $this->center('Thank you for dining with us!', $width);
         $rows[] = $this->center('Visit again.', $width);
         if (!empty($payload['powered_by'])) {
             $rows[] = '';
             $rows[] = $this->center('Powered by ' . $this->ascii((string) $payload['powered_by']), $width);
         }
+        $rows[] = $dash;
         // Extra blank lines so footer is not cut off by the autocutter
         $rows[] = '';
         $rows[] = '';
@@ -457,19 +446,28 @@ class EscPosPrintService
         $width = $this->effectiveWidth($printer);
         $out   = $this->escInit(true);
         // KOT is kitchen-only — never print restaurant logo (logo is for customer invoice only)
+
+        // Hardware-center the title at 2x. Do NOT space-pad then clip to width/2 —
+        // that truncated "KITCHEN KOT" + "NN Food Factory" into "KITCHENN Food".
+        $out .= "\x1B\x61\x01\x1B\x45\x01\x1D\x21\x11";
+        $out .= $this->emitLine($this->kotTitle($payload));
+        $out .= "\x1D\x21\x00\x1B\x45\x00";
+
+        $shop = $this->ascii((string) ($payload['restaurant'] ?? ''));
+        if ($shop !== '') {
+            $out .= "\x1B\x45\x01";
+            foreach ($this->wrapWords($shop, $width) as $row) {
+                $out .= $this->emitLine($row);
+            }
+            $out .= "\x1B\x45\x00";
+        }
+        $out .= "\x1B\x61\x00";
+
         $text  = $this->renderKotText($printer, $payload);
         $lines = preg_split("/\r\n|\n|\r/", $text) ?: [];
-        $printedHeader = 0;
 
         foreach ($lines as $line) {
             $line = (string) $line;
-            if ($printedHeader < 2 && $line !== '' && !str_starts_with($line, '-')) {
-                $out .= "\x1B\x61\x01\x1B\x45\x01\x1D\x21\x11";
-                $out .= $this->emitLine($this->clipLine($line, (int) floor($width / 2)));
-                $out .= "\x1D\x21\x00\x1B\x45\x00\x1B\x61\x00";
-                $printedHeader++;
-                continue;
-            }
             if (preg_match('/^\d+\s*(x|\.)\s+/', $line)) {
                 $out .= "\x1B\x45\x01\x1D\x21\x01";
                 $out .= $this->emitLine($this->clipLine($line, $width));
@@ -479,10 +477,7 @@ class EscPosPrintService
             $out .= $this->emitLine($this->clipLine($line, $width));
         }
 
-        $out .= "\n\n\n";
-        // Feed paper past cutter, then partial cut (keeps "Powered by" on the slip)
-        $out .= "\x1B\x64\x08";   // ESC d 8 — advance 8 lines
-        $out .= "\x1D\x56\x42\x00"; // GS V 66 0 — feed then cut
+        $out .= $this->cutPaper(true);
 
         return $out;
     }
@@ -491,14 +486,11 @@ class EscPosPrintService
     {
         $width = $this->effectiveWidth($printer);
         $out   = $this->escInit(true);
-        $out  .= $this->logoBlock($payload['logo_url'] ?? null, min(384, $width * 10));
         $out  .= $this->buildEscPosBody($this->renderInvoiceText($printer, $payload), $width);
         if ($printer->opensCashDrawer()) {
             $out .= "\x1B\x70\x00\x19\xFA";
         }
-        $out .= "\n\n\n";
-        $out .= "\x1B\x64\x08";
-        $out .= "\x1D\x56\x42\x00";
+        $out .= $this->cutPaper(false);
 
         return $out;
     }
@@ -510,9 +502,39 @@ class EscPosPrintService
         if ($openDrawer) {
             $out .= "\x1B\x70\x00\x19\xFA";
         }
-        $out .= "\n\n\n";
-        $out .= "\x1B\x64\x08";
-        $out .= "\x1D\x56\x42\x00";
+        $out .= $this->cutPaper(false);
+
+        return $out;
+    }
+
+    /**
+     * Big KOT heading. Old payloads sent "KITCHEN KOT" which overflowed 2x type.
+     */
+    protected function kotTitle(array $payload): string
+    {
+        if (!empty($payload['is_modification']) || !empty($payload['modification'])) {
+            return 'ORDER UPDATE';
+        }
+        $copy = strtoupper(trim($this->ascii((string) ($payload['copy'] ?? ''))));
+        if ($copy === '' || $copy === 'KITCHEN KOT' || $copy === 'KITCHEN') {
+            return 'KOT';
+        }
+
+        return $copy;
+    }
+
+    /**
+     * Feed past the blade, then cut.
+     * GS V 1 / GS V 0 are the commands TVS / Xprinter / Rongta actually honor.
+     * GS V 66 (the old command) is ignored or treated as a full cut on those models.
+     */
+    protected function cutPaper(bool $partial = true): string
+    {
+        $out = "\n\n";
+        $out .= "\x1B\x64\x04"; // ESC d 4 — advance so the footer clears the cutter
+        $out .= $partial
+            ? "\x1D\x56\x01"  // GS V 1 — partial cut (leaves a tab)
+            : "\x1D\x56\x00"; // GS V 0 — full cut
 
         return $out;
     }

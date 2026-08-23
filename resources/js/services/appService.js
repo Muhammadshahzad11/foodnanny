@@ -14,6 +14,10 @@ export default {
         if (/^[+]?[0-9]*$/.test(char)) return true;
         else e.preventDefault();
     },
+    isPlayStoreDemoPhone: function (phone) {
+        const digits = String(phone || '').replace(/\D+/g, '');
+        return digits.slice(-10) === '9999999999';
+    },
     textShortener: function (text, number = 30) {
         if (text) {
             if (!(text.length < number)) {

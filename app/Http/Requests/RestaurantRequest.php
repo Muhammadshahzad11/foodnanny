@@ -50,6 +50,7 @@ class RestaurantRequest extends FormRequest
             'enable_pos'                    => ['required', Rule::in([Ask::YES, Ask::NO])],
             'enable_kitchen'                => ['required', Rule::in([Ask::YES, Ask::NO])],
             'enable_waiter'                 => ['required', Rule::in([Ask::YES, Ask::NO])],
+            'fssai_number'                  => ['nullable', 'string', 'max:20'],
             'highlights.*.enabled'          => ['nullable', Rule::in([Ask::YES, Ask::NO])],
             'highlights.*.title'            => ['nullable', 'string', 'max:80'],
         ];
@@ -61,6 +62,11 @@ class RestaurantRequest extends FormRequest
             if ($this->exists($field) && $this->input($field) !== null && $this->input($field) !== '') {
                 $this->merge([$field => (int) $this->input($field)]);
             }
+        }
+
+        if ($this->exists('fssai_number')) {
+            $fssai = preg_replace('/\s+/', '', (string) $this->input('fssai_number'));
+            $this->merge(['fssai_number' => $fssai !== '' ? $fssai : null]);
         }
     }
 }

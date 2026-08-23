@@ -53,6 +53,7 @@ class RestaurantDetailsResource extends JsonResource
             "enable_pos"             => $this->enable_pos ?? \App\Enums\Ask::YES,
             "enable_kitchen"         => $this->enable_kitchen ?? \App\Enums\Ask::YES,
             "enable_waiter"          => $this->enable_waiter ?? \App\Enums\Ask::YES,
+            "fssai_number"           => $this->fssai_number ?? '',
             "balance"                => AppLibrary::flatAmountFormat($this->balance),
             'convert_balance'        => AppLibrary::convertAmountFormat($this->balance),
             'currency_balance'       => AppLibrary::currencyAmountFormat($this->balance)

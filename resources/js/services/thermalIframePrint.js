@@ -402,7 +402,6 @@ export function buildBillHtml(order = {}, opts = {}) {
             <td>Time: ${esc(order.order_time || '')}</td>
             <td class="r">${timeRowRight}</td>
           </tr>
-          ${opts.cashierName ? `<tr><td>Cashier: ${esc(opts.cashierName)}</td><td class="r">${opts.tableLabel ? esc(orderType) : ''}</td></tr>` : ''}
         </table>
         <table class="grid">
           <thead><tr><th class="l">Item</th><th class="qty">Qty</th><th class="price">Price</th><th class="amt">Amt</th></tr></thead>

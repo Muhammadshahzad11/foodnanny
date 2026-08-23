@@ -58,6 +58,8 @@ export async function sendViaLocalBridge(job = {}) {
         throw new Error('Printer IP or Windows printer name is missing.');
     }
 
+    // USB/Windows bill printer must not also carry a kitchen IP — the agent
+    // would then send the tax invoice to 192.168.1.10 with the KOT.
     const body = {
         data: raw,
         ...(windowsPrinter
@@ -65,8 +67,7 @@ export async function sendViaLocalBridge(job = {}) {
                 windows_printer: windowsPrinter,
                 windows_printer_name: windowsPrinter,
             }
-            : {}),
-        ...(ip ? { ip, port } : {}),
+            : { ip, port }),
     };
 
     const urls = bridgeUrls(job);

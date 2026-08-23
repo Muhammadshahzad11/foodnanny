@@ -268,6 +268,22 @@
                     <ItemComponent v-if="categoryWiseItem.items.length > 0" :offer="checkOffer" :type="itemType" :itemIndex="categoryWiseItemIndex" :items="categoryWiseItem.items" />
                 </dd>
             </dl>
+
+            <article v-if="restaurant.id" class="mt-10 rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
+                <h3 class="text-lg font-semibold capitalize text-heading mb-2">{{ restaurant.name }}</h3>
+                <p v-if="restaurant.address" class="flex items-start gap-2 text-sm text-paragraph mb-2">
+                    <i class="lab-fill-location text-base mt-0.5"></i>
+                    <span>{{ restaurant.address }}</span>
+                </p>
+                <p v-if="restaurant.phone" class="flex items-center gap-2 text-sm text-paragraph mb-3">
+                    <i class="lab-fill-call text-base"></i>
+                    <span>{{ restaurant.country_code }}{{ restaurant.phone }}</span>
+                </p>
+                <p v-if="restaurant.fssai_number" class="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm text-paragraph">
+                    <i class="lab-line-shield text-base"></i>
+                    <span>{{ $t('label.fssai_number') }}: {{ restaurant.fssai_number }}</span>
+                </p>
+            </article>
         </div>
     </section>
 
@@ -347,6 +363,10 @@
                         <span v-if="restaurant.phone" class="db-list-item-text w-full sm:w-1/2">{{
                             restaurant.country_code + "" + restaurant.phone
                         }}</span>
+                    </li>
+                    <li v-if="restaurant.fssai_number" class="flex items-center gap-3 py-3 border-b border-gray-100">
+                        <i class="lab-line-shield text-2xl text-paragraph"></i>
+                        <span>{{ $t('label.fssai_number') }}: {{ restaurant.fssai_number }}</span>
                     </li>
                     <li class="flex items-center gap-3 py-3 border-b border-gray-100">
                         <i class="lab-fill-clock text-2xl text-paragraph"></i>

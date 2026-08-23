@@ -92,6 +92,10 @@ export default {
             return;
         }
         this.phoneChecking();
+        if (appService.isPlayStoreDemoPhone(this.props.form.phone)) {
+            this.props.form.token = '0000';
+            await this.save();
+        }
     },
     methods: {
         phoneChecking: function () {

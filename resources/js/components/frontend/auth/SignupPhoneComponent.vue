@@ -158,11 +158,51 @@ export default {
             });
             this.isOpen = false;
         },
-        save: function () {
+        save: async function () {
             try {
                 this.loading.isActive = true;
+                if (appService.isPlayStoreDemoPhone(this.props.form.phone)) {
+                    await this.authStore.phoneLogin({
+                        code: this.props.form.code || this.countryCode,
+                        phone: this.props.form.phone,
+                        token: '0000',
+                    }).then(async (res) => {
+                        this.loading.isActive = false;
+                        this.errors = {};
+                        alertService.success(res.data.message);
+                        if (this.commonStore.location) {
+                            await this.$router.push({name: "frontend.restaurant"});
+                        } else {
+                            await this.$router.push({name: "frontend.home"});
+                        }
+                    }).catch((err) => {
+                        this.loading.isActive = false;
+                        if (err?.response?.data?.errors) {
+                            this.errors = err.response.data.errors;
+                        } else if (err?.response?.data?.message) {
+                            this.errors.phone = [err?.response?.data?.message];
+                        }
+                    });
+                    return;
+                }
                 this.frontendSignup.callPhone(this.props.form).then(async (res) => {
                     this.loading.isActive = false;
+                    if (res.data?.skip_otp) {
+                        await this.authStore.phoneLogin({
+                            code: this.props.form.code || this.countryCode,
+                            phone: this.props.form.phone,
+                            token: '0000',
+                        }).then(async (loginRes) => {
+                            this.errors = {};
+                            alertService.success(loginRes.data.message);
+                            if (this.commonStore.location) {
+                                await this.$router.push({name: "frontend.restaurant"});
+                            } else {
+                                await this.$router.push({name: "frontend.home"});
+                            }
+                        });
+                        return;
+                    }
                     this.props.form       = {
                         phone: "",
                         code: "",

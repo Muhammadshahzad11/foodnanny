@@ -3,7 +3,6 @@
     <div class="customer-bill-print-root" aria-hidden="true">
         <div v-if="hasData" class="receipt-body bill-sheet" :dir="displayMode">
             <div class="bill-center">
-                <img v-if="restaurant?.logo" :src="restaurant.logo" alt="" class="bill-logo"/>
                 <div class="bill-name">{{ restaurant?.name || 'Restaurant' }}</div>
                 <div class="bill-doc-title">TAX INVOICE</div>
             </div>
@@ -24,11 +23,6 @@
                 <span>Time: {{ orderTime }}</span>
                 <span class="bill-right">{{ tableLabel ? 'Table: ' + tableLabel : orderTypeLabel }}</span>
             </div>
-            <div v-if="cashierName" class="bill-row bill-meta">
-                <span>Cashier: {{ cashierName }}</span>
-                <span class="bill-right">{{ tableLabel ? orderTypeLabel : '' }}</span>
-            </div>
-
             <div class="bill-line"></div>
 
             <div class="bill-row bill-head">

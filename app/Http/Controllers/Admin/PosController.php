@@ -83,15 +83,12 @@ class PosController extends AdminController implements HasMiddleware
 
             $order = $this->orderService->posOrderStore($request);
 
-            $printInvoice = true;
-            // Delivery: KOT on place; invoice still allowed when paid at counter (default)
-            if ($orderType === \App\Enums\OrderType::DELIVERY && $request->boolean('kot_only')) {
-                $printInvoice = false;
-            }
-
+            // Takeaway / delivery checkout: KOT on kitchen printer + bill on
+            // dedicated invoice printer (RP3200 lite bill). Same-printer
+            // guard in KotRoutingService still blocks bill-on-KOT.
             $print = $this->kotRoutingService->processPosOrder($order, [
                 'print_kot'     => true,
-                'print_invoice' => $printInvoice,
+                'print_invoice' => true,
             ]);
 
             return (new OrderDetailsResource($order))->additional([

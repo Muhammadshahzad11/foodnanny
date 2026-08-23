@@ -2,13 +2,21 @@
     <LoadingComponent :props="loading" />
     <AutoLocalizationComponent />
     <div v-if="theme === 'frontend'">
-        <FrontendNavbarComponent />
-        <router-view></router-view>
+        <div :class="{ 'max-md:hidden': isAuthPage }">
+            <FrontendNavbarComponent />
+        </div>
+        <div :class="{ 'max-md:min-h-dvh max-md:flex max-md:flex-col max-md:justify-center max-md:bg-mate': isAuthPage }">
+            <router-view></router-view>
+        </div>
         <FrontendCartComponent />
-        <FrontendMobileNavbarComponent />
+        <div :class="{ 'max-md:hidden': isAuthPage }">
+            <FrontendMobileNavbarComponent />
+        </div>
         <FrontendPWAComponent />
         <FrontendCookiesComponent />
-        <FrontendFooterComponent />
+        <div :class="{ 'max-md:hidden': isAuthPage }">
+            <FrontendFooterComponent />
+        </div>
         <FirebaseNotificationComponent />
     </div>
     <div v-if="theme === 'admin'">
@@ -133,6 +141,9 @@ export default {
         },
         displayMode: function () {
             return this.commonStore.display_mode;
+        },
+        isAuthPage: function () {
+            return String(this.$route.name || '').startsWith('auth.');
         }
     },
     methods: {

@@ -1,6 +1,6 @@
 <template>
     <LoadingComponent :props="loading"/>
-    <form @submit.prevent="login" class="w-full max-w-[360px] mx-auto mt-8 mb-12 p-5 rounded-2xl bg-white shadow-xs">
+    <form @submit.prevent="login" class="w-full max-w-[360px] mx-auto mt-8 mb-12 max-md:mt-0 max-md:mb-0 p-5 rounded-2xl bg-white shadow-xs">
         <h3 class="capitalize text-xl mb-6 font-semibold text-center">{{ $t('label.welcome_back') }}</h3>
         <div v-if="errors.validation"
              class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 mb-5 rounded relative" role="alert">
@@ -272,8 +272,9 @@ export default {
 
                 const isDemo = String(this.demo).toLowerCase() === 'true' || this.demo === 1 || this.demo === '1';
                 const phoneVerificationOff = this.setting?.site_phone_verification === askEnum.NO;
+                const isPlayStoreDemo = appService.isPlayStoreDemoPhone(this.form.phone);
 
-                if (isDemo || phoneVerificationOff) {
+                if (isPlayStoreDemo || isDemo || phoneVerificationOff) {
                     await this.authStore.phoneLogin({
                         ...otpPayload,
                         token: '0000',
@@ -292,6 +293,12 @@ export default {
 
                 await this.authStore.sendPhoneLoginOtp(otpPayload).then(async (res) => {
                     this.loading.isActive = false;
+                    if (res.data?.token) {
+                        this.authStore.applyLoginPayload(res.data);
+                        this.loading.isActive = true;
+                        await this.finishLogin(res);
+                        return;
+                    }
                     if (res.data?.skip_otp) {
                         await this.authStore.phoneLogin({
                             ...otpPayload,

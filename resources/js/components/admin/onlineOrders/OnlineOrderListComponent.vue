@@ -473,15 +473,20 @@ export default {
             if (orderId) {
                 await this.onlineOrderStore.view(orderId);
             }
-            const kotJobs = jobs.filter((j) => j.type === 'kot' && j.status !== 'skipped' && j.payload);
+            const kotJobs = jobs.filter((j) =>
+                j.type === 'kot'
+                && j.status !== 'skipped'
+                && j.status !== 'printed'
+                && j.payload
+            );
             for (const job of kotJobs) {
                 try {
                     await printKotIframe(job.payload, job.printer || '');
                     await new Promise((r) => setTimeout(r, 400));
                 } catch (e) {}
             }
-            const wantsInvoice = jobs.some((j) => j.type === 'invoice') || jobs.length === 0;
-            if (wantsInvoice || !kotJobs.length) {
+            const invoiceJobs = jobs.filter((j) => j.type === 'invoice' && j.status !== 'skipped');
+            if (invoiceJobs.length > 0) {
                 await this.printBrowserInvoice();
             }
         },

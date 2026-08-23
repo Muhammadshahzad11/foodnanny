@@ -19,6 +19,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
 use App\Http\Requests\VerifyPhoneRequest;
 use App\Enums\Role as EnumRole;
+use App\Support\DemoCustomerLogin;
 
 class SignupController extends Controller
 {
@@ -33,11 +34,24 @@ class SignupController extends Controller
     public function phone(SignupPhoneRequest $request): \Illuminate\Foundation\Application|\Illuminate\Http\Response|\Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
-            $user = User::where(['country_code' => $request->post('code'), 'phone' => $request->post('phone')])->first();
+            $code  = (string) $request->post('code');
+            $phone = (string) $request->post('phone');
+
+            if (DemoCustomerLogin::matches($code, $phone)) {
+                DemoCustomerLogin::ensureUser();
+
+                return response([
+                    'status'   => true,
+                    'skip_otp' => true,
+                    'message'  => trans('all.message.login_success'),
+                ], 200);
+            }
+
+            $user = User::where(['country_code' => $code, 'phone' => $phone])->first();
             if ($user) {
                 return response(['status' => false, 'message' => trans("all.message.phone_exist")], 422);
             } else {
-                $payload = ['status' => true, 'message' => trans("all.message.check_your_phone_for_code")];
+                $payload = ['status' => true, 'skip_otp' => false, 'message' => trans("all.message.check_your_phone_for_code")];
                 if (Settings::group('site')->get('site_phone_verification') == Activity::ENABLE) {
                     $otp = $this->otpManagerService->phoneOTP($request);
                     if (OtpManagerService::shouldExposeOtp()) {
@@ -54,6 +68,10 @@ class SignupController extends Controller
     public function verify(VerifyPhoneRequest $request): \Illuminate\Foundation\Application|\Illuminate\Http\Response|\Illuminate\Contracts\Routing\ResponseFactory
     {
         try {
+            if (DemoCustomerLogin::matches($request->post('code'), $request->post('phone'))) {
+                return response(['status' => true, 'skip_otp' => true, 'message' => trans("all.message.otp_verify_success")], 200);
+            }
+
             $this->otpManagerService->phoneVerify($request, false);
             return response(['status' => true, 'message' => trans("all.message.otp_verify_success")], 200);
         } catch (Exception $exception) {

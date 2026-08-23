@@ -14,6 +14,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Restaurant;
 use App\Models\FrontendOrder;
+use App\Models\Message;
 use App\Events\OrderPlacedSMS;
 use App\Models\FrontendAddress;
 use App\Events\OrderPlacedEmail;
@@ -98,14 +99,7 @@ class FrontendOrderService
     {
         try {
             DB::transaction(function () use ($request) {
-                $oldOrder = FrontendOrder::where(['user_id' => Auth::user()->id, 'active' => Status::INACTIVE]);
-                if (!blank($oldOrder->get())) {
-                    $ids = $oldOrder->pluck('id');
-                    FrontendOrderItem::whereIn('order_id', $ids)->where(['status' => Status::INACTIVE])->delete();
-                    FrontendOrderAddress::whereIn('order_id', $ids)->where(['user_id' => Auth::user()->id])?->delete();
-                    FrontendOrderCoupon::whereIn('order_id', $ids)->where(['user_id' => Auth::user()->id])?->delete();
-                    $oldOrder->delete();
-                }
+                $this->purgeInactiveFrontendDrafts((int) Auth::id());
 
                 $restaurant          = Restaurant::with('orderSetup')->where(['id' => $request->restaurant_id])->first();
                 $payload             = $request->validated();
@@ -233,9 +227,36 @@ class FrontendOrderService
             }
         } catch (Exception $exception) {
             DB::rollBack();
-            Log::info($exception->getMessage());
+            Log::error('Place order failed: ' . $exception->getMessage());
             throw new Exception(QueryExceptionLibrary::message($exception), 422);
         }
+    }
+
+    /**
+     * Remove unpaid WEB/APP checkout drafts for this customer so a new place-order can insert.
+     * POS/waiter drafts (often on Walking Customer) are skipped — they are not cart leftovers.
+     * Child rows are deleted without a status filter: leftover ACTIVE order_items caused MySQL 1451.
+     */
+    private function purgeInactiveFrontendDrafts(int $userId): void
+    {
+        $ids = FrontendOrder::query()
+            ->where('user_id', $userId)
+            ->where('active', Status::INACTIVE)
+            ->whereIn('source', [Source::WEB, Source::APP])
+            ->pluck('id');
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $orderIds = $ids->all();
+
+        FrontendOrderItem::whereIn('order_id', $orderIds)->delete();
+        FrontendOrderAddress::whereIn('order_id', $orderIds)->delete();
+        FrontendOrderCoupon::whereIn('order_id', $orderIds)->delete();
+        Message::whereIn('order_id', $orderIds)->delete();
+
+        FrontendOrder::whereIn('id', $orderIds)->delete();
     }
 
     /**

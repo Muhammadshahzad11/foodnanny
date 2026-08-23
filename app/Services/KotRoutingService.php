@@ -36,14 +36,14 @@ class KotRoutingService
      *
      * Options:
      * - print_kot (bool, default true)
-     * - print_invoice (bool, default true) — set false for dine-in Place Order
+     * - print_invoice (bool, default false) — customer bill is Print Bill only
      *
      * @return array{jobs: array<int, array>, kot_count: int, warnings: array<int, string>}
      */
     public function processPosOrder(Order $order, array $options = []): array
     {
         $printKot     = array_key_exists('print_kot', $options) ? (bool) $options['print_kot'] : true;
-        $printInvoice = array_key_exists('print_invoice', $options) ? (bool) $options['print_invoice'] : true;
+        $printInvoice = array_key_exists('print_invoice', $options) ? (bool) $options['print_invoice'] : false;
 
         $order->loadMissing([
             'orderItems.orderItem.category',
@@ -57,8 +57,9 @@ class KotRoutingService
         $groups   = $this->groupItemsByKitchen($order);
         $this->persistItemStations($groups);
 
-        $jobs     = [];
-        $warnings = [];
+        $jobs          = [];
+        $warnings      = [];
+        $kotPrinterIds = [];
 
         if ($printKot) {
             $kotJobs = 0;
@@ -83,6 +84,9 @@ class KotRoutingService
                 $payload = $this->buildKotPayload($order, $items, $station);
                 $ticket  = $this->storeTicket($order, $station, $printer, $payload);
                 $jobs[]  = $this->dispatchPrintJob('kot', $printer, $payload, $ticket);
+                if ($printer?->id) {
+                    $kotPrinterIds[] = (int) $printer->id;
+                }
                 $kotJobs++;
             }
 
@@ -95,6 +99,16 @@ class KotRoutingService
                     'message' => $warnings[0],
                     'payload' => null,
                 ];
+            }
+        }
+
+        if ($printInvoice) {
+            $invoicePrinter = $this->resolveInvoicePrinter($order);
+            // One kitchen printer set to BOTH was also dumping the customer bill
+            // after every KOT. Bill only prints on a dedicated invoice printer,
+            // or when the caller asks for invoice-only (Print Bill / pay).
+            if ($invoicePrinter && in_array((int) $invoicePrinter->id, $kotPrinterIds, true)) {
+                $printInvoice = false;
             }
         }
 
@@ -411,7 +425,7 @@ class KotRoutingService
         };
 
         return [
-            'copy'             => 'KITCHEN KOT',
+            'copy'             => 'KOT',
             'ticket_no'        => 'KOT - ' . $order->id . ($station ? ' / ' . $station->name : ''),
             'kot_no'           => (string) $order->id,
             // No logo_url on KOT — logo is for customer invoice only

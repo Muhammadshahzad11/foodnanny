@@ -360,6 +360,7 @@ export default {
             const kotJobs = jobs.filter((j) =>
                 j.type === 'kot'
                 && j.status !== 'skipped'
+                && j.status !== 'printed'
                 && (j.mode === 'browser_popup' || j.status === 'pending_browser' || j.payload)
             );
             const invoiceJobs = jobs.filter((j) =>
@@ -374,7 +375,7 @@ export default {
                 } catch (e) {}
             }
 
-            if (invoiceJobs.length > 0 || (!directJobs.length && !kotJobs.length)) {
+            if (invoiceJobs.length > 0) {
                 try {
                     await this.printBrowserInvoice();
                 } catch (e) {}

@@ -69,6 +69,7 @@ class FrontendRestaurantDetailsResource extends JsonResource
             'important_notice_emphasis' => $this->important_notice_emphasis ?: '',
             'show_highlights'   => (int) ($this->show_highlights ?? Ask::YES) === Ask::YES,
             'highlights'        => $this->resource->resolvedHighlights(),
+            'fssai_number'      => $this->fssai_number ?: '',
         ];
     }
 }

@@ -223,6 +223,14 @@
                             <small class="text-[11px] text-[#6E7191]">{{ $t("label.enable_waiter_hint") }}</small>
                         </div>
 
+                        <div class="form-col-12">
+                            <label for="fssai_number" class="db-field-title">{{ $t("label.fssai_number") }}</label>
+                            <input v-model="props.form.fssai_number" id="fssai_number" type="text" maxlength="20"
+                                   class="db-field-control"
+                                   :placeholder="$t('label.fssai_number_placeholder')"/>
+                            <small class="text-[11px] text-[#6E7191]">{{ $t("label.fssai_number_hint") }}</small>
+                        </div>
+
                         <div class="form-col-12 sm:form-col-6">
                             <label class="db-field-title required">{{ $t("label.show_important_notice") }}</label>
                             <div class="db-field-radio-group">

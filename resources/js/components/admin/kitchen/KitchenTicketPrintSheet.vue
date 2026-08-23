@@ -44,7 +44,7 @@
                 !! {{ String(payload.priority_label).toUpperCase() }} PRIORITY !!
             </div>
             <div v-if="poweredBy" class="kot-center kot-powered">
-                &mdash; {{ $t('label.powered_by') }} {{ poweredBy }}
+                &mdash; Powered by {{ poweredBy }}
             </div>
             <div class="kot-dash"></div>
         </div>

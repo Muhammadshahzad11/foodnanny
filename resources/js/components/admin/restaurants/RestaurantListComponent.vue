@@ -421,6 +421,7 @@ export default {
                 enable_pos: restaurant.enable_pos ?? emptyRestaurantPageDisplay().enable_pos,
                 enable_kitchen: restaurant.enable_kitchen ?? emptyRestaurantPageDisplay().enable_kitchen,
                 enable_waiter: restaurant.enable_waiter ?? emptyRestaurantPageDisplay().enable_waiter,
+                fssai_number: restaurant.fssai_number || "",
             };
             this.countryCodeStore.fetchFind({country_code: restaurant.country_code}).then(res => {
                 this.props.form.flag = res.data.data.flag_emoji;

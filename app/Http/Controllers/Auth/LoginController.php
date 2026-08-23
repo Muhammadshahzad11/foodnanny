@@ -21,6 +21,7 @@ use App\Services\MenuService;
 use App\Services\OtpManagerService;
 use App\Services\PermissionService;
 use App\Services\RestaurantModuleService;
+use App\Support\DemoCustomerLogin;
 use Dipokhalder\Settings\Facades\Settings;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -96,10 +97,27 @@ class LoginController extends Controller
     public function sendPhoneLoginOtp(GuestSignupPhoneRequest $request): JsonResponse
     {
         try {
-            $user = User::where([
-                'country_code' => $request->post('code'),
-                'phone'        => $request->post('phone'),
-            ])->first();
+            $code  = (string) $request->post('code');
+            $phone = (string) $request->post('phone');
+            $user  = DemoCustomerLogin::findUser($code, $phone)
+                ?: User::where(['country_code' => $code, 'phone' => $phone])->first();
+
+            if (DemoCustomerLogin::matches($code, $phone)) {
+                $user = DemoCustomerLogin::ensureUser();
+                if (!Auth::guard('web')->loginUsingId($user->id)) {
+                    return new JsonResponse([
+                        'status'  => false,
+                        'message' => trans('all.message.credentials_invalid'),
+                    ], 400);
+                }
+
+                $login = $this->permissionManager($user);
+                $data  = $login->getData(true);
+                $data['status']   = true;
+                $data['skip_otp'] = true;
+
+                return new JsonResponse($data, 200);
+            }
 
             if (!$user) {
                 return new JsonResponse([
@@ -162,17 +180,20 @@ class LoginController extends Controller
     public function phoneLogin(VerifyPhoneRequest $request): JsonResponse
     {
         try {
-            $skipOtp = env('DEMO')
+            $code    = (string) $request->post('code');
+            $phone   = (string) $request->post('phone');
+            $isDemo  = DemoCustomerLogin::matches($code, $phone);
+            $skipOtp = $isDemo
+                || env('DEMO')
                 || Settings::group('site')->get('site_phone_verification') == Activity::DISABLE;
 
             if (!$skipOtp) {
                 $this->otpManagerService->phoneVerify($request);
             }
 
-            $user = User::where([
-                'country_code' => $request->post('code'),
-                'phone'        => $request->post('phone'),
-            ])->first();
+            $user = $isDemo
+                ? DemoCustomerLogin::ensureUser()
+                : User::where(['country_code' => $code, 'phone' => $phone])->first();
 
             if (!$user) {
                 return new JsonResponse([

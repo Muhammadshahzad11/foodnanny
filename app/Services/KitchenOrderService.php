@@ -805,7 +805,7 @@ class KitchenOrderService
         ])));
 
         return [
-            'copy'              => 'KITCHEN KOT',
+            'copy'              => 'KOT',
             'ticket_no'         => $ticketNo,
             'kot_no'            => (string) $order->id,
             'restaurant'        => $order->restaurant?->name,

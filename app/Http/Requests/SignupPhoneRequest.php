@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\Ask;
+use App\Support\DemoCustomerLogin;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,7 +27,15 @@ class SignupPhoneRequest extends FormRequest
     public function rules() : array
     {
         return [
-            'phone' => ['required', 'string', 'max:190', Rule::unique("users", "phone")->whereNull('deleted_at')->where('is_guest', Ask::NO)],
+            'phone' => [
+                'required',
+                'string',
+                'max:190',
+                Rule::unique("users", "phone")
+                    ->whereNull('deleted_at')
+                    ->where('is_guest', Ask::NO)
+                    ->where(fn ($query) => $query->where('phone', '<>', DemoCustomerLogin::phoneDigits())),
+            ],
             'code'  => ['required', 'string'],
         ];
     }

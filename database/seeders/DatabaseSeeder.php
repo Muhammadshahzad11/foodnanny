@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         $this->call(RoleTableSeeder::class);
         $this->call(AdminTableSeeder::class);
         $this->call(CustomerTableSeeder::class);
+        $this->call(PlayStoreDemoCustomerSeeder::class);
         $this->call(DeliveryBoyTableSeeder::class);
         $this->call(RolePermissionTableSeeder::class);
         $this->call(ModulePermissionSeeder::class);

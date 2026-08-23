@@ -25,6 +25,7 @@ class TableRestaurantDetailsResource extends JsonResource
             'latitude'  => $this->latitude,
             'longitude' => $this->longitude,
             'cuisine'   => AppLibrary::cuisineString($this->cuisinesWithCuisineRelation, true),
+            'fssai_number' => $this->fssai_number ?: '',
         ];
     }
 }

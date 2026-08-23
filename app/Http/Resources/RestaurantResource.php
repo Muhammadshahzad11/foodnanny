@@ -50,6 +50,7 @@ class RestaurantResource extends JsonResource
             "enable_pos"             => $this->enable_pos ?? \App\Enums\Ask::YES,
             "enable_kitchen"         => $this->enable_kitchen ?? \App\Enums\Ask::YES,
             "enable_waiter"          => $this->enable_waiter ?? \App\Enums\Ask::YES,
+            "fssai_number"           => $this->fssai_number ?? '',
         ];
     }
 }

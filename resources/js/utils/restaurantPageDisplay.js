@@ -42,5 +42,6 @@ export function emptyRestaurantPageDisplay() {
         enable_pos: askEnum.YES,
         enable_kitchen: askEnum.YES,
         enable_waiter: askEnum.YES,
+        fssai_number: "",
     };
 }
